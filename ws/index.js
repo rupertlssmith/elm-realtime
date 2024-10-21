@@ -5,7 +5,8 @@ const express = require('express');
 const http = require('http');
 const uuid = require('uuid');
 
-const { WebSocketServer } = require('../..');
+//const { WebSocketServer } = require('../..');
+const { WebSocketServer } = require('ws');
 
 function onSocketError(err) {
   console.error(err);
