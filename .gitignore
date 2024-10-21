@@ -1,0 +1,9 @@
+src/elm.js
+elm-stuff
+node_modules
+*.log
+/stubs
+.vscode/
+.idea/
+__pycache__/
+dist/
