@@ -16,23 +16,27 @@ class Pointer {
     }
 
     pointerDownCallback(e) {
-        //console.log("pointerdown");
-        this.app.ports.onPointerDown.send(e);
+        if (this.app.ports.onPointerDown) {
+            this.app.ports.onPointerDown.send(e);
+        }
     }
 
     pointerUpCallback(e) {
-        //console.log("pointerup");
-        this.app.ports.onPointerUp.send(e);
+        if (this.app.ports.onPointerUp) {
+            this.app.ports.onPointerUp.send(e);
+        }
     }
 
     pointerMoveCallback(e) {
-        //console.log("pointermove");
-        this.app.ports.onPointerMove.send(e);
+        if (this.app.ports.onPointerMove) {
+            this.app.ports.onPointerMove.send(e);
+        }
     }
 
     pointerCancelCallback(e) {
-        //console.log("pointercancel");
-        this.app.ports.onPointerCancel.send(e);
+        if (this.app.ports.onPointerCancel) {
+            this.app.ports.onPointerCancel.send(e);
+        }
     }
 }
 
