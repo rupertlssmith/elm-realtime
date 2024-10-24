@@ -43,7 +43,17 @@ class Websockets {
             }
         }.bind(this);
     }
-
+// ws = new WebSocket(`ws://${location.host}`);
+//     ws.onerror = function () {
+//       showMessage('WebSocket error');
+//     };
+//     ws.onopen = function () {
+//       showMessage('WebSocket connection established');
+//     };
+//     ws.onclose = function () {
+//       showMessage('WebSocket connection closed');
+//       ws = null;
+//     };
     send(args) {
         console.log("Websocket.send");
         console.log(args);

@@ -42,6 +42,7 @@
       ws.close();
     }
 
+    console.log(`ws://${location.host}`);
     ws = new WebSocket(`ws://${location.host}`);
     ws.onerror = function () {
       showMessage('WebSocket error');

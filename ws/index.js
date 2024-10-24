@@ -4,37 +4,24 @@ const session = require('express-session');
 const express = require('express');
 const http = require('http');
 const uuid = require('uuid');
-
-//const { WebSocketServer } = require('../..');
 const { WebSocketServer } = require('ws');
 
-function onSocketError(err) {
-  console.error(err);
-}
-
 const app = express();
+app.use(express.static('public'));
+
+// Holds websockets by user id.
 const map = new Map();
 
-//
-// We need the same instance of the session parser in express and
-// WebSocket server.
-//
+// Express session parser - the same for the HTTP and WS endpoints.
 const sessionParser = session({
   saveUninitialized: false,
   secret: '$eCuRiTy',
   resave: false
 });
-
-//
-// Serve static files from the 'public' folder.
-//
-app.use(express.static('public'));
 app.use(sessionParser);
 
+// Generate a user id on login and store it in the session.
 app.post('/login', function (req, res) {
-  //
-  // "Log in" user and set userId to session.
-  //
   const id = uuid.v4();
 
   console.log(`Updating session for user ${id}`);
@@ -42,6 +29,7 @@ app.post('/login', function (req, res) {
   res.send({ result: 'OK', message: 'Session updated' });
 });
 
+// Delete the user id on logout from the session, and also close any websocket associated with it.
 app.delete('/logout', function (request, response) {
   const ws = map.get(request.session.userId);
 
@@ -53,15 +41,12 @@ app.delete('/logout', function (request, response) {
   });
 });
 
-//
-// Create an HTTP server.
-//
+// Provide the auth endpoints over HTTP.
 const server = http.createServer(app);
 
-//
-// Create a WebSocket server completely detached from the HTTP server.
-//
-const wss = new WebSocketServer({ clientTracking: false, noServer: true });
+server.listen(8080, function () {
+  console.log('Listening on http://localhost:8080');
+});
 
 server.on('upgrade', function (request, socket, head) {
   socket.on('error', onSocketError);
@@ -85,6 +70,14 @@ server.on('upgrade', function (request, socket, head) {
   });
 });
 
+function onSocketError(err) {
+  console.error(err);
+}
+
+// Provide the websocket endpoint.
+const wss = new WebSocketServer({ clientTracking: false, noServer: true });
+
+// Listen for connections.
 wss.on('connection', function (ws, request) {
   const userId = request.session.userId;
 
@@ -104,9 +97,3 @@ wss.on('connection', function (ws, request) {
   });
 });
 
-//
-// Start the server.
-//
-server.listen(8080, function () {
-  console.log('Listening on http://localhost:8080');
-});

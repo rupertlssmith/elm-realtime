@@ -72,7 +72,6 @@ update protocol msg component =
                 |> U2.andMap (switchState ModelRandomized)
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                --|> protocol.onUpdate
                 |> protocol.wsOpen "socket" "ws://localhost:8080"
 
         _ ->
@@ -89,9 +88,43 @@ randomize model =
 
 wsOpened : Protocol (Component a) msg model -> String -> Component a -> ( model, Cmd msg )
 wsOpened protocol id component =
-    Debug.todo "wsOpened"
+    let
+        _ =
+            Debug.log "wsOpened" id
+    in
+    component
+        |> U2.pure
+        |> protocol.wsSend id "Hello!!"
 
 
 wsMessage : Protocol (Component a) msg model -> String -> String -> Component a -> ( model, Cmd msg )
 wsMessage protocol id payload component =
-    Debug.todo "wsMessage"
+    let
+        _ =
+            Debug.log "wsMessage" id
+    in
+    component
+        |> U2.pure
+        |> protocol.onUpdate
+
+
+view =
+    """
+       <body>
+    <h1>Choose an action.</h1>
+    <button id="login" type="button" title="Simulate login">
+      Simulate login
+    </button>
+    <button id="logout" type="button" title="Simulate logout">
+      Simulate logout
+    </button>
+    <button id="wsButton" type="button" title="Open WebSocket connection">
+      Open WebSocket connection
+    </button>
+    <button id="wsSendButton" type="button" title="Send WebSocket message">
+      Send WebSocket message
+    </button>
+    <pre id="messages" style="height: 400px; overflow: scroll"></pre>
+    <script src="app.js"></script>
+  </body>
+"""
