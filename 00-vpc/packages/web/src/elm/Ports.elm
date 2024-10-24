@@ -4,6 +4,8 @@ port module Ports exposing
     , onPointerMove
     , onPointerUp
     , wsClose
+    , wsOnClose
+    , wsOnError
     , wsOnMessage
     , wsOnOpen
     , wsOpen
@@ -36,13 +38,19 @@ port onPointerCancel : (Value -> msg) -> Sub msg
 port wsOpen : { id : String, url : String } -> Cmd msg
 
 
+port wsSend : { id : String, payload : String } -> Cmd msg
+
+
+port wsClose : String -> Cmd msg
+
+
 port wsOnOpen : (String -> msg) -> Sub msg
 
 
-port wsSend : { id : String, payload : String } -> Cmd msg
+port wsOnClose : (String -> msg) -> Sub msg
 
 
 port wsOnMessage : ({ id : String, payload : String } -> msg) -> Sub msg
 
 
-port wsClose : String -> Cmd msg
+port wsOnError : ({ id : String, error : Value } -> msg) -> Sub msg

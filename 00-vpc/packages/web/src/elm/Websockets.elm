@@ -1,12 +1,26 @@
-module Websockets exposing (Model, Msg(..), Ports, Protocol, Socket(..), init, open, send, subscriptions, update)
+module Websockets exposing
+    ( Error(..)
+    , Model
+    , Msg(..)
+    , Ports
+    , Protocol
+    , Socket(..)
+    , init
+    , open
+    , send
+    , subscriptions
+    , update
+    )
 
 import Dict exposing (Dict)
+import Json.Decode exposing (Value)
 import Update2 as U2
 
 
 type Msg
     = SocketOpened String
     | OnMessage { id : String, payload : String }
+    | OnError { id : String, error : Value }
 
 
 type alias Model =
@@ -19,12 +33,17 @@ type Socket
     | Open
 
 
+type Error
+    = Failed
+
+
 type alias Ports =
     { open : { id : String, url : String } -> Cmd Msg
-    , onOpen : (String -> Msg) -> Sub Msg
     , send : { id : String, payload : String } -> Cmd Msg
-    , onMessage : ({ id : String, payload : String } -> Msg) -> Sub Msg
     , close : String -> Cmd Msg
+    , onOpen : (String -> Msg) -> Sub Msg
+    , onMessage : ({ id : String, payload : String } -> Msg) -> Sub Msg
+    , onError : ({ id : String, error : Value } -> Msg) -> Sub Msg
     }
 
 
@@ -34,6 +53,7 @@ type alias Protocol submodel msg model =
     , onUpdate : ( submodel, Cmd msg ) -> ( model, Cmd msg )
     , onOpen : String -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
     , onMessage : String -> String -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
+    , onError : String -> Error -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
     }
 
 
@@ -49,6 +69,7 @@ subscriptions : Protocol Model msg model -> Model -> Sub msg
 subscriptions protocol _ =
     [ protocol.ports.onOpen SocketOpened
     , protocol.ports.onMessage OnMessage
+    , protocol.ports.onError OnError
     ]
         |> Sub.batch
         |> Sub.map protocol.toMsg
@@ -72,6 +93,10 @@ update protocol msg model =
             in
             U2.pure model
                 |> protocol.onMessage id payload
+
+        OnError { id, error } ->
+            U2.pure model
+                |> protocol.onError id Failed
 
 
 open : Protocol Model msg model -> String -> String -> Model -> ( model, Cmd msg )

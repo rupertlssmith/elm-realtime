@@ -11,7 +11,7 @@ import Navigation exposing (Route)
 import Ports
 import Top.Style
 import Update2 as U2
-import Websockets
+import Websockets exposing (Error)
 
 
 type alias Model =
@@ -79,10 +79,11 @@ init flags =
 websocketsPorts : Websockets.Ports
 websocketsPorts =
     { open = Ports.wsOpen
-    , onOpen = Ports.wsOnOpen
     , send = Ports.wsSend
-    , onMessage = Ports.wsOnMessage
     , close = Ports.wsClose
+    , onOpen = Ports.wsOnOpen
+    , onMessage = Ports.wsOnMessage
+    , onError = Ports.wsOnError
     }
 
 
@@ -93,6 +94,7 @@ websocketsProtocol model =
     , onUpdate = \( wsMdl, cmds ) -> ( { model | websockets = wsMdl }, cmds )
     , onOpen = \id -> wsOpened id model
     , onMessage = \id payload -> wsMessage id payload model
+    , onError = \id error -> wsError id error model
     }
 
 
@@ -157,6 +159,13 @@ wsMessage id payload model =
             |> U2.andThen (App.wsMessage appProtocol id payload)
 
 
+wsError : String -> Error -> Model -> ( Websockets.Model, Cmd Msg ) -> ( Model, Cmd Msg )
+wsError id payload model =
+    \( wsMdl, cmds ) ->
+        ( { model | websockets = wsMdl }, cmds )
+            |> U2.andThen (App.wsError appProtocol id payload)
+
+
 wsOpen : String -> String -> Model -> ( Model, Cmd Msg )
 wsOpen id url model =
     Websockets.open (websocketsProtocol model) id url model.websockets
@@ -182,6 +191,7 @@ fullBody model =
                 [ Top.Style.rawCssStyle
                 , Top.Style.style Config.config |> Css.Global.global
                 , leftMenu
+                , App.view model
                 ]
 
         Nothing ->

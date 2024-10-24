@@ -1,5 +1,3 @@
-//var mySockets = {};
-
 class Websockets {
     sockets = {};
     app;
@@ -31,6 +29,16 @@ class Websockets {
         console.log(args);
 
         let socket = new WebSocket(args.url);
+
+        socket.onerror = function (e) {
+            if (this.app.ports.wsOnError) {
+                this.app.ports.wsOnError.send({
+                    id: args.id,
+                    error: e
+                });
+            }
+        }.bind(this);
+
         socket.onmessage = this.onMessage(args.id);
         this.sockets[args.id] = socket;
 
@@ -43,17 +51,7 @@ class Websockets {
             }
         }.bind(this);
     }
-// ws = new WebSocket(`ws://${location.host}`);
-//     ws.onerror = function () {
-//       showMessage('WebSocket error');
-//     };
-//     ws.onopen = function () {
-//       showMessage('WebSocket connection established');
-//     };
-//     ws.onclose = function () {
-//       showMessage('WebSocket connection closed');
-//       ws = null;
-//     };
+
     send(args) {
         console.log("Websocket.send");
         console.log(args);
@@ -71,13 +69,15 @@ class Websockets {
             console.log(evt);
 
             if (this.app.ports.wsOnMessage) {
+                console.log(evt.data);
                 this.app.ports.wsOnMessage.send({
                     id: id,
                     payload: evt.data
                 });
             }
 
-        }.bind(this);;
+        }.bind(this);
+        ;
 
         return handler;
     }
