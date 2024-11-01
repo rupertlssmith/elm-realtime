@@ -127,7 +127,7 @@ login model =
             [--  Http.header "credentials" "include"
              --, Http.header "Access-Control-Allow-Origin" "*"
             ]
-        , url = "http://localhost:8080/login"
+        , url = "http://localhost:7000/login"
         , body = Http.emptyBody
         , expect = Http.expectWhatever LoggedIn
         , timeout = Nothing
@@ -181,13 +181,6 @@ wsMessage protocol id payload component =
 
 wsError : Protocol (Component a) msg model -> String -> Error -> Component a -> ( model, Cmd msg )
 wsError protocol id error component =
-    let
-        _ =
-            Debug.log "wsError"
-                { id = id
-                , error = error
-                }
-    in
     component
         |> U2.pure
         |> protocol.onUpdate

@@ -87,10 +87,6 @@ update protocol msg model =
                 |> protocol.onOpen id
 
         OnMessage { id, payload } ->
-            let
-                _ =
-                    Debug.log "OnMessage" msg
-            in
             U2.pure model
                 |> protocol.onMessage id payload
 

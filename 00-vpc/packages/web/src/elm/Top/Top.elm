@@ -1,4 +1,4 @@
-module Top.Top exposing (main)
+module Top.Top exposing (..)
 
 import App.Component as App
 import Browser
@@ -131,10 +131,6 @@ update msg model =
             ( model, Navigation.routeToString val |> Navigation.pushUrl )
 
         WebsocketsMsg innerMsg ->
-            let
-                _ =
-                    Debug.log "WebsocketsMsg" msg
-            in
             Websockets.update (websocketsProtocol model)
                 innerMsg
                 model.websockets
