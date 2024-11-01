@@ -1,0 +1,8 @@
+node_modules/
+elm-stuff/
+dist/
+.cache/
+gen/
+.elm
+.elm-pages
+dist-server/
