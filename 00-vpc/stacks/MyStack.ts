@@ -1,18 +1,28 @@
-import {StackContext, Api, Function, StaticSite} from "sst/constructs";
+import {StackContext, Table, StaticSite, WebSocketApi} from "sst/constructs";
 
 export function ChatStack({stack}: StackContext) {
-    const api = new Api(stack, "api", {
-        defaults: {},
-        routes: {
-            "POST /": {
-                function: new Function(stack, "Chat", {
-                    handler: "packages/functions/src/lambda.chat",
-                })
-            }
-        }
+    const table = new Table(stack, "Connections", {
+        fields: {
+            id: "string",
+        },
+        primaryIndex: {partitionKey: "id"},
     });
 
-    // Deploy our React app
+    const api = new WebSocketApi(stack, "api", {
+        defaults: {
+            function: {
+                bind: [table],
+            },
+        },
+        routes: {
+            $connect: "packages/functions/src/connect.main",
+            $disconnect: "packages/functions/src/disconnect.main",
+            $default: "packages/functions/src/default.main",
+            sendMessage: "packages/functions/src/sendmessage.main",
+        },
+    });
+
+    // Deploy the Elm app
     const site = new StaticSite(stack, "ChatSite", {
         path: "packages/web",
         buildCommand: "npm run prod",

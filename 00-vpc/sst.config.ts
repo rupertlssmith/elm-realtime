@@ -11,7 +11,7 @@ export default {
     },
     stacks(app) {
         app.setDefaultFunctionProps({
-            runtime: "python3.9",
+            runtime: "nodejs20.x",
         });
         app.stack(ChatStack);
     }
