@@ -9,6 +9,11 @@ export function ChatStack({stack}: StackContext) {
     });
 
     const api = new WebSocketApi(stack, "api", {
+        cdk: {
+            webSocketApi: {
+                routeSelectionExpression: "$request.body.topic"
+            }
+        },
         defaults: {
             function: {
                 bind: [table],

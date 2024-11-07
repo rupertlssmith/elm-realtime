@@ -7,6 +7,7 @@ const dynamoDb = new DynamoDB.DocumentClient();
 import {APIGatewayProxyHandler} from "aws-lambda";
 
 export const main: APIGatewayProxyHandler = async (event) => {
+    console.log("sendmessage invoked");
     const messageData = JSON.parse(event.body).data;
     const {stage, domainName} = event.requestContext;
 
