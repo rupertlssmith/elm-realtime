@@ -2,6 +2,7 @@ module App.Component exposing (..)
 
 import Html.Styled as Html exposing (Html)
 import Http
+import Json.Encode as Encode
 import Random
 import Update2 as U2
 import Websockets exposing (Error)
@@ -9,7 +10,9 @@ import Websockets exposing (Error)
 
 type alias Component a =
     { a
-        | app : Model
+        | location : String
+        , chatApiUrl : String
+        , app : Model
     }
 
 
@@ -25,7 +28,6 @@ type Msg
 type Model
     = ModelStart StartState
     | ModelRandomized RandomizedState
-    | ModelLoggedIn LoggedInState
     | ModelConnected ConnectedState
 
 
@@ -34,12 +36,6 @@ type alias StartState =
 
 
 type alias RandomizedState =
-    { log : List String
-    , seed : Random.Seed
-    }
-
-
-type alias LoggedInState =
     { log : List String
     , seed : Random.Seed
     }
@@ -90,21 +86,10 @@ update protocol msg component =
             , seed = seed
             }
                 |> U2.pure
-                |> U2.andThen login
                 |> U2.andMap (switchState ModelRandomized)
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.onUpdate
-
-        ( ModelRandomized state, LoggedIn (Ok _) ) ->
-            { log = "LoggedIn" :: state.log
-            , seed = state.seed
-            }
-                |> U2.pure
-                |> U2.andMap (switchState ModelLoggedIn)
-                |> Tuple.mapFirst (setModel component)
-                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.wsOpen "socket" "ws://localhost:8080"
+                |> protocol.wsOpen "socket" component.chatApiUrl
 
         _ ->
             U2.pure component
@@ -118,32 +103,21 @@ randomize model =
     )
 
 
-login : RandomizedState -> ( RandomizedState, Cmd Msg )
-login model =
-    ( model
-    , Http.request
-        { method = "POST"
-        , headers =
-            [--  Http.header "credentials" "include"
-             --, Http.header "Access-Control-Allow-Origin" "*"
-            ]
-        , url = "http://localhost:7000/login"
-        , body = Http.emptyBody
-        , expect = Http.expectWhatever LoggedIn
-        , timeout = Nothing
-        , tracker = Nothing
-        }
-    )
-
-
 wsOpened : Protocol (Component a) msg model -> String -> Component a -> ( model, Cmd msg )
 wsOpened protocol id component =
     let
         model =
             component.app
+
+        payload =
+            [ ( "topic", Encode.string "sendMessage" )
+            , ( "data", Encode.string "hello" )
+            ]
+                |> Encode.object
+                |> Encode.encode 2
     in
     case model of
-        ModelLoggedIn state ->
+        ModelRandomized state ->
             { log = "Connected" :: state.log
             , seed = state.seed
             , socketHandle = id
@@ -152,7 +126,7 @@ wsOpened protocol id component =
                 |> U2.andMap (switchState ModelConnected)
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.wsSend id "Hello!!"
+                |> protocol.wsSend id payload
 
         _ ->
             U2.pure component
@@ -193,9 +167,6 @@ view component =
             logs props
 
         ModelRandomized props ->
-            logs props
-
-        ModelLoggedIn props ->
             logs props
 
         ModelConnected props ->
