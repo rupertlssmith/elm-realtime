@@ -26,8 +26,6 @@ export const main: APIGatewayProxyHandler = async (event) => {
             // Send the message to the given client
             await apiG.postToConnection({ConnectionId: id, Data: messageData});
         } catch (e) {
-            console.log(e);
-
             if (e.statusCode === 410) {
                 // Remove stale connections
                 await dynamoDb.delete({TableName, Key: {id}});

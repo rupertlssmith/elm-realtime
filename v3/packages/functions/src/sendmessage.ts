@@ -31,7 +31,7 @@ export async function main(event) {
                     Data: messageData,
                 }));
         } catch (e) {
-            console.log(e);
+            //console.log(e);
 
             if (e.statusCode === 410) {
                 // Remove stale connections
