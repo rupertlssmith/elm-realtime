@@ -1,7 +1,8 @@
-import {DynamoDB} from "aws-sdk";
+import {DynamoDBDocument} from "@aws-sdk/lib-dynamodb";
+import {DynamoDB} from "@aws-sdk/client-dynamodb";
 import {Table} from "sst/node/table";
 
-const dynamoDb = new DynamoDB.DocumentClient();
+const dynamoDb = DynamoDBDocument.from(new DynamoDB());
 
 import {APIGatewayProxyHandler} from "aws-lambda";
 
@@ -13,7 +14,7 @@ export const main: APIGatewayProxyHandler = async (event) => {
         },
     };
 
-    await dynamoDb.put(params).promise();
+    await dynamoDb.put(params);
 
     return {statusCode: 200, body: "Connected"};
 };

@@ -1,8 +1,10 @@
-import {DynamoDB, ApiGatewayManagementApi} from "aws-sdk";
+import {ApiGatewayManagementApi} from "@aws-sdk/client-apigatewaymanagementapi";
+import {DynamoDBDocument} from "@aws-sdk/lib-dynamodb";
+import {DynamoDB} from "@aws-sdk/client-dynamodb";
 import {Table} from "sst/node/table";
 
 const TableName = Table.Connections.tableName;
-const dynamoDb = new DynamoDB.DocumentClient();
+const dynamoDb = DynamoDBDocument.from(new DynamoDB());
 
 import {APIGatewayProxyHandler} from "aws-lambda";
 
@@ -13,23 +15,22 @@ export const main: APIGatewayProxyHandler = async (event) => {
 
     // Get all the connections
     const connections = await dynamoDb
-        .scan({TableName, ProjectionExpression: "id"})
-        .promise();
+        .scan({TableName, ProjectionExpression: "id"});
 
     const apiG = new ApiGatewayManagementApi({
-        endpoint: `${domainName}/${stage}`,
+        endpoint: `https://${domainName}/${stage}`,
     });
 
     const postToConnection = async function ({id}) {
         try {
             // Send the message to the given client
-            await apiG
-                .postToConnection({ConnectionId: id, Data: messageData})
-                .promise();
+            await apiG.postToConnection({ConnectionId: id, Data: messageData});
         } catch (e) {
+            console.log(e);
+
             if (e.statusCode === 410) {
                 // Remove stale connections
-                await dynamoDb.delete({TableName, Key: {id}}).promise();
+                await dynamoDb.delete({TableName, Key: {id}});
             }
         }
     };
