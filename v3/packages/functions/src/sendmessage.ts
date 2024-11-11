@@ -27,7 +27,7 @@ export async function main(event) {
             // Send the message to the given client
             await apiG.send(
                 new PostToConnectionCommand({
-                    ConnectionId: event.requestContext.connectionId,
+                    ConnectionId: id,
                     Data: messageData,
                 }));
         } catch (e) {
