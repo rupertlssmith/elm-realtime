@@ -31,9 +31,7 @@ export async function main(event) {
                     Data: messageData,
                 }));
         } catch (e) {
-            //console.log(e);
-
-            if (e.statusCode === 410) {
+            if (e.$metadata.httpStatusCode === 410) {
                 // Remove stale connections
                 await dynamoDb.delete({TableName, Key: {id}});
             }
