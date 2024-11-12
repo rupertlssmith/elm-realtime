@@ -1,5 +1,6 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
+
 export default $config({
     app(input) {
         return {
@@ -11,6 +12,8 @@ export default $config({
         };
     },
     async run() {
+        const momentoApiKey = new sst.Secret("MomentoApiKey");
+
         const table = new sst.aws.Dynamo("Connections", {
             fields: {
                 id: "string",
@@ -33,7 +36,7 @@ export default $config({
         api.route("$default", "packages/functions/src/default.main");
         api.route("sendMessage", {
             handler: "packages/functions/src/sendmessage.main",
-            link: [table, api],
+            link: [table, api, momentoApiKey],
             //dev: false
         });
 

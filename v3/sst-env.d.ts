@@ -14,6 +14,10 @@ declare module "sst" {
       "name": string
       "type": "sst.aws.Dynamo"
     }
+    "MomentoApiKey": {
+      "type": "sst.sst.Secret"
+      "value": string
+    }
     "api": {
       "managementEndpoint": string
       "type": "sst.aws.ApiGatewayWebSocket"

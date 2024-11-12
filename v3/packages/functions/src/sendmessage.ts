@@ -6,6 +6,8 @@ import {
     PostToConnectionCommand,
 } from "@aws-sdk/client-apigatewaymanagementapi";
 
+import {TopicClient, TopicConfigurations, CredentialProvider} from '@gomomento/sdk';
+
 const TableName = Resource.Connections.name;
 const dynamoDb = DynamoDBDocument.from(new DynamoDB());
 
@@ -13,6 +15,14 @@ export async function main(event) {
     console.log("sendmessage invoked");
     const messageData = JSON.parse(event.body).data;
     //const {stage, domainName} = event.requestContext;
+
+    const momentoApiKey = JSON.parse(Resource.MomentoApiKey.value);
+    console.log(momentoApiKey);
+
+    const cacheClient = new TopicClient({
+        configuration: TopicConfigurations.Default.latest(),
+        credentialProvider: CredentialProvider.fromString({apiKey: momentoApiKey.apiKey}),
+    });
 
     // Get all the connections
     const connections = await dynamoDb
