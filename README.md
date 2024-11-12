@@ -74,3 +74,11 @@ Replace the URL with whatever URL the ApiEndpoint comes out as on the console on
 ### To build it without deploying it
 
     npx sst build
+
+# Setting up third party services
+
+Momento is being used for low-latency pubsub topics. Using the Momento console, create an API key. For now,
+create an API key that can acccess all topics and caches. Download this key into a JSON file. The key must be
+set as an sst secret.
+
+    npx sst secret set MomentoApiKey < ./momento_key.json
