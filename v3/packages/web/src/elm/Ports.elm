@@ -1,15 +1,15 @@
 port module Ports exposing
-    ( onPointerCancel
+    ( mmClose
+    , mmOnClose
+    , mmOnError
+    , mmOnMessage
+    , mmOnOpen
+    , mmOpen
+    , mmSend
+    , onPointerCancel
     , onPointerDown
     , onPointerMove
     , onPointerUp
-    , wsClose
-    , wsOnClose
-    , wsOnError
-    , wsOnMessage
-    , wsOnOpen
-    , wsOpen
-    , wsSend
     )
 
 import Json.Encode exposing (Value)
@@ -54,3 +54,28 @@ port wsOnMessage : ({ id : String, payload : String } -> msg) -> Sub msg
 
 
 port wsOnError : ({ id : String, error : Value } -> msg) -> Sub msg
+
+
+
+-- Momento API
+
+
+port mmOpen : { id : String, cache : String, topic : String, apiKey : String } -> Cmd msg
+
+
+port mmSend : { id : String, payload : String } -> Cmd msg
+
+
+port mmClose : String -> Cmd msg
+
+
+port mmOnOpen : (String -> msg) -> Sub msg
+
+
+port mmOnClose : (String -> msg) -> Sub msg
+
+
+port mmOnMessage : ({ id : String, payload : String } -> msg) -> Sub msg
+
+
+port mmOnError : ({ id : String, error : Value } -> msg) -> Sub msg

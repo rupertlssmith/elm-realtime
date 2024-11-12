@@ -13,6 +13,8 @@ export default $config({
     },
     async run() {
         const momentoApiKey = new sst.Secret("MomentoApiKey");
+        console.log("momentoApiKey");
+        console.log(momentoApiKey.value);
 
         const table = new sst.aws.Dynamo("Connections", {
             fields: {
@@ -61,6 +63,7 @@ export default $config({
             },
             environment: {
                 CHAT_API_URL: api.url,
+                MOMENTO_API_KEY:  momentoApiKey.value
             },
         });
 

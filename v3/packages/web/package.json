@@ -56,6 +56,7 @@
         "tabWidth": 4
     },
     "dependencies": {
+        "@gomomento/sdk-web": "^1.100.0",
         "@the-sett/elm-browser-info": "^1.0.1",
         "process": "^0.11.10"
     }

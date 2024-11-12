@@ -3,15 +3,15 @@ module App.Component exposing (..)
 import Html.Styled as Html exposing (Html)
 import Http
 import Json.Encode as Encode
+import Momento exposing (Error, OpenParams)
 import Random
 import Update2 as U2
-import Websockets exposing (Error)
 
 
 type alias Component a =
     { a
         | location : String
-        , chatApiUrl : String
+        , momentoApiKey : String
         , app : Model
     }
 
@@ -60,7 +60,7 @@ type alias Protocol submodel msg model =
     , onUpdate : ( submodel, Cmd msg ) -> ( model, Cmd msg )
 
     -- Websocket interface.
-    , wsOpen : String -> String -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
+    , wsOpen : String -> OpenParams -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
     , wsSend : String -> String -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
     }
 
@@ -89,7 +89,11 @@ update protocol msg component =
                 |> U2.andMap (switchState ModelRandomized)
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.wsOpen "socket" component.chatApiUrl
+                |> protocol.wsOpen "socket"
+                    { apiKey = component.momentoApiKey
+                    , cache = "TestCache"
+                    , topic = "TestTopic"
+                    }
 
         _ ->
             U2.pure component
@@ -118,7 +122,7 @@ wsOpened protocol id component =
     in
     case model of
         ModelRandomized state ->
-            { log = "Connected" :: state.log
+            { log = ("Sent: " ++ payload) :: "Connected" :: state.log
             , seed = state.seed
             , socketHandle = id
             }

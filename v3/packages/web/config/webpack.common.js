@@ -23,7 +23,9 @@ module.exports = (withDebug) => {
                 template: path.resolve(__dirname, "../src/index.html")
             }),
             new CleanWebpackPlugin(),
-            new webpack.EnvironmentPlugin(['CHAT_API_URL'])
+            new webpack.EnvironmentPlugin([
+                'CHAT_API_URL',
+                'MOMENTO_API_KEY'])
         ],
         optimization: {
             // Prevents compilation errors causing the hot loader to lose state

@@ -7,21 +7,24 @@ import Css.Global
 import Html
 import Html.Styled as HS exposing (Html)
 import Html.Styled.Attributes as HA
+import Json.Decode as Decode
+import Momento exposing (Error, OpenParams)
 import Navigation exposing (Route)
 import Ports
 import Top.Style
 import Update2 as U2
-import Websockets exposing (Error)
 
 
 type alias Model =
     { -- Flags
       location : String
-    , chatApiUrl : String
+
+    --, chatApiUrl : String
+    , momentoApiKey : String
 
     -- Elm modules
     , app : App.Model
-    , websockets : Websockets.Model
+    , websockets : Momento.Model
 
     -- Routing state
     , route : Maybe Route
@@ -33,13 +36,13 @@ type alias Model =
 type Msg
     = UrlChanged (Maybe Route)
     | PushUrl Route
-    | WebsocketsMsg Websockets.Msg
+    | MomentoMsg Momento.Msg
     | AppMsg App.Msg
 
 
 type alias Flags =
     { location : String
-    , chatApiUrl : String
+    , momentoApiKey : String
     }
 
 
@@ -60,10 +63,12 @@ init flags =
             App.init appProtocol.toMsg
 
         ( socketsMdl, socketsCmds ) =
-            Websockets.init WebsocketsMsg websocketsPorts
+            Momento.init MomentoMsg momentoPorts
     in
     ( { location = flags.location
-      , chatApiUrl = flags.chatApiUrl
+      , momentoApiKey =
+            Decode.decodeString (Decode.field "apiKey" Decode.string) flags.momentoApiKey
+                |> Result.withDefault ""
       , app = appMdl
       , websockets = socketsMdl
       , route = Nothing
@@ -76,21 +81,21 @@ init flags =
     )
 
 
-websocketsPorts : Websockets.Ports
-websocketsPorts =
-    { open = Ports.wsOpen
-    , send = Ports.wsSend
-    , close = Ports.wsClose
-    , onOpen = Ports.wsOnOpen
-    , onMessage = Ports.wsOnMessage
-    , onError = Ports.wsOnError
+momentoPorts : Momento.Ports
+momentoPorts =
+    { open = Ports.mmOpen
+    , send = Ports.mmSend
+    , close = Ports.mmClose
+    , onOpen = Ports.mmOnOpen
+    , onMessage = Ports.mmOnMessage
+    , onError = Ports.mmOnError
     }
 
 
-websocketsProtocol : Model -> Websockets.Protocol Websockets.Model Msg Model
-websocketsProtocol model =
-    { toMsg = WebsocketsMsg
-    , ports = websocketsPorts
+momentoProtocol : Model -> Momento.Protocol Momento.Model Msg Model
+momentoProtocol model =
+    { toMsg = MomentoMsg
+    , ports = momentoPorts
     , onUpdate = \( wsMdl, cmds ) -> ( { model | websockets = wsMdl }, cmds )
     , onOpen = \id -> wsOpened id model
     , onMessage = \id payload -> wsMessage id payload model
@@ -111,7 +116,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Navigation.onUrlChange (Navigation.locationHrefToRoute >> UrlChanged)
-        , Websockets.subscriptions (websocketsProtocol model) model.websockets
+        , Momento.subscriptions (momentoProtocol model) model.websockets
         ]
 
 
@@ -130,8 +135,8 @@ update msg model =
         PushUrl val ->
             ( model, Navigation.routeToString val |> Navigation.pushUrl )
 
-        WebsocketsMsg innerMsg ->
-            Websockets.update (websocketsProtocol model)
+        MomentoMsg innerMsg ->
+            Momento.update (momentoProtocol model)
                 innerMsg
                 model.websockets
 
@@ -141,35 +146,35 @@ update msg model =
                 model
 
 
-wsOpened : String -> Model -> ( Websockets.Model, Cmd Msg ) -> ( Model, Cmd Msg )
+wsOpened : String -> Model -> ( Momento.Model, Cmd Msg ) -> ( Model, Cmd Msg )
 wsOpened id model =
     \( wsMdl, cmds ) ->
         ( { model | websockets = wsMdl }, cmds )
             |> U2.andThen (App.wsOpened appProtocol id)
 
 
-wsMessage : String -> String -> Model -> ( Websockets.Model, Cmd Msg ) -> ( Model, Cmd Msg )
+wsMessage : String -> String -> Model -> ( Momento.Model, Cmd Msg ) -> ( Model, Cmd Msg )
 wsMessage id payload model =
     \( wsMdl, cmds ) ->
         ( { model | websockets = wsMdl }, cmds )
             |> U2.andThen (App.wsMessage appProtocol id payload)
 
 
-wsError : String -> Error -> Model -> ( Websockets.Model, Cmd Msg ) -> ( Model, Cmd Msg )
+wsError : String -> Error -> Model -> ( Momento.Model, Cmd Msg ) -> ( Model, Cmd Msg )
 wsError id payload model =
     \( wsMdl, cmds ) ->
         ( { model | websockets = wsMdl }, cmds )
             |> U2.andThen (App.wsError appProtocol id payload)
 
 
-wsOpen : String -> String -> Model -> ( Model, Cmd Msg )
-wsOpen id url model =
-    Websockets.open (websocketsProtocol model) id url model.websockets
+wsOpen : String -> OpenParams -> Model -> ( Model, Cmd Msg )
+wsOpen id params model =
+    Momento.open (momentoProtocol model) id params model.websockets
 
 
 wsSend : String -> String -> Model -> ( Model, Cmd Msg )
 wsSend id payload model =
-    Websockets.send (websocketsProtocol model) id payload model.websockets
+    Momento.send (momentoProtocol model) id payload model.websockets
 
 
 view : Model -> Html.Html Msg
