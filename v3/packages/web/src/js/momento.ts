@@ -1,4 +1,4 @@
-const {
+import {
     CacheClient,
     CreateCacheResponse,
     CredentialProvider,
@@ -8,13 +8,13 @@ const {
     TopicPublishResponse,
     TopicSubscribe,
     TopicSubscribeResponse,
-} = require('@gomomento/sdk-web');
+} from "@gomomento/sdk-web";
 
-class MomentoPorts {
-    sockets = {};
+export class MomentoPorts {
+    sockets: { [id: string] : any; } = {};
     app;
 
-    constructor(app) {
+    constructor(app: any) {
         console.log("Momento.constructor");
         this.app = app;
 
@@ -36,7 +36,7 @@ class MomentoPorts {
         }
     }
 
-    async open(args) {
+    async open(args : any) {
         console.log("Momento.open");
         console.log(args);
 
@@ -102,7 +102,7 @@ class MomentoPorts {
         }
     }
 
-    send(args) {
+    send(args : any) {
         console.log("Momento.send");
         console.log(args);
 
@@ -113,7 +113,7 @@ class MomentoPorts {
         }
     }
 
-    onMessage(id, payload) {
+    onMessage(id : string, payload : any) {
         console.log("Momento.onMessage");
         console.log(payload);
 
@@ -126,7 +126,7 @@ class MomentoPorts {
         }
     }
 
-    close(id) {
+    close(id : string) {
         console.log("Momento.close");
         console.log(id);
 
@@ -134,10 +134,8 @@ class MomentoPorts {
 
         if (socket) {
             socket.close();
-            delete sockets[id];
+            delete this.sockets[id];
         }
     }
 }
 
-module
-    .exports = MomentoPorts;

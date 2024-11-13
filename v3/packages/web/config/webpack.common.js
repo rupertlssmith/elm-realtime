@@ -9,6 +9,7 @@ module.exports = (withDebug) => {
             index: path.resolve(__dirname, "../src/js/index.js")
         },
         resolve: {
+            extensions: ['.tsx', '.ts', '.js'],
             fallback: {
                 process: require.resolve("process/browser")
             }
@@ -33,6 +34,11 @@ module.exports = (withDebug) => {
         },
         module: {
             rules: [
+                {
+                    test: /\.tsx?$/,
+                    use: 'ts-loader',
+                    exclude: /node_modules/,
+                },
                 {
                     test: /\.elm$/,
                     use: [
