@@ -1,16 +1,27 @@
 port module Ports exposing
-    ( mmClose
-    , mmOnClose
-    , mmOnError
-    , mmOnMessage
-    , mmOnOpen
-    , mmOpen
-    , mmSend
-    , onPointerCancel
-    , onPointerDown
-    , onPointerMove
-    , onPointerUp
+    ( onPointerCancel, onPointerDown, onPointerMove, onPointerUp
+    , wsOpen, wsSend, wsClose, wsOnOpen, wsOnClose, wsOnMessage, wsOnError
+    , mmClose, mmOnClose, mmOnError, mmOnMessage, mmOnOpen, mmOpen, mmPushList, mmSend
     )
+
+{-| Application ports
+
+
+# Pointer
+
+@docs onPointerCancel, onPointerDown, onPointerMove, onPointerUp
+
+
+# Raw Websockets
+
+@docs wsOpen, wsSend, wsClose, wsOnOpen, wsOnClose, wsOnMessage, wsOnError
+
+
+# Momento Cache
+
+@docs mmClose, mmOnClose, mmOnError, mmOnMessage, mmOnOpen, mmOpen, mmPushList, mmSend
+
+-}
 
 import Json.Encode exposing (Value)
 
@@ -63,19 +74,22 @@ port wsOnError : ({ id : String, error : Value } -> msg) -> Sub msg
 port mmOpen : { id : String, cache : String, topic : String, apiKey : String } -> Cmd msg
 
 
-port mmSend : { id : String, payload : String } -> Cmd msg
+port mmOnOpen : (String -> msg) -> Sub msg
 
 
 port mmClose : String -> Cmd msg
 
 
-port mmOnOpen : (String -> msg) -> Sub msg
-
-
 port mmOnClose : (String -> msg) -> Sub msg
 
 
+port mmSend : { id : String, payload : String } -> Cmd msg
+
+
 port mmOnMessage : ({ id : String, payload : String } -> msg) -> Sub msg
+
+
+port mmPushList : { id : String, list : String, payload : String } -> Cmd msg
 
 
 port mmOnError : ({ id : String, error : Value } -> msg) -> Sub msg
