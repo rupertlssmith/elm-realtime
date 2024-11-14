@@ -5,7 +5,9 @@ import {
     CredentialProvider,
     TopicClient,
     TopicSubscribeResponse,
+    TopicPublishResponse,
 } from "@gomomento/sdk-web";
+import * as ports from "./ports" ;
 
 type Session = {
     apiKey: string;
@@ -59,25 +61,23 @@ export class MomentoPorts {
         this.close = this.close.bind(this);
         this.pushList = this.pushList.bind(this);
 
-        if (app.ports.mmOpen) {
-            app.ports.mmOpen.subscribe(this.open);
-        }
+        ports.checkPortsExist(app, [
+            "mmOpen",
+            "mmClose",
+            "mmSubscribe",
+            "mmSend",
+            "mmPushList",
+            "mmOnOpen",
+            "mmOnSubscribe",
+            "mmOnMessage",
+            "mmOnError"
+        ]);
 
-        if (app.ports.mmClose) {
-            app.ports.mmClose.subscribe(this.close);
-        }
-
-        if (app.ports.mmSubscribe) {
-            app.ports.mmSubscribe.subscribe(this.subscribe);
-        }
-
-        if (app.ports.mmSend) {
-            app.ports.mmSend.subscribe(this.send);
-        }
-
-        if (app.ports.mmPushList) {
-            app.ports.mmPushList.subscribe(this.pushList);
-        }
+        app.ports.mmOpen.subscribe(this.open);
+        app.ports.mmClose.subscribe(this.close);
+        app.ports.mmSubscribe.subscribe(this.subscribe);
+        app.ports.mmSend.subscribe(this.send);
+        app.ports.mmPushList.subscribe(this.pushList);
     }
 
     // === Cache session lifecycle.
@@ -104,12 +104,10 @@ export class MomentoPorts {
             case CreateCacheResponse.Error:
                 console.log("Momento.open.onError");
 
-                if (this.app.ports.mmOnError) {
-                    this.app.ports.mmOnError.send({
-                        id: args.id,
-                        error: createCacheResponse.innerException()
-                    });
-                }
+                this.app.ports.mmOnError.send({
+                    id: args.id,
+                    error: createCacheResponse.innerException()
+                });
         }
 
         // Set up the topic client.
@@ -127,10 +125,8 @@ export class MomentoPorts {
             topicClient: topicClient
         };
 
-        if (this.app.ports.mmOnOpen) {
-            console.log("Momento.open: Sent to port.");
-            this.app.ports.mmOnOpen.send(args.id);
-        }
+        console.log("Momento.open: Sent to port.");
+        this.app.ports.mmOnOpen.send(args.id);
     }
 
     close(id: string) {
@@ -170,13 +166,11 @@ export class MomentoPorts {
                 case TopicSubscribeResponse.Error:
             }
 
-            if (this.app.ports.mmOnSubscribe) {
-                console.log("Momento.mmOnSubscribe: Sent to port.");
-                this.app.ports.mmOnSubscribe.send({
-                    id: args.id,
-                    topic: args.topic
-                });
-            }
+            console.log("Momento.mmOnSubscribe: Sent to port.");
+            this.app.ports.mmOnSubscribe.send({
+                id: args.id,
+                topic: args.topic
+            });
         }
     }
 
@@ -188,6 +182,15 @@ export class MomentoPorts {
 
         if (session) {
             const publishResponse = await session.topicClient.publish(session.cache, args.topic, args.payload);
+
+            switch (publishResponse.type) {
+                case TopicPublishResponse.Success:
+                    console.log('Value published successfully!');
+                    break;
+                case TopicPublishResponse.Error:
+                    console.log(`Error publishing value: ${publishResponse.toString()}`);
+                    break;
+            }
         }
     }
 
@@ -195,13 +198,11 @@ export class MomentoPorts {
         console.log("Momento.onMessage");
         console.log(payload);
 
-        if (this.app.ports.mmOnMessage) {
-            console.log(payload);
-            this.app.ports.mmOnMessage.send({
-                id: id,
-                payload: payload
-            });
-        }
+        console.log(payload);
+        this.app.ports.mmOnMessage.send({
+            id: id,
+            payload: payload
+        });
     }
 
     // === Lists
@@ -218,12 +219,10 @@ export class MomentoPorts {
                 case CacheListPushBackResponse.Error:
                     console.log("Momento.pusList.Error");
 
-                    if (this.app.ports.mmOnError) {
-                        this.app.ports.mmOnError.send({
-                            id: args.id,
-                            error: pushResponse.innerException()
-                        });
-                    }
+                    this.app.ports.mmOnError.send({
+                        id: args.id,
+                        error: pushResponse.innerException()
+                    });
             }
         }
     }
