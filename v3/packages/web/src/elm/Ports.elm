@@ -1,7 +1,8 @@
 port module Ports exposing
     ( onPointerCancel, onPointerDown, onPointerMove, onPointerUp
     , wsOpen, wsSend, wsClose, wsOnOpen, wsOnClose, wsOnMessage, wsOnError
-    , mmClose, mmOnClose, mmOnError, mmOnMessage, mmOnOpen, mmOpen, mmPushList, mmSend
+    , mmClose, mmOnClose, mmOnError, mmOnMessage, mmOnOpen, mmOpen, mmPushList
+    , mmSend, mmOnSubscribe, mmSubscribe
     )
 
 {-| Application ports
@@ -19,7 +20,8 @@ port module Ports exposing
 
 # Momento Cache
 
-@docs mmClose, mmOnClose, mmOnError, mmOnMessage, mmOnOpen, mmOpen, mmPushList, mmSend
+@docs mmClose, mmOnClose, mmOnError, mmOnMessage, mmOnOpen, mmOpen, mmPushList
+@docs mmSend, mmOnSubscribe, mmSubscribe
 
 -}
 
@@ -71,7 +73,7 @@ port wsOnError : ({ id : String, error : Value } -> msg) -> Sub msg
 -- Momento API
 
 
-port mmOpen : { id : String, cache : String, topic : String, apiKey : String } -> Cmd msg
+port mmOpen : { id : String, cache : String, apiKey : String } -> Cmd msg
 
 
 port mmOnOpen : (String -> msg) -> Sub msg
@@ -83,7 +85,13 @@ port mmClose : String -> Cmd msg
 port mmOnClose : (String -> msg) -> Sub msg
 
 
-port mmSend : { id : String, payload : String } -> Cmd msg
+port mmSubscribe : { id : String, topic : String } -> Cmd msg
+
+
+port mmOnSubscribe : ({ id : String, topic : String } -> msg) -> Sub msg
+
+
+port mmSend : { id : String, topic : String, payload : String } -> Cmd msg
 
 
 port mmOnMessage : ({ id : String, payload : String } -> msg) -> Sub msg

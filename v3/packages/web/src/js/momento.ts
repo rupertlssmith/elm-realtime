@@ -8,8 +8,8 @@ import {
 } from "@gomomento/sdk-web";
 
 type Session = {
+    apiKey: string;
     cache: string;
-    topic: string;
     cacheClient: CacheClient;
     topicClient: TopicClient
 }
@@ -19,6 +19,11 @@ type OpenArgs = {
     apiKey: string;
     cache: string;
     topic: string
+}
+
+type SubscribeArgs = {
+    id: string;
+    topic: string;
 }
 
 type SendArgs = {
@@ -31,6 +36,8 @@ type Ports = {
     mmOpen: { subscribe: any };
     mmOnOpen: { send: any };
     mmClose: { subscribe: any };
+    mmSubscribe: { subscribe: any };
+    mmOnSubscribe: { send: any };
     mmSend: { subscribe: any };
     mmOnMessage: { send: any };
     mmPushList: { subscribe: any };
@@ -47,6 +54,7 @@ export class MomentoPorts {
 
         this.onMessage = this.onMessage.bind(this);
         this.open = this.open.bind(this);
+        this.subscribe = this.subscribe.bind(this);
         this.send = this.send.bind(this);
         this.close = this.close.bind(this);
         this.pushList = this.pushList.bind(this);
@@ -57,6 +65,10 @@ export class MomentoPorts {
 
         if (app.ports.mmClose) {
             app.ports.mmClose.subscribe(this.close);
+        }
+
+        if (app.ports.mmSubscribe) {
+            app.ports.mmSubscribe.subscribe(this.subscribe);
         }
 
         if (app.ports.mmSend) {
@@ -100,36 +112,17 @@ export class MomentoPorts {
                 }
         }
 
-        // Set up the topic.
+        // Set up the topic client.
         const topicClient = new TopicClient({
             credentialProvider: CredentialProvider.fromString({apiKey: args.apiKey}),
         });
 
         console.log("topClient created");
 
-        const topicSubscribeResponse = await topicClient.subscribe(args.cache, args.topic, {
-            onError: () => {
-                return;
-            },
-            onItem: (item) => {
-                console.log(`Received an item on subscription for '${args.topic}': ${item.value().toString()}`);
-                this.onMessage(args.id, JSON.stringify(item));
-
-                return;
-            },
-        });
-
-        switch (topicSubscribeResponse.type) {
-            case TopicSubscribeResponse.Subscription:
-                console.log(`Successfully subscribed to topic '${args.topic}'`);
-                break;
-            case TopicSubscribeResponse.Error:
-        }
-
         // Keep hold of a reference to the topic client and let the application know it is open.
         this.sessions[args.id] = {
+            apiKey: args.apiKey,
             cache: args.cache,
-            topic: args.topic,
             cacheClient: cacheClient,
             topicClient: topicClient
         };
@@ -153,6 +146,40 @@ export class MomentoPorts {
     }
 
     // === Topics
+    async subscribe(args: SubscribeArgs) {
+        const session = this.sessions[args.id];
+
+        if (session) {
+            // Set up the topic.
+            const topicSubscribeResponse = await session.topicClient.subscribe(session.cache, args.topic, {
+                onError: () => {
+                    return;
+                },
+                onItem: (item) => {
+                    console.log(`Received an item on subscription for '${args.topic}': ${item.value().toString()}`);
+                    this.onMessage(args.id, JSON.stringify(item));
+
+                    return;
+                },
+            });
+
+            switch (topicSubscribeResponse.type) {
+                case TopicSubscribeResponse.Subscription:
+                    console.log(`Successfully subscribed to topic '${args.topic}'`);
+                    break;
+                case TopicSubscribeResponse.Error:
+            }
+
+            if (this.app.ports.mmOnSubscribe) {
+                console.log("Momento.mmOnSubscribe: Sent to port.");
+                this.app.ports.mmOnSubscribe.send({
+                    id: args.id,
+                    topic: args.topic
+                });
+            }
+        }
+    }
+
     async send(args: SendArgs) {
         console.log("Momento.send");
         console.log(args);
@@ -160,7 +187,7 @@ export class MomentoPorts {
         const session = this.sessions[args.id];
 
         if (session) {
-            const publishResponse = await session.topicClient.publish(session.cache, session.topic, args.payload);
+            const publishResponse = await session.topicClient.publish(session.cache, args.topic, args.payload);
         }
     }
 

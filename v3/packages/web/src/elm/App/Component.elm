@@ -1,9 +1,20 @@
-module App.Component exposing (..)
+module App.Component exposing
+    ( Model
+    , Msg
+    , Protocol
+    , init
+    , mmError
+    , mmMessage
+    , mmOpened
+    , mmSubscribed
+    , update
+    , view
+    )
 
 import Html.Styled as Html exposing (Html)
 import Http
 import Json.Encode as Encode
-import Momento exposing (Error, OpenParams)
+import Momento exposing (Error, Op, OpenParams, SubscribeParams)
 import Random
 import Update2 as U2
 
@@ -29,20 +40,33 @@ type Model
     = ModelStart StartState
     | ModelRandomized RandomizedState
     | ModelConnected ConnectedState
+    | ModelRunning RunningState
 
 
 type alias StartState =
-    { log : List String }
+    { log : List String
+    , realtimeChannel : String
+    }
 
 
 type alias RandomizedState =
     { log : List String
+    , realtimeChannel : String
     , seed : Random.Seed
     }
 
 
 type alias ConnectedState =
     { log : List String
+    , realtimeChannel : String
+    , socketHandle : String
+    , seed : Random.Seed
+    }
+
+
+type alias RunningState =
+    { log : List String
+    , realtimeChannel : String
     , socketHandle : String
     , seed : Random.Seed
     }
@@ -59,15 +83,18 @@ type alias Protocol submodel msg model =
     { toMsg : Msg -> msg
     , onUpdate : ( submodel, Cmd msg ) -> ( model, Cmd msg )
 
-    -- Websocket interface.
-    , wsOpen : String -> OpenParams -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
-    , wsSend : String -> String -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
+    -- Momento interface.
+    , mmOpen : String -> OpenParams -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
+    , mmSubscribe : String -> SubscribeParams -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
+    , mmOps : String -> List Op -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
     }
 
 
-init : (Msg -> msg) -> ( Model, Cmd msg )
-init toMsg =
-    { log = [ "Started" ] }
+init : String -> (Msg -> msg) -> ( Model, Cmd msg )
+init realtimeChannel toMsg =
+    { log = [ "Started" ]
+    , realtimeChannel = realtimeChannel
+    }
         |> U2.pure
         |> U2.andMap randomize
         |> U2.andMap (switchState ModelStart)
@@ -83,16 +110,16 @@ update protocol msg component =
     case ( model, msg ) of
         ( ModelStart state, RandomSeed seed ) ->
             { log = "Randomized" :: state.log
+            , realtimeChannel = state.realtimeChannel
             , seed = seed
             }
                 |> U2.pure
                 |> U2.andMap (switchState ModelRandomized)
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.wsOpen "socket"
+                |> protocol.mmOpen "socket"
                     { apiKey = component.momentoApiKey
-                    , cache = "TestCache"
-                    , topic = "TestTopic"
+                    , cache = cacheName state
                     }
 
         _ ->
@@ -107,22 +134,16 @@ randomize model =
     )
 
 
-wsOpened : Protocol (Component a) msg model -> String -> Component a -> ( model, Cmd msg )
-wsOpened protocol id component =
+mmOpened : Protocol (Component a) msg model -> String -> Component a -> ( model, Cmd msg )
+mmOpened protocol id component =
     let
         model =
             component.app
-
-        payload =
-            [ ( "action", Encode.string "sendMessage" )
-            , ( "data", Encode.string "hello" )
-            ]
-                |> Encode.object
-                |> Encode.encode 2
     in
     case model of
         ModelRandomized state ->
-            { log = ("Sent: " ++ payload) :: "Connected" :: state.log
+            { log = "Connected" :: state.log
+            , realtimeChannel = state.realtimeChannel
             , seed = state.seed
             , socketHandle = id
             }
@@ -130,24 +151,76 @@ wsOpened protocol id component =
                 |> U2.andMap (switchState ModelConnected)
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.wsSend id payload
+                |> protocol.mmSubscribe id { topic = modelTopicName state }
 
         _ ->
             U2.pure component
                 |> protocol.onUpdate
 
 
-wsMessage : Protocol (Component a) msg model -> String -> String -> Component a -> ( model, Cmd msg )
-wsMessage protocol id payload component =
+mmSubscribed : Protocol (Component a) msg model -> String -> SubscribeParams -> Component a -> ( model, Cmd msg )
+mmSubscribed protocol id params component =
+    let
+        _ =
+            Debug.log "Component.mmSubscribed" "called"
+
+        model =
+            component.app
+
+        payload =
+            [ ( "id", Encode.string "123456" )
+            , ( "client", Encode.string "abcdef" )
+            , ( "seq", Encode.int 1 )
+            , ( "value", Encode.string "hello" )
+            ]
+                |> Encode.object
+                |> Encode.encode 2
+
+        notice =
+            [ ( "client", Encode.string "abcdef" )
+            , ( "seq", Encode.int 1 )
+            , ( "kind", Encode.string "Listed" )
+            ]
+                |> Encode.object
+                |> Encode.encode 2
+    in
+    case model of
+        ModelConnected state ->
+            { log =
+                ("PushList: " ++ payload)
+                    :: ("Publish: " ++ notice)
+                    :: ("Subscribed: " ++ params.topic)
+                    :: state.log
+            , realtimeChannel = state.realtimeChannel
+            , seed = state.seed
+            , socketHandle = id
+            }
+                |> U2.pure
+                |> U2.andMap (switchState ModelRunning)
+                |> Tuple.mapFirst (setModel component)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.mmOps id
+                    [ Momento.publish { topic = notifyTopicName state, payload = notice }
+                    , Momento.pushList { list = saveListName state, payload = payload }
+                    , Momento.publish { topic = modelTopicName state, payload = payload }
+                    ]
+
+        _ ->
+            U2.pure component
+                |> protocol.onUpdate
+
+
+mmMessage : Protocol (Component a) msg model -> String -> String -> Component a -> ( model, Cmd msg )
+mmMessage protocol id payload component =
     let
         model =
             component.app
     in
     case model of
-        ModelConnected state ->
+        ModelRunning state ->
             { state | log = ("Message: " ++ payload) :: state.log }
                 |> U2.pure
-                |> U2.andMap (switchState ModelConnected)
+                |> U2.andMap (switchState ModelRunning)
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
@@ -157,8 +230,8 @@ wsMessage protocol id payload component =
                 |> protocol.onUpdate
 
 
-wsError : Protocol (Component a) msg model -> String -> Error -> Component a -> ( model, Cmd msg )
-wsError protocol id error component =
+mmError : Protocol (Component a) msg model -> String -> Error -> Component a -> ( model, Cmd msg )
+mmError protocol id error component =
     component
         |> U2.pure
         |> protocol.onUpdate
@@ -176,6 +249,9 @@ view component =
         ModelConnected props ->
             logs props
 
+        ModelRunning props ->
+            logs props
+
 
 logs : { a | log : List String } -> Html msg
 logs model =
@@ -184,3 +260,23 @@ logs model =
         []
         model.log
         |> Html.pre []
+
+
+modelTopicName : { a | realtimeChannel : String } -> String
+modelTopicName state =
+    state.realtimeChannel ++ "-modeltopic"
+
+
+notifyTopicName : { a | realtimeChannel : String } -> String
+notifyTopicName state =
+    state.realtimeChannel ++ "-savetopic"
+
+
+cacheName : { a | realtimeChannel : String } -> String
+cacheName state =
+    state.realtimeChannel ++ "-cache"
+
+
+saveListName : { a | realtimeChannel : String } -> String
+saveListName state =
+    state.realtimeChannel ++ "-savelist"
