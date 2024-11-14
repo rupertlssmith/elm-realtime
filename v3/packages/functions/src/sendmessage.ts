@@ -47,32 +47,5 @@ export async function main(event) {
             break;
     }
 
-    // Get all the connections
-    // const connections = await dynamoDb
-    //     .scan({TableName, ProjectionExpression: "id"});
-    //
-    // const apiG = new ApiGatewayManagementApiClient({
-    //     endpoint: Resource.api.managementEndpoint,
-    // });
-    //
-    // const postToConnection = async function ({id}) {
-    //     try {
-    //         // Send the message to the given client
-    //         await apiG.send(
-    //             new PostToConnectionCommand({
-    //                 ConnectionId: id,
-    //                 Data: messageData,
-    //             }));
-    //     } catch (e) {
-    //         if (e.$metadata.httpStatusCode === 410) {
-    //             // Remove stale connections
-    //             await dynamoDb.delete({TableName, Key: {id}});
-    //         }
-    //     }
-    // };
-    //
-    // // Iterate through all the connections
-    // await Promise.all(connections.Items.map(postToConnection));
-
     return {statusCode: 200, body: "Message sent"};
 };
