@@ -218,7 +218,7 @@ mmMessage protocol id payload component =
     in
     case model of
         ModelRunning state ->
-            { state | log = ("Message: " ++ payload) :: state.log }
+            { state | log = ("Message: " ++ String.slice 0 90 payload ++ "...") :: state.log }
                 |> U2.pure
                 |> U2.andMap (switchState ModelRunning)
                 |> Tuple.mapFirst (setModel component)
