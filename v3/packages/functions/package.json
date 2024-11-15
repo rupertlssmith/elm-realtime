@@ -1,0 +1,29 @@
+{
+    "author": "Rupert Smith",
+    "name": "elm-realtime-functions",
+    "version": "4.0.0",
+    "description": "Elm 0.19 starter with Webpack 5 & Tailwind",
+    "main": "index.js",
+    "scripts": {
+        "analyse": "elm-analyse -s -p 3001 -o",
+        "build": "webpack",
+        "api": "elm-graphql http://127.0.0.1:4001/api/graphiql --base Api.EssifyAI --output src/elm-graphql --scalar-codecs Api.EssifyAI.CustomScalarCodecs",
+        "dev": "webpack serve --port 3000 --config config/webpack.dev.js --mode development",
+        "nodebug": "webpack serve --port 3000 --config config/webpack.dev.js --env nodebug",
+        "prod": "NODE_ENV=production webpack --config config/webpack.prod.js",
+        "start": "npm run dev",
+        "test": "elm-test"
+    },
+    "devDependencies": {
+    },
+    "engines": {
+        "node": ">=12"
+    },
+    "prettier": {
+        "tabWidth": 4
+    },
+    "dependencies": {
+        "@gomomento/sdk-web": "^1.100.0",
+        "@the-sett/serverless-elm-bridge": "^3.0.0"
+    }
+}

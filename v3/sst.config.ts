@@ -23,36 +23,14 @@ export default $config({
             primaryIndex: {hashKey: "id"},
         });
 
-        const api = new sst.aws.ApiGatewayWebSocket("api", {});
+        const api = new sst.aws.ApiGatewayV2("saveapi", {link: [momentoApiKey]});
 
-        api.route("$connect", {
-            handler: "packages/functions/src/connect.main",
-            link: [table],
-            //dev: false
-        });
-        api.route("$disconnect", {
-            handler: "packages/functions/src/disconnect.main",
-            link: [table],
-            //dev: false
-        });
-        api.route("$default", "packages/functions/src/default.main");
-        api.route("sendMessage", {
-            handler: "packages/functions/src/sendmessage.main",
-            link: [table, api, momentoApiKey],
-            //dev: false
-        });
-
-        // const httpApi = new sst.aws.ApiGatewayV2("MyApi");
-        // httpApi.route("GET /", {
-        //     handler: "packages/functions/src/connect.main",
-        //     //dev: false
-        // });
-
-        // const fun = new sst.aws.Function("MyFunction", {
-        //     handler: "packages/functions/src/connect.main",
-        //     link: [table],
-        //     url: true
-        // });
+        api.route("ANY /v1/{proxy+}",
+            {
+                handler: "packages/functions/src/api.main",
+                link: [momentoApiKey]
+            }
+        );
 
         // Deploy the Elm app
         const site = new sst.aws.StaticSite("ChatSite", {
@@ -63,7 +41,7 @@ export default $config({
             },
             environment: {
                 CHAT_API_URL: api.url,
-                MOMENTO_API_KEY:  momentoApiKey.value
+                MOMENTO_API_KEY: momentoApiKey.value
             },
         });
 

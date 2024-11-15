@@ -18,9 +18,8 @@ declare module "sst" {
       "type": "sst.sst.Secret"
       "value": string
     }
-    "api": {
-      "managementEndpoint": string
-      "type": "sst.aws.ApiGatewayWebSocket"
+    "saveapi": {
+      "type": "sst.aws.ApiGatewayV2"
       "url": string
     }
   }

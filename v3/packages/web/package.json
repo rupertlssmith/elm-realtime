@@ -1,6 +1,6 @@
 {
     "author": "Rupert Smith",
-    "name": "elm-webpack-starter",
+    "name": "elm-realtime-dev",
     "version": "4.0.0",
     "description": "Elm 0.19 starter with Webpack 5 & Tailwind",
     "main": "index.js",
