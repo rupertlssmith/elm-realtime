@@ -61,15 +61,12 @@ update protocol msg model =
     case msg of
         Request ( id, cb, rawRequest ) ->
             U2.pure model
-                |> U2.andMap (decodeRequestAndRoute id cb protocol rawRequest)
+                |> U2.andMap (checkAndForwardRoute protocol id cb rawRequest)
 
 
-
---decodeRequestAndRoute : Protocol Model msg model route -> Value -> Model -> ( Model, Cmd Msg )
-
-
-decodeRequestAndRoute id cb protocol rawRequest model =
-    case blarg rawRequest protocol.parseRoute of
+checkAndForwardRoute : Protocol Model msg model route -> String -> Value -> Value -> Model -> ( model, Cmd msg )
+checkAndForwardRoute protocol id cb rawRequest model =
+    case decodeRequestAndRoute rawRequest protocol.parseRoute of
         Ok ( req, route ) ->
             let
                 _ =
@@ -94,7 +91,8 @@ decodeRequestAndRoute id cb protocol rawRequest model =
                 |> protocol.onUpdate
 
 
-blarg rawRequest parseRoute =
+decodeRequestAndRoute : Value -> (Url -> Maybe route) -> Result String ( Request.Request, route )
+decodeRequestAndRoute rawRequest parseRoute =
     Decode.decodeValue Request.decoder rawRequest
         |> Result.mapError Decode.errorToString
         |> Result.andThen
@@ -113,6 +111,7 @@ blarg rawRequest parseRoute =
             )
 
 
+ok200 : String -> Value -> Model -> ( Model, Cmd msg )
 ok200 id cb model =
     let
         response =
@@ -123,6 +122,7 @@ ok200 id cb model =
     ( model, Ports.responsePort ( id, cb, response ) )
 
 
+err500 : String -> Value -> String -> Model -> ( Model, Cmd msg )
 err500 id cb err model =
     let
         response =
