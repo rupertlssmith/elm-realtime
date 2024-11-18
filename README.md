@@ -39,33 +39,32 @@ If you want to create an AWS account for example for IJI, run through the above 
 
 # Setting up for Development
 
+# Setting up third party services
+
+Momento is being used for low-latency pubsub topics. Using the Momento console, create an API key. For now,
+create an API key has full access, because it needs to be able to create a topic. Download this key into a
+JSON file. The key must be set as an sst secret.
+
+    npx sst secret set MomentoApiKey < ./momento_key.json
+
 ### To install all Node packages needed to build:
 
-    cd 00-vpc
-    npm ci
-    cd packages/web
     npm ci
 
-### To set up a Python virtual environment (you will need python installed already):
+### To run in dev mode:
 
-    cd 00-vpc
-    python3 -m venv venv
-    . ./venv/bin/activate
-    pip install -r packages/functions/requirements.txt
-
-### To run in dev mode
-
-    cd 00-vpc
     npx sst dev &
-    cd packages/web
-    npm start
+
+### To recompile the Elm code for the backend during dev:
+
+    cd packages/functions
+    elm make src/API.elm --output src/elm.js
 
 ### To check that the API is working:
 
 Replace the URL with whatever URL the ApiEndpoint comes out as on the console once dev mode has been started:
 
     curl -X POST https://de6pgy115l.execute-api.eu-west-2.amazonaws.com  -H 'Content-Type: application/json' -d '{"prompt":"What is so great about AI in less then 100 words."}'
-
 
 # Deploying to Production
 
@@ -75,10 +74,3 @@ Replace the URL with whatever URL the ApiEndpoint comes out as on the console on
 
     npx sst build
 
-# Setting up third party services
-
-Momento is being used for low-latency pubsub topics. Using the Momento console, create an API key. For now,
-create an API key has full access, because it needs to be able to create a topic. Download this key into a
-JSON file. The key must be set as an sst secret.
-
-    npx sst secret set MomentoApiKey < ./momento_key.json
