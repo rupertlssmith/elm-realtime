@@ -10,16 +10,6 @@ import Update2 as U2
 import Url exposing (Url)
 
 
-type alias Component a =
-    { a
-        | api : Model
-    }
-
-
-setModel m x =
-    { m | api = x }
-
-
 type Msg
     = Request ( String, Encode.Value, Encode.Value )
 
@@ -34,11 +24,18 @@ type alias Ports =
     }
 
 
+type alias ApiRoute route =
+    { route : route
+    , request : Request.Request
+    }
+
+
 type alias Protocol submodel msg model route =
     { toMsg : Msg -> msg
     , ports : Ports
     , parseRoute : Url -> Maybe route
     , onUpdate : ( submodel, Cmd msg ) -> ( model, Cmd msg )
+    , onApiRoute : ApiRoute route -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
     }
 
 
@@ -49,49 +46,42 @@ init toMsg =
         |> Tuple.mapSecond (Cmd.map toMsg)
 
 
-subscriptions : Protocol (Component a) msg model route -> Model -> Sub msg
+subscriptions : Protocol Model msg model route -> Model -> Sub msg
 subscriptions protocol model =
     protocol.ports.request Request
         |> Sub.map protocol.toMsg
 
 
-update : Protocol (Component a) msg model route -> Msg -> Component a -> ( model, Cmd msg )
-update protocol msg component =
+update : Protocol Model msg model route -> Msg -> Model -> ( model, Cmd msg )
+update protocol msg model =
     let
-        model =
-            component.api
-
         _ =
             Debug.log "update" "called"
     in
     case msg of
         Request ( id, cb, rawRequest ) ->
             U2.pure model
-                |> U2.andThen (decodeRequestAndRoute protocol rawRequest)
-                |> U2.andThen (ok id cb)
-                |> Tuple.mapFirst (setModel component)
+                |> U2.andMap (decodeRequestAndRoute id cb protocol rawRequest)
+
+
+
+--decodeRequestAndRoute : Protocol Model msg model route -> Value -> Model -> ( Model, Cmd Msg )
+
+
+decodeRequestAndRoute id cb protocol rawRequest model =
+    case blarg rawRequest protocol.parseRoute of
+        Ok ( req, route ) ->
+            let
+                _ =
+                    Debug.log "decodeRequestAndRoute" route
+            in
+            U2.pure model
+                |> U2.andThen (ok200 id cb)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.onUpdate
-
-
-decodeRequestAndRoute : Protocol (Component a) msg model route -> Value -> Model -> ( Model, Cmd Msg )
-decodeRequestAndRoute protocol rawRequest model =
-    case Decode.decodeValue Request.decoder rawRequest of
-        Ok req ->
-            case Request.url req |> Url.fromString |> Maybe.andThen protocol.parseRoute of
-                Just route ->
-                    let
-                        _ =
-                            Debug.log "decodeRequestAndRoute" route
-                    in
-                    U2.pure model
-
-                Nothing ->
-                    let
-                        _ =
-                            Debug.log "decodeRequestAndRoute" "no route matched"
-                    in
-                    U2.pure model
+                |> protocol.onApiRoute
+                    { route = route
+                    , request = req
+                    }
 
         Err err ->
             let
@@ -99,13 +89,46 @@ decodeRequestAndRoute protocol rawRequest model =
                     Debug.log "decodeRequestAndRoute" err
             in
             U2.pure model
+                |> U2.andThen (err500 id cb err)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
 
 
-ok id cb model =
+blarg rawRequest parseRoute =
+    Decode.decodeValue Request.decoder rawRequest
+        |> Result.mapError Decode.errorToString
+        |> Result.andThen
+            (\req ->
+                Request.url req
+                    |> Url.fromString
+                    |> Maybe.andThen parseRoute
+                    |> (\maybeRoute ->
+                            case maybeRoute of
+                                Nothing ->
+                                    Err "No matching route."
+
+                                Just route ->
+                                    Ok ( req, route )
+                       )
+            )
+
+
+ok200 id cb model =
     let
         response =
             Response.init
                 |> Response.setBody (Body.text "Hello from Elm, it works!")
+                |> Response.encode
+    in
+    ( model, Ports.responsePort ( id, cb, response ) )
+
+
+err500 id cb err model =
+    let
+        response =
+            Response.init
+                |> Response.setBody (Body.text err)
+                |> Response.setStatus 500
                 |> Response.encode
     in
     ( model, Ports.responsePort ( id, cb, response ) )

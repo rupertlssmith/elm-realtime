@@ -3,7 +3,8 @@ module API exposing (main)
 import EventLog.Component as EventLog
 import Momento exposing (Error, Op, OpenParams, SubscribeParams)
 import Ports
-import Server.API as Api
+import Server.API as Api exposing (ApiRoute)
+import Update2 as U2
 
 
 {-| API for managing realtime channels.
@@ -31,6 +32,7 @@ type alias Model =
     -- Elm modules
     , api : Api.Model
     , momento : Momento.Model
+    , eventLog : EventLog.Model
 
     -- Routing state
     -- Shared state
@@ -40,6 +42,7 @@ type alias Model =
 type Msg
     = MomentoMsg Momento.Msg
     | ApiMsg Api.Msg
+    | EventLogMsg EventLog.Msg
 
 
 type alias MomentoSecret =
@@ -66,21 +69,85 @@ main =
 init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
-        ( appMdl, appCmds ) =
-            Api.init apiProtocol.toMsg
+        ( apiMdl, apiCmds ) =
+            Api.init ApiMsg
 
-        ( socketsMdl, socketsCmds ) =
+        ( momentoMdl, momentoCmds ) =
             Momento.init MomentoMsg momentoPorts
+
+        ( eventLogMdl, eventLogCmds ) =
+            EventLog.init EventLogMsg
     in
     ( { momentoApiKey = flags.momentoSecret.apiKey
-      , api = appMdl
-      , momento = socketsMdl
+      , api = apiMdl
+      , momento = momentoMdl
+      , eventLog = eventLogMdl
       }
     , Cmd.batch
-        [ appCmds
-        , socketsCmds
+        [ apiCmds
+        , momentoCmds
+        , eventLogCmds
         ]
     )
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.batch
+        [ Api.subscriptions (apiProtocol model) model.api
+        , Momento.subscriptions (momentoProtocol model) model.momento
+        ]
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        MomentoMsg innerMsg ->
+            Momento.update (momentoProtocol model)
+                innerMsg
+                model.momento
+
+        ApiMsg innerMsg ->
+            Api.update (apiProtocol model)
+                innerMsg
+                model.api
+
+        EventLogMsg innerMsg ->
+            EventLog.update eventLogProtocol
+                innerMsg
+                model
+
+
+
+-- API Protocol
+
+
+apiPorts : Api.Ports
+apiPorts =
+    { request = Ports.requestPort
+    , response = Ports.responsePort
+    }
+
+
+apiProtocol : Model -> Api.Protocol Api.Model Msg Model EventLog.Route
+apiProtocol model =
+    { toMsg = ApiMsg
+    , ports = apiPorts
+    , parseRoute = EventLog.routeParser
+    , onUpdate = \( apiMdl, cmds ) -> ( { model | api = apiMdl }, cmds )
+    , onApiRoute = \route -> apiRoute route model
+    }
+
+
+apiRoute : ApiRoute EventLog.Route -> Model -> ( Api.Model, Cmd Msg ) -> ( Model, Cmd Msg )
+apiRoute route model =
+    \( apiMdl, cmds ) ->
+        ( { model | api = apiMdl }, cmds )
+            |> U2.andThen (EventLog.processRoute eventLogProtocol route)
+
+
+
+-- Momento Protocol
 
 
 momentoPorts : Momento.Ports
@@ -109,48 +176,6 @@ momentoProtocol model =
     }
 
 
-apiPorts : Api.Ports
-apiPorts =
-    { request = Ports.requestPort
-    , response = Ports.responsePort
-    }
-
-
-apiProtocol : Api.Protocol Model Msg Model EventLog.Route
-apiProtocol =
-    { toMsg = ApiMsg
-    , ports = apiPorts
-    , onUpdate = identity
-    , parseRoute = EventLog.routeParser
-
-    --, mmOpen = \id params -> U2.andThen (mmOpen id params)
-    --, mmSubscribe = \id params -> U2.andThen (mmSubscribe id params)
-    --, mmOps = \id ops -> U2.andThen (mmOps id ops)
-    }
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.batch
-        [ Api.subscriptions apiProtocol model.api
-        , Momento.subscriptions (momentoProtocol model) model.momento
-        ]
-
-
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    case msg of
-        MomentoMsg innerMsg ->
-            Momento.update (momentoProtocol model)
-                innerMsg
-                model.momento
-
-        ApiMsg innerMsg ->
-            Api.update apiProtocol
-                innerMsg
-                model
-
-
 mmOpened : String -> Model -> ( Momento.Model, Cmd Msg ) -> ( Model, Cmd Msg )
 mmOpened id model =
     \( wsMdl, cmds ) ->
@@ -173,6 +198,17 @@ mmError : String -> Error -> Model -> ( Momento.Model, Cmd Msg ) -> ( Model, Cmd
 mmError id payload model =
     \( wsMdl, cmds ) ->
         ( { model | momento = wsMdl }, cmds )
+
+
+
+-- EventLog Protocol
+
+
+eventLogProtocol : EventLog.Protocol Model Msg Model
+eventLogProtocol =
+    { toMsg = EventLogMsg
+    , onUpdate = identity
+    }
 
 
 mmOpen : String -> OpenParams -> Model -> ( Model, Cmd Msg )

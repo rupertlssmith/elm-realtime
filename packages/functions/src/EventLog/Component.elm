@@ -19,10 +19,25 @@ Channel save:
 
 -}
 
+import Server.API exposing (ApiRoute)
+import Serverless.Conn.Request as Request exposing (Method(..))
+import Update2 as U2
 import Url exposing (Url)
-import Url.Builder
 import Url.Parser as UP exposing ((</>), (<?>))
-import Url.Parser.Query as Query
+
+
+type alias Component a =
+    { a
+        | eventLog : Model
+    }
+
+
+setModel m x =
+    { m | eventLog = x }
+
+
+
+-- API Routing
 
 
 type Route
@@ -36,3 +51,43 @@ routeParser =
         ]
         |> UP.map (Debug.log "route")
         |> UP.parse
+
+
+processRoute : Protocol (Component a) msg model -> ApiRoute Route -> Component a -> ( Component a, Cmd msg )
+processRoute protocol route model =
+    case ( Request.method route.request, route.route ) |> Debug.log "processRoute" of
+        ( GET, V1 ) ->
+            U2.pure model
+
+        _ ->
+            U2.pure model
+
+
+
+-- Side Effects
+
+
+type alias Model =
+    {}
+
+
+type Msg
+    = Noop
+
+
+type alias Protocol submodel msg model =
+    { toMsg : Msg -> msg
+    , onUpdate : ( submodel, Cmd msg ) -> ( model, Cmd msg )
+    }
+
+
+init : (Msg -> msg) -> ( Model, Cmd msg )
+init toMsg =
+    {}
+        |> U2.pure
+        |> Tuple.mapSecond (Cmd.map toMsg)
+
+
+update : Protocol (Component a) msg model -> Msg -> Component a -> ( Component a, Cmd msg )
+update protocol msg model =
+    U2.pure model
