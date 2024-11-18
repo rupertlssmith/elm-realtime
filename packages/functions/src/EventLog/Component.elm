@@ -6,7 +6,7 @@ Channel creation:
 
     * Create the cache or confirm it already exists.
     * Create a webhook on the save topic.
-    * Create a dynamodb table for the persisted events.
+    * Create a dynamodb table for the persisted events or confirm it already exists.
     * Return a confirmation that everything has been set up.
 
 Channel save:
@@ -28,12 +28,26 @@ import Url.Parser as UP exposing ((</>), (<?>))
 
 type alias Component a =
     { a
-        | eventLog : Model
+        | momentoApiKey : String
+        , eventLog : Model
     }
 
 
 setModel m x =
     { m | eventLog = x }
+
+
+type alias Protocol submodel msg model =
+    { toMsg : Msg -> msg
+    , onUpdate : ( submodel, Cmd msg ) -> ( model, Cmd msg )
+    }
+
+
+init : (Msg -> msg) -> ( Model, Cmd msg )
+init toMsg =
+    {}
+        |> U2.pure
+        |> Tuple.mapSecond (Cmd.map toMsg)
 
 
 
@@ -73,19 +87,6 @@ type alias Model =
 
 type Msg
     = Noop
-
-
-type alias Protocol submodel msg model =
-    { toMsg : Msg -> msg
-    , onUpdate : ( submodel, Cmd msg ) -> ( model, Cmd msg )
-    }
-
-
-init : (Msg -> msg) -> ( Model, Cmd msg )
-init toMsg =
-    {}
-        |> U2.pure
-        |> Tuple.mapSecond (Cmd.map toMsg)
 
 
 update : Protocol (Component a) msg model -> Msg -> Component a -> ( Component a, Cmd msg )
