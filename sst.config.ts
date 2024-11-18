@@ -9,6 +9,12 @@ export default $config({
             name: "00-vpc",
             removal: input.stage === "production" ? "retain" : "remove",
             //profile: input.stage === "production" ? "thesett-prod" : "thesett-dev",
+            providers: {
+                aws: {
+                    profile: input.stage === "production" ? "thesett-prod" : "thesett-dev",
+                    region: "eu-west-2"
+                }
+            }
         };
     },
     async run() {

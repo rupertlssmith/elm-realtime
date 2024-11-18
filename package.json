@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "sso": "aws sso login --sso-session=thesett",
     "dev": "sst dev",
     "build": "sst build",
     "deploy": "sst deploy",

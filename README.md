@@ -45,7 +45,11 @@ Momento is being used for low-latency pubsub topics. Using the Momento console, 
 create an API key has full access, because it needs to be able to create a topic. Download this key into a
 JSON file. The key must be set as an sst secret.
 
-    npx sst secret set MomentoApiKey < ./momento_key.json
+    npx sst secret set MomentoApiKey < ./momento_secret.json
+
+Note, this must be done separately when deploying the other stages.
+
+    npx sst secret set --statge production MomentoApiKey < ./momento_secret.json
 
 ### To install all Node packages needed to build:
 
@@ -68,9 +72,4 @@ Replace the URL with whatever URL the ApiEndpoint comes out as on the console on
 
 # Deploying to Production
 
-    npx sst deploy --profile thesett-prod
-
-### To build it without deploying it
-
-    npx sst build
-
+    npx sst deploy --stage production
