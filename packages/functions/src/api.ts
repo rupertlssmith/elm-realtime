@@ -7,7 +7,7 @@ const momentoSecret = JSON.parse(Resource.MomentoApiKey.value);
 
 const app = Elm.API.init({
     flags: {
-        momentoApiKey: momentoSecret.apiKey
+        momentoSecret: momentoSecret
     },
 });
 

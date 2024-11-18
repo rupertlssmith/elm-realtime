@@ -1,9 +1,8 @@
-port module API exposing (main)
+module API exposing (main)
 
-import Json.Encode as Encode exposing (Value)
+import Momento exposing (Error, Op, OpenParams, SubscribeParams)
 import Ports
-import Serverless.Conn.Body as Body
-import Serverless.Conn.Response as Response
+import Server.API as Api
 
 
 {-| API for managing realtime channels.
@@ -24,20 +23,37 @@ Channel save:
     * Publish the saved event to the model topic.
 
 -}
-type Msg
-    = Request ( String, Encode.Value, Encode.Value )
+type alias Model =
+    { -- Flags
+      momentoApiKey : String
 
+    -- Elm modules
+    , api : Api.Model
+    , momento : Momento.Model
 
-type alias Config =
-    { momentoApiKey : String
+    -- Routing state
+    -- Shared state
     }
 
 
-type alias Model =
-    { momentoApiKey : String }
+type Msg
+    = MomentoMsg Momento.Msg
+    | ApiMsg Api.Msg
 
 
-main : Platform.Program Config Model Msg
+type alias MomentoSecret =
+    { apiKey : String
+    , refreshToken : String
+    , restEndpoint : String
+    }
+
+
+type alias Flags =
+    { momentoSecret : MomentoSecret
+    }
+
+
+main : Program Flags Model Msg
 main =
     Platform.worker
         { init = init
@@ -46,30 +62,127 @@ main =
         }
 
 
-init : Config -> ( Model, Cmd Msg )
+init : Flags -> ( Model, Cmd Msg )
 init flags =
-    ( { momentoApiKey = flags.momentoApiKey }
-    , Cmd.none
+    let
+        ( appMdl, appCmds ) =
+            Api.init apiProtocol.toMsg
+
+        ( socketsMdl, socketsCmds ) =
+            Momento.init MomentoMsg momentoPorts
+    in
+    ( { momentoApiKey = flags.momentoSecret.apiKey
+      , api = appMdl
+      , momento = socketsMdl
+      }
+    , Cmd.batch
+        [ appCmds
+        , socketsCmds
+        ]
     )
+
+
+momentoPorts : Momento.Ports
+momentoPorts =
+    { open = Ports.mmOpen
+    , onOpen = Ports.mmOnOpen
+    , close = Ports.mmClose
+    , subscribe = Ports.mmSubscribe
+    , onSunscribe = Ports.mmOnSubscribe
+    , publish = Ports.mmSend
+    , onMessage = Ports.mmOnMessage
+    , pushList = Ports.mmPushList
+    , onError = Ports.mmOnError
+    }
+
+
+momentoProtocol : Model -> Momento.Protocol Momento.Model Msg Model
+momentoProtocol model =
+    { toMsg = MomentoMsg
+    , ports = momentoPorts
+    , onUpdate = \( wsMdl, cmds ) -> ( { model | momento = wsMdl }, cmds )
+    , onOpen = \id -> mmOpened id model
+    , onSubscribe = \id params -> mmSubscribed id params model
+    , onMessage = \id payload -> mmMessage id payload model
+    , onError = \id error -> mmError id error model
+    }
+
+
+apiPorts : Api.Ports
+apiPorts =
+    { request = Ports.requestPort
+    , response = Ports.responsePort
+    }
+
+
+apiProtocol : Api.Protocol Model Msg Model
+apiProtocol =
+    { toMsg = ApiMsg
+    , ports = apiPorts
+    , onUpdate = identity
+
+    --, mmOpen = \id params -> U2.andThen (mmOpen id params)
+    --, mmSubscribe = \id params -> U2.andThen (mmSubscribe id params)
+    --, mmOps = \id ops -> U2.andThen (mmOps id ops)
+    }
 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Ports.requestPort Request
+    Sub.batch
+        [ Api.subscriptions apiProtocol model.api
+        , Momento.subscriptions (momentoProtocol model) model.momento
+        ]
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    let
-        _ =
-            Debug.log "update" "called"
-    in
     case msg of
-        Request ( id, cb, req ) ->
-            let
-                response =
-                    Response.init
-                        |> Response.setBody (Body.text "Hello from Elm, it works!")
-                        |> Response.encode
-            in
-            ( model, Ports.responsePort ( id, cb, response ) )
+        MomentoMsg innerMsg ->
+            Momento.update (momentoProtocol model)
+                innerMsg
+                model.momento
+
+        ApiMsg innerMsg ->
+            Api.update apiProtocol
+                innerMsg
+                model
+
+
+mmOpened : String -> Model -> ( Momento.Model, Cmd Msg ) -> ( Model, Cmd Msg )
+mmOpened id model =
+    \( wsMdl, cmds ) ->
+        ( { model | momento = wsMdl }, cmds )
+
+
+mmSubscribed : String -> SubscribeParams -> Model -> ( Momento.Model, Cmd Msg ) -> ( Model, Cmd Msg )
+mmSubscribed id params model =
+    \( wsMdl, cmds ) ->
+        ( { model | momento = wsMdl }, cmds )
+
+
+mmMessage : String -> String -> Model -> ( Momento.Model, Cmd Msg ) -> ( Model, Cmd Msg )
+mmMessage id payload model =
+    \( wsMdl, cmds ) ->
+        ( { model | momento = wsMdl }, cmds )
+
+
+mmError : String -> Error -> Model -> ( Momento.Model, Cmd Msg ) -> ( Model, Cmd Msg )
+mmError id payload model =
+    \( wsMdl, cmds ) ->
+        ( { model | momento = wsMdl }, cmds )
+
+
+mmOpen : String -> OpenParams -> Model -> ( Model, Cmd Msg )
+mmOpen id params model =
+    Momento.open (momentoProtocol model) id params model.momento
+
+
+mmSubscribe : String -> SubscribeParams -> Model -> ( Model, Cmd Msg )
+mmSubscribe id params model =
+    Momento.subscribe (momentoProtocol model) id params model.momento
+
+
+mmOps : String -> List Op -> Model -> ( Model, Cmd Msg )
+mmOps id ops model =
+    Momento.processOps (momentoProtocol model) id ops model.momento
