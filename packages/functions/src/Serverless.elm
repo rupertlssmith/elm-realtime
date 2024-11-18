@@ -10,13 +10,6 @@ at the [demos](https://github.com/ktonon/elm-serverless/blob/master/demo)
 for usage examples.
 
 
-## Table of Contents
-
-  - [Defining a Program](#defining-a-program)
-  - [Port Types](#port-types)
-  - [Initialization Helpers](#initialization-helpers)
-
-
 ## Defining a Program
 
 Use `httpApi` to define a headless Elm program.

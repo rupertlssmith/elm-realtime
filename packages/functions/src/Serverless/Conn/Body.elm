@@ -241,7 +241,7 @@ appendText val body =
 -}
 decoder : Maybe String -> Decoder Body
 decoder maybeType =
-    Decode.nullable Decode.string
+    Decode.maybe Decode.string
         |> andThen
             (\maybeString ->
                 case maybeString of

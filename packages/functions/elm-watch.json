@@ -4,7 +4,7 @@
             "inputs": [
                 "src/API.elm"
             ],
-            "output": "src/elm.js"
+            "output": "/tmp/elm.js"
         }
     }
 }

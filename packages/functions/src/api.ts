@@ -12,6 +12,8 @@ const app = Elm.API.init({
 });
 
 export async function main(event, context) {
+    //console.log(event);
+
     const handler = elmServerless.httpApi({
         app: app,
         logger: silent,

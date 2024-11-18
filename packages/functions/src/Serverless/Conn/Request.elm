@@ -9,14 +9,6 @@ module Serverless.Conn.Request exposing
 {-| Query attributes of the HTTP request.
 
 
-## Table of Contents
-
-  - [Request Types](#request-types)
-  - [Routing](#routing)
-  - [Body](#body)
-  - [Other Attributes](#other-attributes)
-
-
 ## Request Types
 
 @docs Request, Method, Scheme

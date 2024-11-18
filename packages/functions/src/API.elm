@@ -1,5 +1,6 @@
 module API exposing (main)
 
+import EventLog.Component as EventLog
 import Momento exposing (Error, Op, OpenParams, SubscribeParams)
 import Ports
 import Server.API as Api
@@ -115,11 +116,12 @@ apiPorts =
     }
 
 
-apiProtocol : Api.Protocol Model Msg Model
+apiProtocol : Api.Protocol Model Msg Model EventLog.Route
 apiProtocol =
     { toMsg = ApiMsg
     , ports = apiPorts
     , onUpdate = identity
+    , parseRoute = EventLog.routeParser
 
     --, mmOpen = \id params -> U2.andThen (mmOpen id params)
     --, mmSubscribe = \id params -> U2.andThen (mmSubscribe id params)

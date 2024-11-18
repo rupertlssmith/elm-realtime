@@ -12,14 +12,6 @@ module Serverless.Conn exposing
 @docs Conn, Id
 
 
-## Table of Contents
-
-  - [Processing Application Data](#processing-application-data)
-  - [Querying the Request](#querying-the-request)
-  - [Responding](#responding)
-  - [Response Body](#response-body)
-
-
 ## Processing Application Data
 
 Query and update your application specific data.

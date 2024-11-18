@@ -35,8 +35,8 @@ module.exports = ({
     const req = {
         body: encodeBody(body),
         headers: norm(headers),
-        host,
-        method,
+        host:requestContext.http.sourceIp,
+        method: requestContext.http.method,
         path: path(pathParameters || {}),
         port: parseInt(headers['X-Forwarded-Port'] || port || 80, 10), // Assume port 80, if none given.
         queryParams: queryStringParameters,

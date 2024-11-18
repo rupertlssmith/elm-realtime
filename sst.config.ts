@@ -5,10 +5,8 @@ export default $config({
     app(input) {
         return {
             home: "aws",
-            //region: "eu-west-2",
             name: "00-vpc",
             removal: input.stage === "production" ? "retain" : "remove",
-            //profile: input.stage === "production" ? "thesett-prod" : "thesett-dev",
             providers: {
                 aws: {
                     profile: input.stage === "production" ? "thesett-prod" : "thesett-dev",
@@ -29,7 +27,7 @@ export default $config({
 
         const api = new sst.aws.ApiGatewayV2("saveapi", {link: [momentoApiKey]});
 
-        api.route("ANY /v1/{proxy+}",
+        api.route("GET /{proxy+}",
             {
                 handler: "packages/functions/src/api.main",
                 link: [momentoApiKey]
