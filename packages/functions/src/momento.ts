@@ -5,8 +5,8 @@ import {
     CredentialProvider,
     TopicClient,
     TopicSubscribeResponse,
-    TopicPublishResponse,
-} from "@gomomento/sdk-web";
+    TopicPublishResponse, PutWebhookResponse,
+} from "@gomomento/sdk";
 import * as ports from "./ports" ;
 
 type Session = {
@@ -51,7 +51,7 @@ export class MomentoPorts {
     app: { ports: Ports };
 
     constructor(app: any) {
-        console.log("Momento.constructor");
+        console.info("Momento.constructor");
         this.app = app;
 
         this.onMessage = this.onMessage.bind(this);
@@ -60,6 +60,7 @@ export class MomentoPorts {
         this.send = this.send.bind(this);
         this.close = this.close.bind(this);
         this.pushList = this.pushList.bind(this);
+        this.createWebhook = this.createWebhook.bind(this);
 
         ports.checkPortsExist(app, [
             "mmOpen",
@@ -70,7 +71,8 @@ export class MomentoPorts {
             "mmOnOpen",
             "mmOnSubscribe",
             "mmOnMessage",
-            "mmOnError"
+            "mmOnError",
+            "mmCreateWebhook"
         ]);
 
         app.ports.mmOpen.subscribe(this.open);
@@ -78,6 +80,7 @@ export class MomentoPorts {
         app.ports.mmSubscribe.subscribe(this.subscribe);
         app.ports.mmSend.subscribe(this.send);
         app.ports.mmPushList.subscribe(this.pushList);
+        app.ports.mmCreateWebhook.subscribe(this.createWebhook);
     }
 
     // === Cache session lifecycle.
@@ -207,6 +210,8 @@ export class MomentoPorts {
 
     // === Lists
     async pushList(args: any) {
+        console.log("Momento.pushList");
+
         const session = this.sessions[args.id];
 
         if (session) {
@@ -222,6 +227,39 @@ export class MomentoPorts {
                     this.app.ports.mmOnError.send({
                         id: args.id,
                         error: pushResponse.innerException()
+                    });
+            }
+        }
+    }
+
+    // == Webhooks
+    async createWebhook(args: any) {
+        console.log("Momento.createWebhook");
+        console.log(args);
+
+        const session = this.sessions[args.id];
+
+        if (session) {
+            const webhookResponse = await session.topicClient.putWebhook(
+                session.cache,
+                `${args.topic}-webhook`,
+                {
+                    topicName: args.topic,
+                    destination: args.url
+                });
+
+            switch (webhookResponse.type) {
+                case PutWebhookResponse.Success:
+                    console.log('Successfully put webhook');
+                    break;
+
+                case PutWebhookResponse.Error:
+                    console.log("Momento.createWebhook.Error");
+                    console.error(webhookResponse.innerException());
+
+                    this.app.ports.mmOnError.send({
+                        id: args.id,
+                        error: webhookResponse.innerException()
                     });
             }
         }

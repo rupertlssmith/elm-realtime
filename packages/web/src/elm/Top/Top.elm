@@ -58,7 +58,7 @@ init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
         ( appMdl, appCmds ) =
-            App.init "abczxy" appProtocol.toMsg
+            App.init "aflpeYGXfU" appProtocol.toMsg
 
         ( socketsMdl, socketsCmds ) =
             Momento.init MomentoMsg momentoPorts
@@ -89,6 +89,7 @@ momentoPorts =
     , publish = Ports.mmSend
     , onMessage = Ports.mmOnMessage
     , pushList = Ports.mmPushList
+    , createWebhook = Ports.mmCreateWebhook
     , onError = Ports.mmOnError
     }
 

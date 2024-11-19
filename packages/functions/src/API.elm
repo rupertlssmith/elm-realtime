@@ -28,6 +28,7 @@ Channel save:
 type alias Model =
     { -- Flags
       momentoApiKey : String
+    , channelApiUrl : String
 
     -- Elm modules
     , api : Api.Model
@@ -54,6 +55,7 @@ type alias MomentoSecret =
 
 type alias Flags =
     { momentoSecret : MomentoSecret
+    , channelApiUrl : String
     }
 
 
@@ -79,6 +81,7 @@ init flags =
             EventLog.init EventLogMsg
     in
     ( { momentoApiKey = flags.momentoSecret.apiKey
+      , channelApiUrl = flags.channelApiUrl
       , api = apiMdl
       , momento = momentoMdl
       , eventLog = eventLogMdl
@@ -101,7 +104,7 @@ subscriptions model =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
+    case Debug.log "API.update" msg of
         MomentoMsg innerMsg ->
             Momento.update (momentoProtocol model)
                 innerMsg
@@ -160,6 +163,7 @@ momentoPorts =
     , publish = Ports.mmSend
     , onMessage = Ports.mmOnMessage
     , pushList = Ports.mmPushList
+    , createWebhook = Ports.mmCreateWebhook
     , onError = Ports.mmOnError
     }
 
@@ -180,6 +184,7 @@ mmOpened : String -> Model -> ( Momento.Model, Cmd Msg ) -> ( Model, Cmd Msg )
 mmOpened id model =
     \( wsMdl, cmds ) ->
         ( { model | momento = wsMdl }, cmds )
+            |> U2.andThen (EventLog.mmOpened eventLogProtocol id)
 
 
 mmSubscribed : String -> SubscribeParams -> Model -> ( Momento.Model, Cmd Msg ) -> ( Model, Cmd Msg )
@@ -198,6 +203,7 @@ mmError : String -> Error -> Model -> ( Momento.Model, Cmd Msg ) -> ( Model, Cmd
 mmError id payload model =
     \( wsMdl, cmds ) ->
         ( { model | momento = wsMdl }, cmds )
+            |> U2.andThen (EventLog.mmError eventLogProtocol id payload)
 
 
 
@@ -208,6 +214,8 @@ eventLogProtocol : EventLog.Protocol Model Msg Model
 eventLogProtocol =
     { toMsg = EventLogMsg
     , onUpdate = identity
+    , mmOpen = \id params -> U2.andThen (mmOpen id params)
+    , mmOps = \id ops -> U2.andThen (mmOps id ops)
     }
 
 

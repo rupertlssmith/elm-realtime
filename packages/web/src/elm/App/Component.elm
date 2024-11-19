@@ -119,7 +119,7 @@ update protocol msg component =
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.mmOpen "socket"
                     { apiKey = component.momentoApiKey
-                    , cache = cacheName state
+                    , cache = cacheName state.realtimeChannel
                     }
 
         _ ->
@@ -151,7 +151,7 @@ mmOpened protocol id component =
                 |> U2.andMap (switchState ModelConnected)
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.mmSubscribe id { topic = modelTopicName state }
+                |> protocol.mmSubscribe id { topic = modelTopicName state.realtimeChannel }
 
         _ ->
             U2.pure component
@@ -200,9 +200,9 @@ mmSubscribed protocol id params component =
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.mmOps id
-                    [ Momento.publish { topic = notifyTopicName state, payload = notice }
-                    , Momento.pushList { list = saveListName state, payload = payload }
-                    , Momento.publish { topic = modelTopicName state, payload = payload }
+                    [ Momento.publish { topic = notifyTopicName state.realtimeChannel, payload = notice }
+                    , Momento.pushList { list = saveListName state.realtimeChannel, payload = payload }
+                    , Momento.publish { topic = modelTopicName state.realtimeChannel, payload = payload }
                     ]
 
         _ ->
@@ -262,21 +262,21 @@ logs model =
         |> Html.pre []
 
 
-modelTopicName : { a | realtimeChannel : String } -> String
-modelTopicName state =
-    state.realtimeChannel ++ "-modeltopic"
+modelTopicName : String -> String
+modelTopicName channel =
+    channel ++ "-modeltopic"
 
 
-notifyTopicName : { a | realtimeChannel : String } -> String
-notifyTopicName state =
-    state.realtimeChannel ++ "-savetopic"
+notifyTopicName : String -> String
+notifyTopicName channel =
+    channel ++ "-savetopic"
 
 
-cacheName : { a | realtimeChannel : String } -> String
-cacheName state =
-    state.realtimeChannel ++ "-cache"
+cacheName : String -> String
+cacheName channel =
+    channel ++ "-cache"
 
 
-saveListName : { a | realtimeChannel : String } -> String
-saveListName state =
-    state.realtimeChannel ++ "-savelist"
+saveListName : String -> String
+saveListName channel =
+    channel ++ "-savelist"

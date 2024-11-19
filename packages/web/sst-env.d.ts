@@ -6,6 +6,10 @@ import "sst"
 export {}
 declare module "sst" {
   export interface Resource {
+    "ChannelApi": {
+      "type": "sst.aws.ApiGatewayV2"
+      "url": string
+    }
     "ChatSite": {
       "type": "sst.aws.StaticSite"
       "url": string
@@ -17,10 +21,6 @@ declare module "sst" {
     "MomentoApiKey": {
       "type": "sst.sst.Secret"
       "value": string
-    }
-    "saveapi": {
-      "type": "sst.aws.ApiGatewayV2"
-      "url": string
     }
   }
 }

@@ -2358,6 +2358,89 @@ function _Platform_mergeExportsDebug(moduleName, obj, exports)
 }
 
 
+
+var _Bitwise_and = F2(function(a, b)
+{
+	return a & b;
+});
+
+var _Bitwise_or = F2(function(a, b)
+{
+	return a | b;
+});
+
+var _Bitwise_xor = F2(function(a, b)
+{
+	return a ^ b;
+});
+
+function _Bitwise_complement(a)
+{
+	return ~a;
+};
+
+var _Bitwise_shiftLeftBy = F2(function(offset, a)
+{
+	return a << offset;
+});
+
+var _Bitwise_shiftRightBy = F2(function(offset, a)
+{
+	return a >> offset;
+});
+
+var _Bitwise_shiftRightZfBy = F2(function(offset, a)
+{
+	return a >>> offset;
+});
+
+
+
+function _Time_now(millisToPosix)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(millisToPosix(Date.now())));
+	});
+}
+
+var _Time_setInterval = F2(function(interval, task)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		var id = setInterval(function() { _Scheduler_rawSpawn(task); }, interval);
+		return function() { clearInterval(id); };
+	});
+});
+
+function _Time_here()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(
+			A2($elm$time$Time$customZone, -(new Date().getTimezoneOffset()), _List_Nil)
+		));
+	});
+}
+
+
+function _Time_getZoneName()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		try
+		{
+			var name = $elm$time$Time$Name(Intl.DateTimeFormat().resolvedOptions().timeZone);
+		}
+		catch (e)
+		{
+			var name = $elm$time$Time$Offset(new Date().getTimezoneOffset());
+		}
+		callback(_Scheduler_succeed(name));
+	});
+}
+
+
 function _Url_percentEncode(string)
 {
 	return encodeURIComponent(string);
@@ -2860,6 +2943,22 @@ var $author$project$API$MomentoMsg = function (a) {
 	return {$: 'MomentoMsg', a: a};
 };
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $author$project$EventLog$Component$ModelStart = function (a) {
+	return {$: 'ModelStart', a: a};
+};
+var $the_sett$elm_update_helper$Update2$andMap = F2(
+	function (fn, _v0) {
+		var model = _v0.a;
+		var cmd = _v0.b;
+		var _v1 = fn(model);
+		var nextModel = _v1.a;
+		var nextCmd = _v1.b;
+		return _Utils_Tuple2(
+			nextModel,
+			$elm$core$Platform$Cmd$batch(
+				_List_fromArray(
+					[cmd, nextCmd])));
+	});
 var $elm$core$Platform$Cmd$map = _Platform_map;
 var $elm$core$Tuple$mapSecond = F2(
 	function (func, _v0) {
@@ -2873,12 +2972,222 @@ var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $the_sett$elm_update_helper$Update2$pure = function (model) {
 	return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 };
+var $elm$core$Basics$identity = function (x) {
+	return x;
+};
+var $author$project$EventLog$Component$RandomSeed = function (a) {
+	return {$: 'RandomSeed', a: a};
+};
+var $elm$random$Random$Generate = function (a) {
+	return {$: 'Generate', a: a};
+};
+var $elm$core$Task$andThen = _Scheduler_andThen;
+var $elm$random$Random$Seed = F2(
+	function (a, b) {
+		return {$: 'Seed', a: a, b: b};
+	});
+var $elm$core$Bitwise$shiftRightZfBy = _Bitwise_shiftRightZfBy;
+var $elm$random$Random$next = function (_v0) {
+	var state0 = _v0.a;
+	var incr = _v0.b;
+	return A2($elm$random$Random$Seed, ((state0 * 1664525) + incr) >>> 0, incr);
+};
+var $elm$random$Random$initialSeed = function (x) {
+	var _v0 = $elm$random$Random$next(
+		A2($elm$random$Random$Seed, 0, 1013904223));
+	var state1 = _v0.a;
+	var incr = _v0.b;
+	var state2 = (state1 + x) >>> 0;
+	return $elm$random$Random$next(
+		A2($elm$random$Random$Seed, state2, incr));
+};
+var $elm$time$Time$Name = function (a) {
+	return {$: 'Name', a: a};
+};
+var $elm$time$Time$Offset = function (a) {
+	return {$: 'Offset', a: a};
+};
+var $elm$time$Time$Zone = F2(
+	function (a, b) {
+		return {$: 'Zone', a: a, b: b};
+	});
+var $elm$time$Time$customZone = $elm$time$Time$Zone;
+var $elm$time$Time$Posix = function (a) {
+	return {$: 'Posix', a: a};
+};
+var $elm$time$Time$millisToPosix = $elm$time$Time$Posix;
+var $elm$time$Time$now = _Time_now($elm$time$Time$millisToPosix);
+var $elm$time$Time$posixToMillis = function (_v0) {
+	var millis = _v0.a;
+	return millis;
+};
+var $elm$core$Task$succeed = _Scheduler_succeed;
+var $elm$random$Random$init = A2(
+	$elm$core$Task$andThen,
+	function (time) {
+		return $elm$core$Task$succeed(
+			$elm$random$Random$initialSeed(
+				$elm$time$Time$posixToMillis(time)));
+	},
+	$elm$time$Time$now);
+var $elm$core$Platform$sendToApp = _Platform_sendToApp;
+var $elm$random$Random$step = F2(
+	function (_v0, seed) {
+		var generator = _v0.a;
+		return generator(seed);
+	});
+var $elm$random$Random$onEffects = F3(
+	function (router, commands, seed) {
+		if (!commands.b) {
+			return $elm$core$Task$succeed(seed);
+		} else {
+			var generator = commands.a.a;
+			var rest = commands.b;
+			var _v1 = A2($elm$random$Random$step, generator, seed);
+			var value = _v1.a;
+			var newSeed = _v1.b;
+			return A2(
+				$elm$core$Task$andThen,
+				function (_v2) {
+					return A3($elm$random$Random$onEffects, router, rest, newSeed);
+				},
+				A2($elm$core$Platform$sendToApp, router, value));
+		}
+	});
+var $elm$random$Random$onSelfMsg = F3(
+	function (_v0, _v1, seed) {
+		return $elm$core$Task$succeed(seed);
+	});
+var $elm$random$Random$Generator = function (a) {
+	return {$: 'Generator', a: a};
+};
+var $elm$random$Random$map = F2(
+	function (func, _v0) {
+		var genA = _v0.a;
+		return $elm$random$Random$Generator(
+			function (seed0) {
+				var _v1 = genA(seed0);
+				var a = _v1.a;
+				var seed1 = _v1.b;
+				return _Utils_Tuple2(
+					func(a),
+					seed1);
+			});
+	});
+var $elm$random$Random$cmdMap = F2(
+	function (func, _v0) {
+		var generator = _v0.a;
+		return $elm$random$Random$Generate(
+			A2($elm$random$Random$map, func, generator));
+	});
+_Platform_effectManagers['Random'] = _Platform_createManager($elm$random$Random$init, $elm$random$Random$onEffects, $elm$random$Random$onSelfMsg, $elm$random$Random$cmdMap);
+var $elm$random$Random$command = _Platform_leaf('Random');
+var $elm$random$Random$generate = F2(
+	function (tagger, generator) {
+		return $elm$random$Random$command(
+			$elm$random$Random$Generate(
+				A2($elm$random$Random$map, tagger, generator)));
+	});
+var $elm$core$Bitwise$and = _Bitwise_and;
+var $elm$core$Basics$negate = function (n) {
+	return -n;
+};
+var $elm$core$Bitwise$xor = _Bitwise_xor;
+var $elm$random$Random$peel = function (_v0) {
+	var state = _v0.a;
+	var word = (state ^ (state >>> ((state >>> 28) + 4))) * 277803737;
+	return ((word >>> 22) ^ word) >>> 0;
+};
+var $elm$random$Random$int = F2(
+	function (a, b) {
+		return $elm$random$Random$Generator(
+			function (seed0) {
+				var _v0 = (_Utils_cmp(a, b) < 0) ? _Utils_Tuple2(a, b) : _Utils_Tuple2(b, a);
+				var lo = _v0.a;
+				var hi = _v0.b;
+				var range = (hi - lo) + 1;
+				if (!((range - 1) & range)) {
+					return _Utils_Tuple2(
+						(((range - 1) & $elm$random$Random$peel(seed0)) >>> 0) + lo,
+						$elm$random$Random$next(seed0));
+				} else {
+					var threshhold = (((-range) >>> 0) % range) >>> 0;
+					var accountForBias = function (seed) {
+						accountForBias:
+						while (true) {
+							var x = $elm$random$Random$peel(seed);
+							var seedN = $elm$random$Random$next(seed);
+							if (_Utils_cmp(x, threshhold) < 0) {
+								var $temp$seed = seedN;
+								seed = $temp$seed;
+								continue accountForBias;
+							} else {
+								return _Utils_Tuple2((x % range) + lo, seedN);
+							}
+						}
+					};
+					return accountForBias(seed0);
+				}
+			});
+	});
+var $elm$random$Random$map3 = F4(
+	function (func, _v0, _v1, _v2) {
+		var genA = _v0.a;
+		var genB = _v1.a;
+		var genC = _v2.a;
+		return $elm$random$Random$Generator(
+			function (seed0) {
+				var _v3 = genA(seed0);
+				var a = _v3.a;
+				var seed1 = _v3.b;
+				var _v4 = genB(seed1);
+				var b = _v4.a;
+				var seed2 = _v4.b;
+				var _v5 = genC(seed2);
+				var c = _v5.a;
+				var seed3 = _v5.b;
+				return _Utils_Tuple2(
+					A3(func, a, b, c),
+					seed3);
+			});
+	});
+var $elm$core$Bitwise$or = _Bitwise_or;
+var $elm$random$Random$independentSeed = $elm$random$Random$Generator(
+	function (seed0) {
+		var makeIndependentSeed = F3(
+			function (state, b, c) {
+				return $elm$random$Random$next(
+					A2($elm$random$Random$Seed, state, (1 | (b ^ c)) >>> 0));
+			});
+		var gen = A2($elm$random$Random$int, 0, 4294967295);
+		return A2(
+			$elm$random$Random$step,
+			A4($elm$random$Random$map3, makeIndependentSeed, gen, gen, gen),
+			seed0);
+	});
+var $author$project$EventLog$Component$randomize = function (model) {
+	return _Utils_Tuple2(
+		model,
+		A2($elm$random$Random$generate, $author$project$EventLog$Component$RandomSeed, $elm$random$Random$independentSeed));
+};
+var $author$project$EventLog$Component$switchState = F2(
+	function (cons, state) {
+		return _Utils_Tuple2(
+			cons(state),
+			$elm$core$Platform$Cmd$none);
+	});
 var $author$project$EventLog$Component$init = function (toMsg) {
 	return A2(
 		$elm$core$Tuple$mapSecond,
 		$elm$core$Platform$Cmd$map(toMsg),
-		$the_sett$elm_update_helper$Update2$pure(
-			{}));
+		A2(
+			$the_sett$elm_update_helper$Update2$andMap,
+			$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelStart),
+			A2(
+				$the_sett$elm_update_helper$Update2$andMap,
+				$author$project$EventLog$Component$randomize,
+				$the_sett$elm_update_helper$Update2$pure(
+					{}))));
 };
 var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
@@ -2897,6 +3206,36 @@ var $author$project$Server$API$init = function (toMsg) {
 };
 var $elm$json$Json$Encode$string = _Json_wrap;
 var $author$project$Ports$mmClose = _Platform_outgoingPort('mmClose', $elm$json$Json$Encode$string);
+var $elm$json$Json$Encode$object = function (pairs) {
+	return _Json_wrap(
+		A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v0, obj) {
+					var k = _v0.a;
+					var v = _v0.b;
+					return A3(_Json_addField, k, v, obj);
+				}),
+			_Json_emptyObject(_Utils_Tuple0),
+			pairs));
+};
+var $author$project$Ports$mmCreateWebhook = _Platform_outgoingPort(
+	'mmCreateWebhook',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'topic',
+					$elm$json$Json$Encode$string($.topic)),
+					_Utils_Tuple2(
+					'url',
+					$elm$json$Json$Encode$string($.url))
+				]));
+	});
 var $elm$json$Json$Decode$string = _Json_decodeString;
 var $elm$json$Json$Decode$succeed = _Json_succeed;
 var $elm$json$Json$Decode$value = _Json_decodeValue;
@@ -2943,19 +3282,6 @@ var $author$project$Ports$mmOnSubscribe = _Platform_incomingPort(
 				A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
 		},
 		A2($elm$json$Json$Decode$field, 'topic', $elm$json$Json$Decode$string)));
-var $elm$json$Json$Encode$object = function (pairs) {
-	return _Json_wrap(
-		A3(
-			$elm$core$List$foldl,
-			F2(
-				function (_v0, obj) {
-					var k = _v0.a;
-					var v = _v0.b;
-					return A3(_Json_addField, k, v, obj);
-				}),
-			_Json_emptyObject(_Utils_Tuple0),
-			pairs));
-};
 var $author$project$Ports$mmOpen = _Platform_outgoingPort(
 	'mmOpen',
 	function ($) {
@@ -3021,7 +3347,7 @@ var $author$project$Ports$mmSubscribe = _Platform_outgoingPort(
 					$elm$json$Json$Encode$string($.topic))
 				]));
 	});
-var $author$project$API$momentoPorts = {close: $author$project$Ports$mmClose, onError: $author$project$Ports$mmOnError, onMessage: $author$project$Ports$mmOnMessage, onOpen: $author$project$Ports$mmOnOpen, onSunscribe: $author$project$Ports$mmOnSubscribe, open: $author$project$Ports$mmOpen, publish: $author$project$Ports$mmSend, pushList: $author$project$Ports$mmPushList, subscribe: $author$project$Ports$mmSubscribe};
+var $author$project$API$momentoPorts = {close: $author$project$Ports$mmClose, createWebhook: $author$project$Ports$mmCreateWebhook, onError: $author$project$Ports$mmOnError, onMessage: $author$project$Ports$mmOnMessage, onOpen: $author$project$Ports$mmOnOpen, onSunscribe: $author$project$Ports$mmOnSubscribe, open: $author$project$Ports$mmOpen, publish: $author$project$Ports$mmSend, pushList: $author$project$Ports$mmPushList, subscribe: $author$project$Ports$mmSubscribe};
 var $author$project$API$init = function (flags) {
 	var _v0 = A2($author$project$Momento$init, $author$project$API$MomentoMsg, $author$project$API$momentoPorts);
 	var momentoMdl = _v0.a;
@@ -3033,7 +3359,7 @@ var $author$project$API$init = function (flags) {
 	var apiMdl = _v2.a;
 	var apiCmds = _v2.b;
 	return _Utils_Tuple2(
-		{api: apiMdl, eventLog: eventLogMdl, momento: momentoMdl, momentoApiKey: flags.momentoSecret.apiKey},
+		{api: apiMdl, channelApiUrl: flags.channelApiUrl, eventLog: eventLogMdl, momento: momentoMdl, momentoApiKey: flags.momentoSecret.apiKey},
 		$elm$core$Platform$Cmd$batch(
 			_List_fromArray(
 				[apiCmds, momentoCmds, eventLogCmds])));
@@ -3058,9 +3384,6 @@ var $author$project$Ports$requestPort = _Platform_incomingPort(
 				A2($elm$json$Json$Decode$index, 1, $elm$json$Json$Decode$value));
 		},
 		A2($elm$json$Json$Decode$index, 0, $elm$json$Json$Decode$string)));
-var $elm$core$Basics$identity = function (x) {
-	return x;
-};
 var $elm$json$Json$Encode$list = F2(
 	function (func, entries) {
 		return _Json_wrap(
@@ -3100,50 +3423,138 @@ var $the_sett$elm_update_helper$Update2$andThen = F2(
 				_List_fromArray(
 					[cmd, nextCmd])));
 	});
-var $author$project$API$eventLogProtocol = {onUpdate: $elm$core$Basics$identity, toMsg: $author$project$API$EventLogMsg};
 var $elm$core$Debug$log = _Debug_log;
-var $author$project$Serverless$Conn$Request$method = function (_v0) {
-	var request = _v0.a;
-	return request.method;
-};
-var $author$project$EventLog$Component$processRoute = F3(
-	function (protocol, route, model) {
+var $elm$core$Debug$toString = _Debug_toString;
+var $author$project$EventLog$Component$mmError = F4(
+	function (protocol, id, error, component) {
 		var _v0 = A2(
 			$elm$core$Debug$log,
-			'processRoute',
-			_Utils_Tuple2(
-				$author$project$Serverless$Conn$Request$method(route.request),
-				route.route));
-		if (_v0.a.$ === 'GET') {
-			var _v1 = _v0.a;
-			var _v2 = _v0.b;
-			return $the_sett$elm_update_helper$Update2$pure(model);
-		} else {
-			return $the_sett$elm_update_helper$Update2$pure(model);
-		}
+			'mmError',
+			'channel ' + (id + (' ' + $elm$core$Debug$toString(error))));
+		return protocol.onUpdate(
+			$the_sett$elm_update_helper$Update2$pure(component));
 	});
-var $author$project$API$apiRoute = F2(
-	function (route, model) {
+var $author$project$API$mmMessage = F3(
+	function (id, payload, model) {
 		return function (_v0) {
-			var apiMdl = _v0.a;
+			var wsMdl = _v0.a;
 			var cmds = _v0.b;
-			return A2(
-				$the_sett$elm_update_helper$Update2$andThen,
-				A2($author$project$EventLog$Component$processRoute, $author$project$API$eventLogProtocol, route),
-				_Utils_Tuple2(
-					_Utils_update(
-						model,
-						{api: apiMdl}),
-					cmds));
+			return _Utils_Tuple2(
+				_Utils_update(
+					model,
+					{momento: wsMdl}),
+				cmds);
 		};
 	});
-var $author$project$EventLog$Component$V1 = {$: 'V1'};
-var $elm$url$Url$Parser$Parser = function (a) {
-	return {$: 'Parser', a: a};
+var $author$project$EventLog$Component$ModelRandomized = function (a) {
+	return {$: 'ModelRandomized', a: a};
 };
-var $elm$url$Url$Parser$State = F5(
-	function (visited, unvisited, params, frag, value) {
-		return {frag: frag, params: params, unvisited: unvisited, value: value, visited: visited};
+var $author$project$Momento$Webhook = function (a) {
+	return {$: 'Webhook', a: a};
+};
+var $elm$core$Tuple$mapFirst = F2(
+	function (func, _v0) {
+		var x = _v0.a;
+		var y = _v0.b;
+		return _Utils_Tuple2(
+			func(x),
+			y);
+	});
+var $author$project$EventLog$Component$notifyTopicName = function (channel) {
+	return channel + '-savetopic';
+};
+var $author$project$EventLog$Component$setModel = F2(
+	function (m, x) {
+		return _Utils_update(
+			m,
+			{eventLog: x});
+	});
+var $author$project$EventLog$Component$mmOpened = F3(
+	function (protocol, channelId, component) {
+		var model = component.eventLog;
+		var _v0 = A2($elm$core$Debug$log, 'mmOpened', 'channel ' + channelId);
+		if (model.$ === 'ModelRandomized') {
+			var state = model.a;
+			return A3(
+				protocol.mmOps,
+				channelId,
+				_List_fromArray(
+					[
+						$author$project$Momento$Webhook(
+						{
+							topic: $author$project$EventLog$Component$notifyTopicName(channelId),
+							url: component.channelApiUrl + ('/v1/channel/' + channelId)
+						})
+					]),
+				A2(
+					$elm$core$Tuple$mapSecond,
+					$elm$core$Platform$Cmd$map(protocol.toMsg),
+					A2(
+						$elm$core$Tuple$mapFirst,
+						$author$project$EventLog$Component$setModel(component),
+						A2(
+							$the_sett$elm_update_helper$Update2$andMap,
+							$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelRandomized),
+							$the_sett$elm_update_helper$Update2$pure(state)))));
+		} else {
+			return protocol.onUpdate(
+				$the_sett$elm_update_helper$Update2$pure(component));
+		}
+	});
+var $author$project$API$mmSubscribed = F3(
+	function (id, params, model) {
+		return function (_v0) {
+			var wsMdl = _v0.a;
+			var cmds = _v0.b;
+			return _Utils_Tuple2(
+				_Utils_update(
+					model,
+					{momento: wsMdl}),
+				cmds);
+		};
+	});
+var $author$project$Momento$open = F4(
+	function (protocol, id, props, model) {
+		return protocol.onUpdate(
+			_Utils_Tuple2(
+				model,
+				A2(
+					$elm$core$Platform$Cmd$map,
+					protocol.toMsg,
+					protocol.ports.open(
+						{apiKey: props.apiKey, cache: props.cache, id: id}))));
+	});
+var $elm$core$Basics$compare = _Utils_compare;
+var $elm$core$Dict$get = F2(
+	function (targetKey, dict) {
+		get:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var _v1 = A2($elm$core$Basics$compare, targetKey, key);
+				switch (_v1.$) {
+					case 'LT':
+						var $temp$targetKey = targetKey,
+							$temp$dict = left;
+						targetKey = $temp$targetKey;
+						dict = $temp$dict;
+						continue get;
+					case 'EQ':
+						return $elm$core$Maybe$Just(value);
+					default:
+						var $temp$targetKey = targetKey,
+							$temp$dict = right;
+						targetKey = $temp$targetKey;
+						dict = $temp$dict;
+						continue get;
+				}
+			}
+		}
 	});
 var $elm$core$List$foldrHelper = F4(
 	function (fn, acc, ctr, ls) {
@@ -3213,6 +3624,483 @@ var $elm$core$List$map = F2(
 				}),
 			_List_Nil,
 			xs);
+	});
+var $author$project$Momento$processOp = F3(
+	function (protocol, id, op) {
+		switch (op.$) {
+			case 'Publish':
+				var topic = op.a.topic;
+				var payload = op.a.payload;
+				return A2(
+					$elm$core$Platform$Cmd$map,
+					protocol.toMsg,
+					protocol.ports.publish(
+						{id: id, payload: payload, topic: topic}));
+			case 'PushList':
+				var list = op.a.list;
+				var payload = op.a.payload;
+				return A2(
+					$elm$core$Platform$Cmd$map,
+					protocol.toMsg,
+					protocol.ports.pushList(
+						{id: id, list: list, payload: payload}));
+			default:
+				var topic = op.a.topic;
+				var url = op.a.url;
+				return A2(
+					$elm$core$Platform$Cmd$map,
+					protocol.toMsg,
+					protocol.ports.createWebhook(
+						{id: id, topic: topic, url: url}));
+		}
+	});
+var $author$project$Momento$processOps = F4(
+	function (protocol, id, ops, model) {
+		var socket = A2($elm$core$Dict$get, id, model.sessions);
+		var _v0 = A2(
+			$elm$core$Debug$log,
+			'Momento.processOps',
+			_Utils_Tuple3(id, ops, socket));
+		if ((socket.$ === 'Just') && (socket.a.$ === 'Open')) {
+			var _v2 = socket.a;
+			var portCmds = A2(
+				$elm$core$List$map,
+				A2($author$project$Momento$processOp, protocol, id),
+				ops);
+			return protocol.onUpdate(
+				_Utils_Tuple2(
+					model,
+					$elm$core$Platform$Cmd$batch(portCmds)));
+		} else {
+			return protocol.onUpdate(
+				$the_sett$elm_update_helper$Update2$pure(model));
+		}
+	});
+var $author$project$API$mmError = F3(
+	function (id, payload, model) {
+		return function (_v2) {
+			var wsMdl = _v2.a;
+			var cmds = _v2.b;
+			return A2(
+				$the_sett$elm_update_helper$Update2$andThen,
+				A3(
+					$author$project$EventLog$Component$mmError,
+					$author$project$API$cyclic$eventLogProtocol(),
+					id,
+					payload),
+				_Utils_Tuple2(
+					_Utils_update(
+						model,
+						{momento: wsMdl}),
+					cmds));
+		};
+	});
+var $author$project$API$mmOpen = F3(
+	function (id, params, model) {
+		return A4(
+			$author$project$Momento$open,
+			$author$project$API$momentoProtocol(model),
+			id,
+			params,
+			model.momento);
+	});
+var $author$project$API$mmOpened = F2(
+	function (id, model) {
+		return function (_v1) {
+			var wsMdl = _v1.a;
+			var cmds = _v1.b;
+			return A2(
+				$the_sett$elm_update_helper$Update2$andThen,
+				A2(
+					$author$project$EventLog$Component$mmOpened,
+					$author$project$API$cyclic$eventLogProtocol(),
+					id),
+				_Utils_Tuple2(
+					_Utils_update(
+						model,
+						{momento: wsMdl}),
+					cmds));
+		};
+	});
+var $author$project$API$mmOps = F3(
+	function (id, ops, model) {
+		return A4(
+			$author$project$Momento$processOps,
+			$author$project$API$momentoProtocol(model),
+			id,
+			ops,
+			model.momento);
+	});
+var $author$project$API$momentoProtocol = function (model) {
+	return {
+		onError: F2(
+			function (id, error) {
+				return A3($author$project$API$mmError, id, error, model);
+			}),
+		onMessage: F2(
+			function (id, payload) {
+				return A3($author$project$API$mmMessage, id, payload, model);
+			}),
+		onOpen: function (id) {
+			return A2($author$project$API$mmOpened, id, model);
+		},
+		onSubscribe: F2(
+			function (id, params) {
+				return A3($author$project$API$mmSubscribed, id, params, model);
+			}),
+		onUpdate: function (_v0) {
+			var wsMdl = _v0.a;
+			var cmds = _v0.b;
+			return _Utils_Tuple2(
+				_Utils_update(
+					model,
+					{momento: wsMdl}),
+				cmds);
+		},
+		ports: $author$project$API$momentoPorts,
+		toMsg: $author$project$API$MomentoMsg
+	};
+};
+function $author$project$API$cyclic$eventLogProtocol() {
+	return {
+		mmOpen: F2(
+			function (id, params) {
+				return $the_sett$elm_update_helper$Update2$andThen(
+					A2($author$project$API$mmOpen, id, params));
+			}),
+		mmOps: F2(
+			function (id, ops) {
+				return $the_sett$elm_update_helper$Update2$andThen(
+					A2($author$project$API$mmOps, id, ops));
+			}),
+		onUpdate: $elm$core$Basics$identity,
+		toMsg: $author$project$API$EventLogMsg
+	};
+}
+try {
+	var $author$project$API$eventLogProtocol = $author$project$API$cyclic$eventLogProtocol();
+	$author$project$API$cyclic$eventLogProtocol = function () {
+		return $author$project$API$eventLogProtocol;
+	};
+} catch ($) {
+	throw 'Some top-level definitions from `API` are causing infinite recursion:\n\n  ┌─────┐\n  │    eventLogProtocol\n  │     ↓\n  │    mmError\n  │     ↓\n  │    mmOpen\n  │     ↓\n  │    mmOpened\n  │     ↓\n  │    mmOps\n  │     ↓\n  │    momentoProtocol\n  └─────┘\n\nThese errors are very tricky, so read https://elm-lang.org/0.19.1/bad-recursion to learn how to fix it!';}
+var $elm$json$Json$Decode$decodeString = _Json_runOnString;
+var $elm$core$Result$mapError = F2(
+	function (f, result) {
+		if (result.$ === 'Ok') {
+			var v = result.a;
+			return $elm$core$Result$Ok(v);
+		} else {
+			var e = result.a;
+			return $elm$core$Result$Err(
+				f(e));
+		}
+	});
+var $elm$json$Json$Encode$null = _Json_encodeNull;
+var $author$project$Serverless$Conn$Body$asJson = function (body) {
+	switch (body.$) {
+		case 'Empty':
+			return $elm$core$Result$Ok($elm$json$Json$Encode$null);
+		case 'Error':
+			var err = body.a;
+			return $elm$core$Result$Err(err);
+		case 'Text':
+			var val = body.a;
+			return A2(
+				$elm$core$Result$mapError,
+				$elm$json$Json$Decode$errorToString,
+				A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, val));
+		case 'Json':
+			var val = body.a;
+			return $elm$core$Result$Ok(val);
+		default:
+			var val = body.b;
+			return A2(
+				$elm$core$Result$mapError,
+				$elm$json$Json$Decode$errorToString,
+				A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, val));
+	}
+};
+var $author$project$Serverless$Conn$Request$body = function (_v0) {
+	var request = _v0.a;
+	return request.body;
+};
+var $author$project$EventLog$Component$cacheName = function (channel) {
+	return channel + '-cache';
+};
+var $elm$core$Basics$abs = function (n) {
+	return (n < 0) ? (-n) : n;
+};
+var $elm$random$Random$andThen = F2(
+	function (callback, _v0) {
+		var genA = _v0.a;
+		return $elm$random$Random$Generator(
+			function (seed) {
+				var _v1 = genA(seed);
+				var result = _v1.a;
+				var newSeed = _v1.b;
+				var _v2 = callback(result);
+				var genB = _v2.a;
+				return genB(newSeed);
+			});
+	});
+var $elm$core$Basics$composeL = F3(
+	function (g, f, x) {
+		return g(
+			f(x));
+	});
+var $elm$random$Random$float = F2(
+	function (a, b) {
+		return $elm$random$Random$Generator(
+			function (seed0) {
+				var seed1 = $elm$random$Random$next(seed0);
+				var range = $elm$core$Basics$abs(b - a);
+				var n1 = $elm$random$Random$peel(seed1);
+				var n0 = $elm$random$Random$peel(seed0);
+				var lo = (134217727 & n1) * 1.0;
+				var hi = (67108863 & n0) * 1.0;
+				var val = ((hi * 134217728.0) + lo) / 9007199254740992.0;
+				var scaled = (val * range) + a;
+				return _Utils_Tuple2(
+					scaled,
+					$elm$random$Random$next(seed1));
+			});
+	});
+var $elm$core$Tuple$second = function (_v0) {
+	var y = _v0.b;
+	return y;
+};
+var $elm$core$List$sum = function (numbers) {
+	return A3($elm$core$List$foldl, $elm$core$Basics$add, 0, numbers);
+};
+var $elm_community$random_extra$Random$Extra$frequency = F2(
+	function (head, pairs) {
+		var total = $elm$core$List$sum(
+			A2(
+				$elm$core$List$map,
+				A2($elm$core$Basics$composeL, $elm$core$Basics$abs, $elm$core$Tuple$first),
+				A2($elm$core$List$cons, head, pairs)));
+		var pick = F2(
+			function (someChoices, n) {
+				pick:
+				while (true) {
+					if (someChoices.b) {
+						var _v1 = someChoices.a;
+						var k = _v1.a;
+						var g = _v1.b;
+						var rest = someChoices.b;
+						if (_Utils_cmp(n, k) < 1) {
+							return g;
+						} else {
+							var $temp$someChoices = rest,
+								$temp$n = n - k;
+							someChoices = $temp$someChoices;
+							n = $temp$n;
+							continue pick;
+						}
+					} else {
+						return head.b;
+					}
+				}
+			});
+		return A2(
+			$elm$random$Random$andThen,
+			pick(
+				A2($elm$core$List$cons, head, pairs)),
+			A2($elm$random$Random$float, 0, total));
+	});
+var $elm_community$random_extra$Random$Extra$choices = F2(
+	function (hd, gens) {
+		return A2(
+			$elm_community$random_extra$Random$Extra$frequency,
+			_Utils_Tuple2(1, hd),
+			A2(
+				$elm$core$List$map,
+				function (g) {
+					return _Utils_Tuple2(1, g);
+				},
+				gens));
+	});
+var $elm$core$Char$fromCode = _Char_fromCode;
+var $elm_community$random_extra$Random$Char$char = F2(
+	function (start, end) {
+		return A2(
+			$elm$random$Random$map,
+			$elm$core$Char$fromCode,
+			A2($elm$random$Random$int, start, end));
+	});
+var $elm_community$random_extra$Random$Char$lowerCaseLatin = A2($elm_community$random_extra$Random$Char$char, 97, 122);
+var $elm_community$random_extra$Random$Char$upperCaseLatin = A2($elm_community$random_extra$Random$Char$char, 65, 90);
+var $elm_community$random_extra$Random$Char$latin = A2(
+	$elm_community$random_extra$Random$Extra$choices,
+	$elm_community$random_extra$Random$Char$lowerCaseLatin,
+	_List_fromArray(
+		[$elm_community$random_extra$Random$Char$upperCaseLatin]));
+var $elm_community$random_extra$Random$Char$english = $elm_community$random_extra$Random$Char$latin;
+var $elm$core$String$fromList = _String_fromList;
+var $elm$random$Random$listHelp = F4(
+	function (revList, n, gen, seed) {
+		listHelp:
+		while (true) {
+			if (n < 1) {
+				return _Utils_Tuple2(revList, seed);
+			} else {
+				var _v0 = gen(seed);
+				var value = _v0.a;
+				var newSeed = _v0.b;
+				var $temp$revList = A2($elm$core$List$cons, value, revList),
+					$temp$n = n - 1,
+					$temp$gen = gen,
+					$temp$seed = newSeed;
+				revList = $temp$revList;
+				n = $temp$n;
+				gen = $temp$gen;
+				seed = $temp$seed;
+				continue listHelp;
+			}
+		}
+	});
+var $elm$random$Random$list = F2(
+	function (n, _v0) {
+		var gen = _v0.a;
+		return $elm$random$Random$Generator(
+			function (seed) {
+				return A4($elm$random$Random$listHelp, _List_Nil, n, gen, seed);
+			});
+	});
+var $elm_community$random_extra$Random$String$string = F2(
+	function (stringLength, charGenerator) {
+		return A2(
+			$elm$random$Random$map,
+			$elm$core$String$fromList,
+			A2($elm$random$Random$list, stringLength, charGenerator));
+	});
+var $author$project$EventLog$Component$nameGenerator = A2($elm_community$random_extra$Random$String$string, 10, $elm_community$random_extra$Random$Char$english);
+var $author$project$EventLog$Component$createChannel = F2(
+	function (protocol, component) {
+		var model = component.eventLog;
+		if (model.$ === 'ModelRandomized') {
+			var state = model.a;
+			var _v1 = A2($elm$random$Random$step, $author$project$EventLog$Component$nameGenerator, state.seed);
+			var channelName = _v1.a;
+			var nextSeed = _v1.b;
+			var _v2 = A2($elm$core$Debug$log, 'createChannel', channelName);
+			return A3(
+				protocol.mmOpen,
+				channelName,
+				{
+					apiKey: component.momentoApiKey,
+					cache: $author$project$EventLog$Component$cacheName(channelName)
+				},
+				A2(
+					$elm$core$Tuple$mapSecond,
+					$elm$core$Platform$Cmd$map(protocol.toMsg),
+					A2(
+						$elm$core$Tuple$mapFirst,
+						$author$project$EventLog$Component$setModel(component),
+						A2(
+							$the_sett$elm_update_helper$Update2$andMap,
+							$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelRandomized),
+							$the_sett$elm_update_helper$Update2$pure(
+								_Utils_update(
+									state,
+									{seed: nextSeed}))))));
+		} else {
+			return protocol.onUpdate(
+				$the_sett$elm_update_helper$Update2$pure(component));
+		}
+	});
+var $elm$core$Result$map = F2(
+	function (func, ra) {
+		if (ra.$ === 'Ok') {
+			var a = ra.a;
+			return $elm$core$Result$Ok(
+				func(a));
+		} else {
+			var e = ra.a;
+			return $elm$core$Result$Err(e);
+		}
+	});
+var $author$project$Serverless$Conn$Request$method = function (_v0) {
+	var request = _v0.a;
+	return request.method;
+};
+var $author$project$EventLog$Component$processRoute = F3(
+	function (protocol, route, component) {
+		var _v0 = A2(
+			$elm$core$Debug$log,
+			'processRoute',
+			_Utils_Tuple2(
+				$author$project$Serverless$Conn$Request$method(route.request),
+				route.route));
+		_v0$3:
+		while (true) {
+			if (_v0.b.$ === 'V1ChannelRoot') {
+				switch (_v0.a.$) {
+					case 'GET':
+						var _v1 = _v0.a;
+						var _v2 = _v0.b;
+						return A2(
+							$the_sett$elm_update_helper$Update2$andMap,
+							$author$project$EventLog$Component$createChannel(protocol),
+							$the_sett$elm_update_helper$Update2$pure(component));
+					case 'POST':
+						var _v3 = _v0.a;
+						var _v4 = _v0.b;
+						return A2(
+							$the_sett$elm_update_helper$Update2$andMap,
+							$author$project$EventLog$Component$createChannel(protocol),
+							$the_sett$elm_update_helper$Update2$pure(component));
+					default:
+						break _v0$3;
+				}
+			} else {
+				if (_v0.a.$ === 'POST') {
+					var _v5 = _v0.a;
+					var channel = _v0.b.a;
+					var _v6 = A2(
+						$elm$core$Debug$log,
+						'EventLog.processRoute',
+						A2(
+							$elm$core$Result$map,
+							$elm$json$Json$Encode$encode(4),
+							$author$project$Serverless$Conn$Body$asJson(
+								$author$project$Serverless$Conn$Request$body(route.request))));
+					return protocol.onUpdate(
+						$the_sett$elm_update_helper$Update2$pure(component));
+				} else {
+					break _v0$3;
+				}
+			}
+		}
+		return protocol.onUpdate(
+			$the_sett$elm_update_helper$Update2$pure(component));
+	});
+var $author$project$API$apiRoute = F2(
+	function (route, model) {
+		return function (_v0) {
+			var apiMdl = _v0.a;
+			var cmds = _v0.b;
+			return A2(
+				$the_sett$elm_update_helper$Update2$andThen,
+				A2($author$project$EventLog$Component$processRoute, $author$project$API$eventLogProtocol, route),
+				_Utils_Tuple2(
+					_Utils_update(
+						model,
+						{api: apiMdl}),
+					cmds));
+		};
+	});
+var $author$project$EventLog$Component$V1Channel = function (a) {
+	return {$: 'V1Channel', a: a};
+};
+var $author$project$EventLog$Component$V1ChannelRoot = {$: 'V1ChannelRoot'};
+var $elm$url$Url$Parser$Parser = function (a) {
+	return {$: 'Parser', a: a};
+};
+var $elm$url$Url$Parser$State = F5(
+	function (visited, unvisited, params, frag, value) {
+		return {frag: frag, params: params, unvisited: unvisited, value: value, visited: visited};
 	});
 var $elm$url$Url$Parser$mapState = F2(
 	function (func, _v0) {
@@ -3336,38 +4224,6 @@ var $elm$url$Url$Parser$addToParametersHelp = F2(
 		}
 	});
 var $elm$url$Url$percentDecode = _Url_percentDecode;
-var $elm$core$Basics$compare = _Utils_compare;
-var $elm$core$Dict$get = F2(
-	function (targetKey, dict) {
-		get:
-		while (true) {
-			if (dict.$ === 'RBEmpty_elm_builtin') {
-				return $elm$core$Maybe$Nothing;
-			} else {
-				var key = dict.b;
-				var value = dict.c;
-				var left = dict.d;
-				var right = dict.e;
-				var _v1 = A2($elm$core$Basics$compare, targetKey, key);
-				switch (_v1.$) {
-					case 'LT':
-						var $temp$targetKey = targetKey,
-							$temp$dict = left;
-						targetKey = $temp$targetKey;
-						dict = $temp$dict;
-						continue get;
-					case 'EQ':
-						return $elm$core$Maybe$Just(value);
-					default:
-						var $temp$targetKey = targetKey,
-							$temp$dict = right;
-						targetKey = $temp$targetKey;
-						dict = $temp$dict;
-						continue get;
-				}
-			}
-		}
-	});
 var $elm$core$Dict$Black = {$: 'Black'};
 var $elm$core$Dict$RBNode_elm_builtin = F5(
 	function (a, b, c, d, e) {
@@ -3928,6 +4784,52 @@ var $elm$url$Url$Parser$s = function (str) {
 			}
 		});
 };
+var $elm$url$Url$Parser$slash = F2(
+	function (_v0, _v1) {
+		var parseBefore = _v0.a;
+		var parseAfter = _v1.a;
+		return $elm$url$Url$Parser$Parser(
+			function (state) {
+				return A2(
+					$elm$core$List$concatMap,
+					parseAfter,
+					parseBefore(state));
+			});
+	});
+var $elm$url$Url$Parser$custom = F2(
+	function (tipe, stringToSomething) {
+		return $elm$url$Url$Parser$Parser(
+			function (_v0) {
+				var visited = _v0.visited;
+				var unvisited = _v0.unvisited;
+				var params = _v0.params;
+				var frag = _v0.frag;
+				var value = _v0.value;
+				if (!unvisited.b) {
+					return _List_Nil;
+				} else {
+					var next = unvisited.a;
+					var rest = unvisited.b;
+					var _v2 = stringToSomething(next);
+					if (_v2.$ === 'Just') {
+						var nextValue = _v2.a;
+						return _List_fromArray(
+							[
+								A5(
+								$elm$url$Url$Parser$State,
+								A2($elm$core$List$cons, next, visited),
+								rest,
+								params,
+								frag,
+								value(nextValue))
+							]);
+					} else {
+						return _List_Nil;
+					}
+				}
+			});
+	});
+var $elm$url$Url$Parser$string = A2($elm$url$Url$Parser$custom, 'STRING', $elm$core$Maybe$Just);
 var $author$project$EventLog$Component$routeParser = $elm$url$Url$Parser$parse(
 	A2(
 		$elm$url$Url$Parser$map,
@@ -3937,8 +4839,21 @@ var $author$project$EventLog$Component$routeParser = $elm$url$Url$Parser$parse(
 				[
 					A2(
 					$elm$url$Url$Parser$map,
-					$author$project$EventLog$Component$V1,
-					$elm$url$Url$Parser$s('v1'))
+					$author$project$EventLog$Component$V1ChannelRoot,
+					A2(
+						$elm$url$Url$Parser$slash,
+						$elm$url$Url$Parser$s('v1'),
+						$elm$url$Url$Parser$s('channel'))),
+					A2(
+					$elm$url$Url$Parser$map,
+					$author$project$EventLog$Component$V1Channel,
+					A2(
+						$elm$url$Url$Parser$slash,
+						$elm$url$Url$Parser$s('v1'),
+						A2(
+							$elm$url$Url$Parser$slash,
+							$elm$url$Url$Parser$s('channel'),
+							$elm$url$Url$Parser$string)))
 				]))));
 var $author$project$API$apiProtocol = function (model) {
 	return {
@@ -3960,84 +4875,6 @@ var $author$project$API$apiProtocol = function (model) {
 	};
 };
 var $elm$core$Platform$Sub$batch = _Platform_batch;
-var $author$project$API$mmError = F3(
-	function (id, payload, model) {
-		return function (_v0) {
-			var wsMdl = _v0.a;
-			var cmds = _v0.b;
-			return _Utils_Tuple2(
-				_Utils_update(
-					model,
-					{momento: wsMdl}),
-				cmds);
-		};
-	});
-var $author$project$API$mmMessage = F3(
-	function (id, payload, model) {
-		return function (_v0) {
-			var wsMdl = _v0.a;
-			var cmds = _v0.b;
-			return _Utils_Tuple2(
-				_Utils_update(
-					model,
-					{momento: wsMdl}),
-				cmds);
-		};
-	});
-var $author$project$API$mmOpened = F2(
-	function (id, model) {
-		return function (_v0) {
-			var wsMdl = _v0.a;
-			var cmds = _v0.b;
-			return _Utils_Tuple2(
-				_Utils_update(
-					model,
-					{momento: wsMdl}),
-				cmds);
-		};
-	});
-var $author$project$API$mmSubscribed = F3(
-	function (id, params, model) {
-		return function (_v0) {
-			var wsMdl = _v0.a;
-			var cmds = _v0.b;
-			return _Utils_Tuple2(
-				_Utils_update(
-					model,
-					{momento: wsMdl}),
-				cmds);
-		};
-	});
-var $author$project$API$momentoProtocol = function (model) {
-	return {
-		onError: F2(
-			function (id, error) {
-				return A3($author$project$API$mmError, id, error, model);
-			}),
-		onMessage: F2(
-			function (id, payload) {
-				return A3($author$project$API$mmMessage, id, payload, model);
-			}),
-		onOpen: function (id) {
-			return A2($author$project$API$mmOpened, id, model);
-		},
-		onSubscribe: F2(
-			function (id, params) {
-				return A3($author$project$API$mmSubscribed, id, params, model);
-			}),
-		onUpdate: function (_v0) {
-			var wsMdl = _v0.a;
-			var cmds = _v0.b;
-			return _Utils_Tuple2(
-				_Utils_update(
-					model,
-					{momento: wsMdl}),
-				cmds);
-		},
-		ports: $author$project$API$momentoPorts,
-		toMsg: $author$project$API$MomentoMsg
-	};
-};
 var $author$project$Momento$OnError = function (a) {
 	return {$: 'OnError', a: a};
 };
@@ -4090,8 +4927,27 @@ var $author$project$API$subscriptions = function (model) {
 			]));
 };
 var $author$project$EventLog$Component$update = F3(
-	function (protocol, msg, model) {
-		return $the_sett$elm_update_helper$Update2$pure(model);
+	function (protocol, msg, component) {
+		var model = component.eventLog;
+		var _v0 = _Utils_Tuple2(model, msg);
+		if (_v0.a.$ === 'ModelStart') {
+			var seed = _v0.b.a;
+			return protocol.onUpdate(
+				A2(
+					$elm$core$Tuple$mapSecond,
+					$elm$core$Platform$Cmd$map(protocol.toMsg),
+					A2(
+						$elm$core$Tuple$mapFirst,
+						$author$project$EventLog$Component$setModel(component),
+						A2(
+							$the_sett$elm_update_helper$Update2$andMap,
+							$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelRandomized),
+							$the_sett$elm_update_helper$Update2$pure(
+								{seed: seed})))));
+		} else {
+			return protocol.onUpdate(
+				$the_sett$elm_update_helper$Update2$pure(component));
+		}
 	});
 var $author$project$Momento$Failed = {$: 'Failed'};
 var $author$project$Momento$Open = {$: 'Open'};
@@ -4135,19 +4991,6 @@ var $author$project$Momento$update = F3(
 					$the_sett$elm_update_helper$Update2$pure(model));
 		}
 	});
-var $the_sett$elm_update_helper$Update2$andMap = F2(
-	function (fn, _v0) {
-		var model = _v0.a;
-		var cmd = _v0.b;
-		var _v1 = fn(model);
-		var nextModel = _v1.a;
-		var nextCmd = _v1.b;
-		return _Utils_Tuple2(
-			nextModel,
-			$elm$core$Platform$Cmd$batch(
-				_List_fromArray(
-					[cmd, nextCmd])));
-	});
 var $elm$core$Maybe$andThen = F2(
 	function (callback, maybeValue) {
 		if (maybeValue.$ === 'Just') {
@@ -4174,11 +5017,6 @@ var $author$project$Serverless$Conn$Request$HeadersOnly = function (headers) {
 var $author$project$Serverless$Conn$Request$Request = function (a) {
 	return {$: 'Request', a: a};
 };
-var $elm$core$Basics$composeL = F3(
-	function (g, f, x) {
-		return g(
-			f(x));
-	});
 var $elm$json$Json$Decode$keyValuePairs = _Json_decodeKeyValuePairs;
 var $elm$json$Json$Decode$map = _Json_map1;
 var $elm$json$Json$Decode$null = _Json_decodeNull;
@@ -4225,7 +5063,6 @@ var $author$project$Serverless$Conn$Body$Json = function (a) {
 var $author$project$Serverless$Conn$Body$Text = function (a) {
 	return {$: 'Text', a: a};
 };
-var $elm$json$Json$Decode$decodeString = _Json_runOnString;
 var $elm$json$Json$Decode$maybe = function (decoder) {
 	return $elm$json$Json$Decode$oneOf(
 		_List_fromArray(
@@ -4611,22 +5448,11 @@ var $elm$url$Url$fromString = function (str) {
 		$elm$url$Url$Https,
 		A2($elm$core$String$dropLeft, 8, str)) : $elm$core$Maybe$Nothing);
 };
-var $elm$core$Result$mapError = F2(
-	function (f, result) {
-		if (result.$ === 'Ok') {
-			var v = result.a;
-			return $elm$core$Result$Ok(v);
-		} else {
-			var e = result.a;
-			return $elm$core$Result$Err(
-				f(e));
-		}
-	});
 var $author$project$Serverless$Conn$Request$url = function (_v0) {
 	var request = _v0.a;
 	return request.url;
 };
-var $author$project$Server$API$blarg = F2(
+var $author$project$Server$API$decodeRequestAndRoute = F2(
 	function (rawRequest, parseRoute) {
 		return A2(
 			$elm$core$Result$andThen,
@@ -4671,7 +5497,6 @@ var $author$project$Serverless$Conn$Response$contentType = function (_v0) {
 	var charset = _v0.charset;
 	return $author$project$Serverless$Conn$Body$contentType(body) + ('; charset=' + $author$project$Serverless$Conn$Charset$toString(charset));
 };
-var $elm$json$Json$Encode$null = _Json_encodeNull;
 var $author$project$Serverless$Conn$Body$encode = function (body) {
 	switch (body.$) {
 		case 'Empty':
@@ -4803,9 +5628,9 @@ var $author$project$Server$API$ok200 = F3(
 			$author$project$Ports$responsePort(
 				_Utils_Tuple3(id, cb, response)));
 	});
-var $author$project$Server$API$decodeRequestAndRoute = F5(
-	function (id, cb, protocol, rawRequest, model) {
-		var _v0 = A2($author$project$Server$API$blarg, rawRequest, protocol.parseRoute);
+var $author$project$Server$API$checkAndForwardRoute = F5(
+	function (protocol, id, cb, rawRequest, model) {
+		var _v0 = A2($author$project$Server$API$decodeRequestAndRoute, rawRequest, protocol.parseRoute);
 		if (_v0.$ === 'Ok') {
 			var _v1 = _v0.a;
 			var req = _v1.a;
@@ -4843,28 +5668,29 @@ var $author$project$Server$API$update = F3(
 		var rawRequest = _v2.c;
 		return A2(
 			$the_sett$elm_update_helper$Update2$andMap,
-			A4($author$project$Server$API$decodeRequestAndRoute, id, cb, protocol, rawRequest),
+			A4($author$project$Server$API$checkAndForwardRoute, protocol, id, cb, rawRequest),
 			$the_sett$elm_update_helper$Update2$pure(model));
 	});
 var $author$project$API$update = F2(
 	function (msg, model) {
-		switch (msg.$) {
+		var _v0 = A2($elm$core$Debug$log, 'API.update', msg);
+		switch (_v0.$) {
 			case 'MomentoMsg':
-				var innerMsg = msg.a;
+				var innerMsg = _v0.a;
 				return A3(
 					$author$project$Momento$update,
 					$author$project$API$momentoProtocol(model),
 					innerMsg,
 					model.momento);
 			case 'ApiMsg':
-				var innerMsg = msg.a;
+				var innerMsg = _v0.a;
 				return A3(
 					$author$project$Server$API$update,
 					$author$project$API$apiProtocol(model),
 					innerMsg,
 					model.api);
 			default:
-				var innerMsg = msg.a;
+				var innerMsg = _v0.a;
 				return A3($author$project$EventLog$Component$update, $author$project$API$eventLogProtocol, innerMsg, model);
 		}
 	});
@@ -4875,8 +5701,13 @@ _Platform_export({'API':{'init':$author$project$API$main(
 	A2(
 		$elm$json$Json$Decode$andThen,
 		function (momentoSecret) {
-			return $elm$json$Json$Decode$succeed(
-				{momentoSecret: momentoSecret});
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (channelApiUrl) {
+					return $elm$json$Json$Decode$succeed(
+						{channelApiUrl: channelApiUrl, momentoSecret: momentoSecret});
+				},
+				A2($elm$json$Json$Decode$field, 'channelApiUrl', $elm$json$Json$Decode$string));
 		},
 		A2(
 			$elm$json$Json$Decode$field,

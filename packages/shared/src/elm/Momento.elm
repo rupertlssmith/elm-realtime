@@ -55,6 +55,7 @@ type Error
 type Op
     = Publish { topic : String, payload : String }
     | PushList { list : String, payload : String }
+    | Webhook { topic : String, url : String }
 
 
 type alias Ports =
@@ -66,6 +67,7 @@ type alias Ports =
     , publish : { id : String, topic : String, payload : String } -> Cmd Msg
     , onMessage : ({ id : String, payload : String } -> Msg) -> Sub Msg
     , pushList : { id : String, list : String, payload : String } -> Cmd Msg
+    , createWebhook : { id : String, topic : String, url : String } -> Cmd Msg
     , onError : ({ id : String, error : Value } -> Msg) -> Sub Msg
     }
 
@@ -154,22 +156,16 @@ processOps protocol id ops model =
     let
         socket =
             Dict.get id model.sessions
+
+        _ =
+            Debug.log "Momento.processOps" ( id, ops, socket )
     in
     case socket of
         Just Open ->
             let
                 portCmds =
                     List.map
-                        (\op ->
-                            case op of
-                                Publish { topic, payload } ->
-                                    protocol.ports.publish { id = id, topic = topic, payload = payload }
-                                        |> Cmd.map protocol.toMsg
-
-                                PushList { list, payload } ->
-                                    protocol.ports.pushList { id = id, list = list, payload = payload }
-                                        |> Cmd.map protocol.toMsg
-                        )
+                        (processOp protocol id)
                         ops
             in
             ( model
@@ -182,17 +178,24 @@ processOps protocol id ops model =
                 |> protocol.onUpdate
 
 
+processOp protocol id op =
+    case op of
+        Publish { topic, payload } ->
+            protocol.ports.publish { id = id, topic = topic, payload = payload }
+                |> Cmd.map protocol.toMsg
 
---send : String -> {} -> Op
+        PushList { list, payload } ->
+            protocol.ports.pushList { id = id, list = list, payload = payload }
+                |> Cmd.map protocol.toMsg
+
+        Webhook { topic, url } ->
+            protocol.ports.createWebhook { id = id, topic = topic, url = url }
+                |> Cmd.map protocol.toMsg
 
 
 publish args =
     { topic = args.topic, payload = args.payload }
         |> Publish
-
-
-
---pushList : String -> {} -> Op
 
 
 pushList args =

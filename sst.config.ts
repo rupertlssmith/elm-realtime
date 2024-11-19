@@ -25,12 +25,12 @@ export default $config({
             primaryIndex: {hashKey: "id"},
         });
 
-        const api = new sst.aws.ApiGatewayV2("saveapi", {link: [momentoApiKey]});
+        const api = new sst.aws.ApiGatewayV2("ChannelApi", {link: [momentoApiKey]});
 
-        api.route("GET /{proxy+}",
+        api.route("ANY /{proxy+}",
             {
                 handler: "packages/functions/src/api.main",
-                link: [momentoApiKey]
+                link: [momentoApiKey, api]
             }
         );
 

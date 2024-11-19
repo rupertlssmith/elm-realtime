@@ -3,6 +3,7 @@ port module Ports exposing
     , wsOpen, wsSend, wsClose, wsOnOpen, wsOnClose, wsOnMessage, wsOnError
     , mmClose, mmOnClose, mmOnError, mmOnMessage, mmOnOpen, mmOpen, mmPushList
     , mmSend, mmOnSubscribe, mmSubscribe
+    , mmCreateWebhook
     )
 
 {-| Application ports
@@ -22,6 +23,7 @@ port module Ports exposing
 
 @docs mmClose, mmOnClose, mmOnError, mmOnMessage, mmOnOpen, mmOpen, mmPushList
 @docs mmSend, mmOnSubscribe, mmSubscribe
+@docs mmCreateWebhook
 
 -}
 
@@ -98,6 +100,9 @@ port mmOnMessage : ({ id : String, payload : String } -> msg) -> Sub msg
 
 
 port mmPushList : { id : String, list : String, payload : String } -> Cmd msg
+
+
+port mmCreateWebhook : { id : String, topic : String, url : String } -> Cmd msg
 
 
 port mmOnError : ({ id : String, error : Value } -> msg) -> Sub msg
