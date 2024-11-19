@@ -95,8 +95,8 @@ processRoute protocol route component =
 {-| Channel creation:
 
     * Create the cache or confirm it already exists.
-    * Create a webhook on the save topic.
     * Create a dynamodb table for the persisted events or confirm it already exists.
+    * Create a webhook on the save topic.
     * Return a confirmation that everything has been set up.
 
 -}
