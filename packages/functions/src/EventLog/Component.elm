@@ -94,10 +94,6 @@ processRoute protocol route component =
                 |> protocol.onUpdate
 
 
-
--- Channel Creation
-
-
 {-| Channel creation:
 
     * Create the cache or confirm it already exists.
@@ -170,8 +166,8 @@ mmError protocol id error component =
         |> protocol.onUpdate
 
 
-mmOpsComplete : Protocol (Component a) msg model -> String -> Component a -> ( model, Cmd msg )
-mmOpsComplete protocol id component =
+dynamoResult : Protocol (Component a) msg model -> String -> Component a -> ( model, Cmd msg )
+dynamoResult protocol id component =
     let
         model =
             component.eventLog
@@ -189,8 +185,8 @@ mmOpsComplete protocol id component =
                 |> protocol.onUpdate
 
 
-dynamoResult : Protocol (Component a) msg model -> String -> Component a -> ( model, Cmd msg )
-dynamoResult protocol id component =
+mmOpsComplete : Protocol (Component a) msg model -> String -> Component a -> ( model, Cmd msg )
+mmOpsComplete protocol id component =
     let
         model =
             component.eventLog
