@@ -1,9 +1,10 @@
-module EventLog.Component exposing (Component, Model(..), Msg(..), Protocol, RandomizedState, Route(..), StartState, cacheName, createChannel, init, mmError, mmOpened, modelTopicName, nameGenerator, notifyTopicName, processRoute, randomize, routeParser, saveChannelEvent, saveListName, setModel, switchState, update)
+module EventLog.Component exposing (Component, Model(..), Msg(..), Protocol, ReadyState, Route(..), StartState, cacheName, createChannel, init, mmError, mmOpened, modelTopicName, nameGenerator, notifyTopicName, processRoute, randomize, routeParser, saveChannelEvent, saveListName, setModel, switchState, update)
 
 {-| API for managing realtime channels.
 -}
 
 import AWS.Dynamo as Dynamo
+import Dict exposing (Dict)
 import Json.Encode as Encode
 import Momento exposing (Error, Op(..), OpenParams)
 import Random
@@ -108,7 +109,7 @@ createChannel protocol component =
             component.eventLog
     in
     case model of
-        ModelRandomized state ->
+        ModelReady state ->
             let
                 ( channelName, nextSeed ) =
                     Random.step nameGenerator state.seed
@@ -117,7 +118,7 @@ createChannel protocol component =
                     Debug.log "createChannel" channelName
             in
             U2.pure { state | seed = nextSeed }
-                |> U2.andMap (switchState ModelRandomized)
+                |> U2.andMap (switchState ModelReady)
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.mmOpen channelName
@@ -142,9 +143,9 @@ mmOpened protocol channelId component =
             Debug.log "mmOpened" ("channel " ++ channelId)
     in
     case model of
-        ModelRandomized state ->
+        ModelReady state ->
             U2.pure state
-                |> U2.andMap (switchState ModelRandomized)
+                |> U2.andMap (switchState ModelReady)
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.mmOps channelId
@@ -202,7 +203,7 @@ type Msg
 
 type Model
     = ModelStart StartState
-    | ModelRandomized RandomizedState
+    | ModelReady ReadyState
 
 
 switchState : (a -> Model) -> a -> ( Model, Cmd Msg )
@@ -216,8 +217,9 @@ type alias StartState =
     {}
 
 
-type alias RandomizedState =
+type alias ReadyState =
     { seed : Random.Seed
+    , requests : Dict String Route
     }
 
 
@@ -230,9 +232,10 @@ update protocol msg component =
     case ( model, msg ) of
         ( ModelStart _, RandomSeed seed ) ->
             { seed = seed
+            , requests = Dict.empty
             }
                 |> U2.pure
-                |> U2.andMap (switchState ModelRandomized)
+                |> U2.andMap (switchState ModelReady)
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate

@@ -3446,8 +3446,8 @@ var $author$project$API$mmMessage = F3(
 				cmds);
 		};
 	});
-var $author$project$EventLog$Component$ModelRandomized = function (a) {
-	return {$: 'ModelRandomized', a: a};
+var $author$project$EventLog$Component$ModelReady = function (a) {
+	return {$: 'ModelReady', a: a};
 };
 var $author$project$Momento$Webhook = function (a) {
 	return {$: 'Webhook', a: a};
@@ -3473,7 +3473,7 @@ var $author$project$EventLog$Component$mmOpened = F3(
 	function (protocol, channelId, component) {
 		var model = component.eventLog;
 		var _v0 = A2($elm$core$Debug$log, 'mmOpened', 'channel ' + channelId);
-		if (model.$ === 'ModelRandomized') {
+		if (model.$ === 'ModelReady') {
 			var state = model.a;
 			return A3(
 				protocol.mmOps,
@@ -3494,7 +3494,7 @@ var $author$project$EventLog$Component$mmOpened = F3(
 						$author$project$EventLog$Component$setModel(component),
 						A2(
 							$the_sett$elm_update_helper$Update2$andMap,
-							$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelRandomized),
+							$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelReady),
 							$the_sett$elm_update_helper$Update2$pure(state)))));
 		} else {
 			return protocol.onUpdate(
@@ -3979,7 +3979,7 @@ var $author$project$EventLog$Component$nameGenerator = A2($elm_community$random_
 var $author$project$EventLog$Component$createChannel = F2(
 	function (protocol, component) {
 		var model = component.eventLog;
-		if (model.$ === 'ModelRandomized') {
+		if (model.$ === 'ModelReady') {
 			var state = model.a;
 			var _v1 = A2($elm$random$Random$step, $author$project$EventLog$Component$nameGenerator, state.seed);
 			var channelName = _v1.a;
@@ -4000,7 +4000,7 @@ var $author$project$EventLog$Component$createChannel = F2(
 						$author$project$EventLog$Component$setModel(component),
 						A2(
 							$the_sett$elm_update_helper$Update2$andMap,
-							$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelRandomized),
+							$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelReady),
 							$the_sett$elm_update_helper$Update2$pure(
 								_Utils_update(
 									state,
@@ -4934,9 +4934,9 @@ var $author$project$EventLog$Component$update = F3(
 						$author$project$EventLog$Component$setModel(component),
 						A2(
 							$the_sett$elm_update_helper$Update2$andMap,
-							$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelRandomized),
+							$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelReady),
 							$the_sett$elm_update_helper$Update2$pure(
-								{seed: seed})))));
+								{requests: $elm$core$Dict$empty, seed: seed})))));
 		} else {
 			return protocol.onUpdate(
 				$the_sett$elm_update_helper$Update2$pure(component));
