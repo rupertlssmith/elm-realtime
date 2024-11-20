@@ -20,13 +20,15 @@
             "elm-community/maybe-extra": "5.3.0",
             "elm-community/random-extra": "3.2.0",
             "elm-community/result-extra": "2.4.0",
+            "the-sett/elm-error-handling": "2.3.0",
             "the-sett/elm-update-helper": "2.3.0"
         },
         "indirect": {
             "TSFoster/elm-tuple-extra": "2.0.0",
             "elm/bytes": "1.0.8",
             "elm/file": "1.0.5",
-            "elm/virtual-dom": "1.0.3"
+            "elm/virtual-dom": "1.0.3",
+            "mgold/elm-nonempty-list": "4.2.0"
         }
     },
     "test-dependencies": {

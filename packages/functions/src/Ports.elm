@@ -3,6 +3,8 @@ port module Ports exposing
     , mmClose, mmOnClose, mmOnError, mmOnMessage, mmOnOpen, mmOpen, mmPushList
     , mmSend, mmOnSubscribe, mmSubscribe
     , mmCreateWebhook
+    , dynamoBatchGet, dynamoBatchWrite, dynamoDelete, dynamoGet, dynamoPut
+    , dynamoQuery, dynamoResponse
     )
 
 {-| Application ports
@@ -18,6 +20,12 @@ port module Ports exposing
 @docs mmClose, mmOnClose, mmOnError, mmOnMessage, mmOnOpen, mmOpen, mmPushList
 @docs mmSend, mmOnSubscribe, mmSubscribe
 @docs mmCreateWebhook
+
+
+# AWS Dynamo DB
+
+@docs dynamoBatchGet, dynamoBatchWrite, dynamoDelete, dynamoGet, dynamoPut
+@docs dynamoQuery, dynamoResponse
 
 -}
 
@@ -69,3 +77,28 @@ port mmCreateWebhook : { id : String, topic : String, url : String } -> Cmd msg
 
 
 port mmOnError : ({ id : String, error : Value } -> msg) -> Sub msg
+
+
+
+-- DynamoDB API
+
+
+port dynamoGet : ( String, Value ) -> Cmd msg
+
+
+port dynamoPut : ( String, Value ) -> Cmd msg
+
+
+port dynamoDelete : ( String, Value ) -> Cmd msg
+
+
+port dynamoBatchGet : ( String, Value ) -> Cmd msg
+
+
+port dynamoBatchWrite : ( String, Value ) -> Cmd msg
+
+
+port dynamoQuery : ( String, Value ) -> Cmd msg
+
+
+port dynamoResponse : (( String, Value ) -> msg) -> Sub msg

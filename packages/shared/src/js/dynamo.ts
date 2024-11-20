@@ -1,8 +1,7 @@
 const AWS = require('aws-sdk');
 import * as ports from "./ports" ;
 
-let DocumentClient = new AWS.DynamoDB.DocumentClient();
-
+let documentClient = new AWS.DynamoDB.DocumentClient();
 
 export class DynamoPorts {
     //app: { ports: Ports };
@@ -22,12 +21,16 @@ export class DynamoPorts {
             "dynamoResponse"
         ]);
 
-        app.ports.mmOpen.subscribe(this.open);
+        app.ports.dynamoGet.subscribe(this.dynamoGet);
+        app.ports.dynamoPut.subscribe(this.dynamoPut);
+        app.ports.dynamoDelete.subscribe(this.dynamoDelete);
+        app.ports.dynamoBatchGet.subscribe(this.dynamoBatchGet);
+        app.ports.dynamoBatchWrite.subscribe(this.dynamoBatchWrite);
+        app.ports.dynamoQuery.subscribe(this.dynamoQuery);
     }
 
-
-    dynamoGet = (responsePort, correlationId, interopId, params) => {
-        DocumentClient.get(params, (error, result) => {
+    dynamoGet = (correlationId, params) => {
+        documentClient.get(params, (error, result) => {
             var getResponse;
 
             if (error) {
@@ -46,13 +49,12 @@ export class DynamoPorts {
                 }
             }
 
-            responsePort.send([correlationId, interopId, getResponse]);
+            this.app.ports.dynamoResponse.send([correlationId, getResponse]);
         });
     }
 
-    let
-    dynamoPut = (responsePort, correlationId, interopId, params) => {
-        DocumentClient.put(params, (error, result) => {
+    dynamoPut = (responsePort, correlationId, params) => {
+        documentClient.put(params, (error, result) => {
             var putResponse;
 
             if (error) {
@@ -66,13 +68,12 @@ export class DynamoPorts {
                 }
             }
 
-            responsePort.send([correlationId, interopId, putResponse]);
+            this.app.ports.dynamoResponse.send([correlationId, putResponse]);
         });
     }
 
-    let
-    dynamoDelete = (responsePort, correlationId, interopId, params) => {
-        DocumentClient.delete(params, (error, result) => {
+    dynamoDelete = (responsePort, correlationId, params) => {
+        documentClient.delete(params, (error, result) => {
             var deleteResponse;
 
             if (error) {
@@ -86,13 +87,12 @@ export class DynamoPorts {
                 }
             }
 
-            responsePort.send([correlationId, interopId, deleteResponse]);
+            this.app.ports.dynamoResponse.send([correlationId, deleteResponse]);
         });
     }
 
-    let
-    dynamoBatchGet = (responsePort, correlationId, interopId, params) => {
-        DocumentClient.batchGet(params, (error, result) => {
+    dynamoBatchGet = (responsePort, correlationId, params) => {
+        documentClient.batchGet(params, (error, result) => {
             var getResponse;
 
             if (error) {
@@ -112,13 +112,12 @@ export class DynamoPorts {
                 }
             }
 
-            responsePort.send([correlationId, interopId, getResponse]);
+            this.app.ports.dynamoResponse.send([correlationId, getResponse]);
         });
     }
 
-    let
-    dynamoBatchWrite = (responsePort, correlationId, interopId, params) => {
-        DocumentClient.batchWrite(params, (error, result) => {
+    dynamoBatchWrite = (responsePort, correlationId, params) => {
+        documentClient.batchWrite(params, (error, result) => {
             var putResponse;
 
             if (error) {
@@ -132,13 +131,12 @@ export class DynamoPorts {
                 }
             }
 
-            responsePort.send([correlationId, interopId, putResponse]);
+            this.app.ports.dynamoResponse.send([correlationId, putResponse]);
         });
     }
 
-    let
-    dynamoQuery = (responsePort, correlationId, interopId, params) => {
-        DocumentClient.query(params, (error, result) => {
+    dynamoQuery = (responsePort, correlationId, params) => {
+        documentClient.query(params, (error, result) => {
             var getResponse;
 
             if (error) {
@@ -162,7 +160,7 @@ export class DynamoPorts {
                 getResponse.lastEvaluatedKey = result.LastEvaluatedKey;
             }
 
-            responsePort.send([correlationId, interopId, getResponse]);
+            this.app.ports.dynamoResponse.send([correlationId, getResponse]);
         });
     }
 }
