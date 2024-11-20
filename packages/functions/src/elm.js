@@ -4035,7 +4035,7 @@ var $author$project$EventLog$Component$processRoute = F3(
 				route.route));
 		_v0$3:
 		while (true) {
-			if (_v0.b.$ === 'V1ChannelRoot') {
+			if (_v0.b.$ === 'ChannelRoot') {
 				switch (_v0.a.$) {
 					case 'GET':
 						var _v1 = _v0.a;
@@ -4090,10 +4090,10 @@ var $author$project$API$apiRoute = F2(
 					cmds));
 		};
 	});
-var $author$project$EventLog$Component$V1Channel = function (a) {
-	return {$: 'V1Channel', a: a};
+var $author$project$EventLog$Component$Channel = function (a) {
+	return {$: 'Channel', a: a};
 };
-var $author$project$EventLog$Component$V1ChannelRoot = {$: 'V1ChannelRoot'};
+var $author$project$EventLog$Component$ChannelRoot = {$: 'ChannelRoot'};
 var $elm$url$Url$Parser$Parser = function (a) {
 	return {$: 'Parser', a: a};
 };
@@ -4838,21 +4838,15 @@ var $author$project$EventLog$Component$routeParser = $elm$url$Url$Parser$parse(
 				[
 					A2(
 					$elm$url$Url$Parser$map,
-					$author$project$EventLog$Component$V1ChannelRoot,
-					A2(
-						$elm$url$Url$Parser$slash,
-						$elm$url$Url$Parser$s('v1'),
-						$elm$url$Url$Parser$s('channel'))),
+					$author$project$EventLog$Component$ChannelRoot,
+					$elm$url$Url$Parser$s('channel')),
 					A2(
 					$elm$url$Url$Parser$map,
-					$author$project$EventLog$Component$V1Channel,
+					$author$project$EventLog$Component$Channel,
 					A2(
 						$elm$url$Url$Parser$slash,
-						$elm$url$Url$Parser$s('v1'),
-						A2(
-							$elm$url$Url$Parser$slash,
-							$elm$url$Url$Parser$s('channel'),
-							$elm$url$Url$Parser$string)))
+						$elm$url$Url$Parser$s('channel'),
+						$elm$url$Url$Parser$string))
 				]))));
 var $author$project$API$apiProtocol = function (model) {
 	return {

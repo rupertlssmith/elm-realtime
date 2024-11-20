@@ -27,7 +27,7 @@ export default $config({
 
         const api = new sst.aws.ApiGatewayV2("ChannelApi", {link: [momentoApiKey]});
 
-        api.route("ANY /{proxy+}",
+        api.route("ANY /v1/{proxy+}",
             {
                 handler: "packages/functions/src/api.main",
                 link: [momentoApiKey, api]

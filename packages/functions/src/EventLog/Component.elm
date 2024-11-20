@@ -50,15 +50,15 @@ init toMsg =
 
 
 type Route
-    = V1ChannelRoot
-    | V1Channel String
+    = ChannelRoot
+    | Channel String
 
 
 routeParser : Url -> Maybe Route
 routeParser =
     UP.oneOf
-        [ UP.map V1ChannelRoot (UP.s "v1" </> UP.s "channel")
-        , UP.map V1Channel (UP.s "v1" </> UP.s "channel" </> UP.string)
+        [ UP.map ChannelRoot (UP.s "channel")
+        , UP.map Channel (UP.s "channel" </> UP.string)
         ]
         |> UP.map (Debug.log "route")
         |> UP.parse
@@ -67,15 +67,15 @@ routeParser =
 processRoute : Protocol (Component a) msg model -> ApiRoute Route -> Component a -> ( model, Cmd msg )
 processRoute protocol route component =
     case ( Request.method route.request, route.route ) |> Debug.log "processRoute" of
-        ( GET, V1ChannelRoot ) ->
+        ( GET, ChannelRoot ) ->
             U2.pure component
                 |> U2.andMap (createChannel protocol)
 
-        ( POST, V1ChannelRoot ) ->
+        ( POST, ChannelRoot ) ->
             U2.pure component
                 |> U2.andMap (createChannel protocol)
 
-        ( POST, V1Channel _ ) ->
+        ( POST, Channel _ ) ->
             let
                 _ =
                     Debug.log "EventLog.processRoute"
