@@ -1,4 +1,4 @@
-module EventLog.Component exposing (..)
+module EventLog.Component exposing (Component, Model(..), Msg(..), Protocol, RandomizedState, Route(..), StartState, cacheName, createChannel, init, mmError, mmOpened, modelTopicName, nameGenerator, notifyTopicName, processRoute, randomize, routeParser, saveChannelEvent, saveListName, setModel, switchState, update)
 
 {-| API for managing realtime channels.
 -}
@@ -74,7 +74,7 @@ processRoute protocol route component =
             U2.pure component
                 |> U2.andMap (createChannel protocol)
 
-        ( POST, V1Channel channel ) ->
+        ( POST, V1Channel _ ) ->
             let
                 _ =
                     Debug.log "EventLog.processRoute"

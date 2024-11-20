@@ -226,7 +226,7 @@ appendText val body =
         Text existingVal ->
             Ok (Text (existingVal ++ val))
 
-        Json jval ->
+        Json _ ->
             Err "cannot append text to json"
 
         Binary _ _ ->

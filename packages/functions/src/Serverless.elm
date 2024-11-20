@@ -3,6 +3,7 @@ module Serverless exposing
     , IO, RequestPort, ResponsePort
     , noConfig, noRoutes, noSideEffects, noPorts
     , InteropRequestPort, InteropResponsePort, interop
+    , Flags, Model, Msg
     )
 
 {-| Use `httpApi` to define a `Program` that responds to HTTP requests. Take a look

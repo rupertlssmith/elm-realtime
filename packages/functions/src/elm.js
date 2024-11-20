@@ -4057,7 +4057,6 @@ var $author$project$EventLog$Component$processRoute = F3(
 			} else {
 				if (_v0.a.$ === 'POST') {
 					var _v5 = _v0.a;
-					var channel = _v0.b.a;
 					var _v6 = A2(
 						$elm$core$Debug$log,
 						'EventLog.processRoute',
@@ -4983,7 +4982,6 @@ var $author$project$Momento$update = F3(
 					$the_sett$elm_update_helper$Update2$pure(model));
 			default:
 				var id = _v0.a.id;
-				var error = _v0.a.error;
 				return A3(
 					protocol.onError,
 					id,

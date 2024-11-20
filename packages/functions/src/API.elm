@@ -1,4 +1,4 @@
-module API exposing (main)
+module API exposing (Flags, Model, MomentoSecret, Msg, main)
 
 import EventLog.Component as EventLog
 import Momento exposing (Error, Op, OpenParams, SubscribeParams)

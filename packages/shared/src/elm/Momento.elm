@@ -121,7 +121,7 @@ update protocol msg model =
             U2.pure model
                 |> protocol.onMessage id payload
 
-        OnError { id, error } ->
+        OnError { id } ->
             U2.pure model
                 |> protocol.onError id Failed
 

@@ -11,6 +11,7 @@ port module AWS.Dynamo exposing
     , int, string
     , dynamoPutPort, dynamoGetPort, dynamoBatchWritePort, dynamoBatchGetPort, dynamoQueryPort
     , dynamoResponsePort
+    , AttributeValue, KeyCondition
     )
 
 {-| A wrapper around the AWS DynamoDB Document API.
