@@ -3446,9 +3446,11 @@ var $author$project$API$mmMessage = F3(
 				cmds);
 		};
 	});
-var $author$project$EventLog$Component$ModelReady = function (a) {
-	return {$: 'ModelReady', a: a};
-};
+var $author$project$EventLog$Component$ModelProcessing = F2(
+	function (a, b) {
+		return {$: 'ModelProcessing', a: a, b: b};
+	});
+var $author$project$EventLog$Component$PostChannelRootChannelCreated = {$: 'PostChannelRootChannelCreated'};
 var $author$project$Momento$Webhook = function (a) {
 	return {$: 'Webhook', a: a};
 };
@@ -3473,8 +3475,9 @@ var $author$project$EventLog$Component$mmOpened = F3(
 	function (protocol, channelId, component) {
 		var model = component.eventLog;
 		var _v0 = A2($elm$core$Debug$log, 'mmOpened', 'channel ' + channelId);
-		if (model.$ === 'ModelReady') {
-			var state = model.a;
+		if ((model.$ === 'ModelProcessing') && (model.a.$ === 'PostChannelRootStart')) {
+			var _v2 = model.a;
+			var state = model.b;
 			return A3(
 				protocol.mmOps,
 				channelId,
@@ -3494,7 +3497,8 @@ var $author$project$EventLog$Component$mmOpened = F3(
 						$author$project$EventLog$Component$setModel(component),
 						A2(
 							$the_sett$elm_update_helper$Update2$andMap,
-							$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelReady),
+							$author$project$EventLog$Component$switchState(
+								$author$project$EventLog$Component$ModelProcessing($author$project$EventLog$Component$PostChannelRootChannelCreated)),
 							$the_sett$elm_update_helper$Update2$pure(state)))));
 		} else {
 			return protocol.onUpdate(
@@ -3825,6 +3829,7 @@ var $author$project$Serverless$Conn$Request$body = function (_v0) {
 	var request = _v0.a;
 	return request.body;
 };
+var $author$project$EventLog$Component$PostChannelRootStart = {$: 'PostChannelRootStart'};
 var $author$project$EventLog$Component$cacheName = function (channel) {
 	return channel + '-cache';
 };
@@ -3976,39 +3981,31 @@ var $elm_community$random_extra$Random$String$string = F2(
 			A2($elm$random$Random$list, stringLength, charGenerator));
 	});
 var $author$project$EventLog$Component$nameGenerator = A2($elm_community$random_extra$Random$String$string, 10, $elm_community$random_extra$Random$Char$english);
-var $author$project$EventLog$Component$createChannel = F2(
-	function (protocol, component) {
-		var model = component.eventLog;
-		if (model.$ === 'ModelReady') {
-			var state = model.a;
-			var _v1 = A2($elm$random$Random$step, $author$project$EventLog$Component$nameGenerator, state.seed);
-			var channelName = _v1.a;
-			var nextSeed = _v1.b;
-			var _v2 = A2($elm$core$Debug$log, 'createChannel', channelName);
-			return A3(
-				protocol.mmOpen,
-				channelName,
-				{
-					apiKey: component.momentoApiKey,
-					cache: $author$project$EventLog$Component$cacheName(channelName)
-				},
+var $author$project$EventLog$Component$createChannel = F4(
+	function (protocol, route, state, component) {
+		var _v0 = A2($elm$random$Random$step, $author$project$EventLog$Component$nameGenerator, state.seed);
+		var channelName = _v0.a;
+		var nextSeed = _v0.b;
+		var _v1 = A2($elm$core$Debug$log, 'createChannel', channelName);
+		return A3(
+			protocol.mmOpen,
+			channelName,
+			{
+				apiKey: component.momentoApiKey,
+				cache: $author$project$EventLog$Component$cacheName(channelName)
+			},
+			A2(
+				$elm$core$Tuple$mapSecond,
+				$elm$core$Platform$Cmd$map(protocol.toMsg),
 				A2(
-					$elm$core$Tuple$mapSecond,
-					$elm$core$Platform$Cmd$map(protocol.toMsg),
+					$elm$core$Tuple$mapFirst,
+					$author$project$EventLog$Component$setModel(component),
 					A2(
-						$elm$core$Tuple$mapFirst,
-						$author$project$EventLog$Component$setModel(component),
-						A2(
-							$the_sett$elm_update_helper$Update2$andMap,
-							$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelReady),
-							$the_sett$elm_update_helper$Update2$pure(
-								_Utils_update(
-									state,
-									{seed: nextSeed}))))));
-		} else {
-			return protocol.onUpdate(
-				$the_sett$elm_update_helper$Update2$pure(component));
-		}
+						$the_sett$elm_update_helper$Update2$andMap,
+						$author$project$EventLog$Component$switchState(
+							$author$project$EventLog$Component$ModelProcessing($author$project$EventLog$Component$PostChannelRootStart)),
+						$the_sett$elm_update_helper$Update2$pure(
+							{seed: nextSeed})))));
 	});
 var $elm$core$Result$map = F2(
 	function (func, ra) {
@@ -4027,35 +4024,43 @@ var $author$project$Serverless$Conn$Request$method = function (_v0) {
 };
 var $author$project$EventLog$Component$processRoute = F3(
 	function (protocol, route, component) {
+		var model = component.eventLog;
 		var _v0 = A2(
 			$elm$core$Debug$log,
 			'processRoute',
-			_Utils_Tuple2(
+			_Utils_Tuple3(
 				$author$project$Serverless$Conn$Request$method(route.request),
-				route.route));
+				route.route,
+				model));
 		_v0$3:
 		while (true) {
 			if (_v0.b.$ === 'ChannelRoot') {
-				switch (_v0.a.$) {
-					case 'GET':
-						var _v1 = _v0.a;
-						var _v2 = _v0.b;
-						return A2(
-							$the_sett$elm_update_helper$Update2$andMap,
-							$author$project$EventLog$Component$createChannel(protocol),
-							$the_sett$elm_update_helper$Update2$pure(component));
-					case 'POST':
-						var _v3 = _v0.a;
-						var _v4 = _v0.b;
-						return A2(
-							$the_sett$elm_update_helper$Update2$andMap,
-							$author$project$EventLog$Component$createChannel(protocol),
-							$the_sett$elm_update_helper$Update2$pure(component));
-					default:
-						break _v0$3;
+				if (_v0.c.$ === 'ModelReady') {
+					switch (_v0.a.$) {
+						case 'GET':
+							var _v1 = _v0.a;
+							var _v2 = _v0.b;
+							var state = _v0.c.a;
+							return A2(
+								$the_sett$elm_update_helper$Update2$andMap,
+								A3($author$project$EventLog$Component$createChannel, protocol, route.route, state),
+								$the_sett$elm_update_helper$Update2$pure(component));
+						case 'POST':
+							var _v3 = _v0.a;
+							var _v4 = _v0.b;
+							var state = _v0.c.a;
+							return A2(
+								$the_sett$elm_update_helper$Update2$andMap,
+								A3($author$project$EventLog$Component$createChannel, protocol, route.route, state),
+								$the_sett$elm_update_helper$Update2$pure(component));
+						default:
+							break _v0$3;
+					}
+				} else {
+					break _v0$3;
 				}
 			} else {
-				if (_v0.a.$ === 'POST') {
+				if ((_v0.a.$ === 'POST') && (_v0.c.$ === 'ModelReady')) {
 					var _v5 = _v0.a;
 					var _v6 = A2(
 						$elm$core$Debug$log,
@@ -4919,6 +4924,9 @@ var $author$project$API$subscriptions = function (model) {
 				model.momento)
 			]));
 };
+var $author$project$EventLog$Component$ModelReady = function (a) {
+	return {$: 'ModelReady', a: a};
+};
 var $author$project$EventLog$Component$update = F3(
 	function (protocol, msg, component) {
 		var model = component.eventLog;
@@ -4936,7 +4944,7 @@ var $author$project$EventLog$Component$update = F3(
 							$the_sett$elm_update_helper$Update2$andMap,
 							$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelReady),
 							$the_sett$elm_update_helper$Update2$pure(
-								{requests: $elm$core$Dict$empty, seed: seed})))));
+								{seed: seed})))));
 		} else {
 			return protocol.onUpdate(
 				$the_sett$elm_update_helper$Update2$pure(component));

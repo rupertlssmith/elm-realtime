@@ -67,16 +67,20 @@ routeParser =
 
 processRoute : Protocol (Component a) msg model -> ApiRoute Route -> Component a -> ( model, Cmd msg )
 processRoute protocol route component =
-    case ( Request.method route.request, route.route ) |> Debug.log "processRoute" of
-        ( GET, ChannelRoot ) ->
+    let
+        model =
+            component.eventLog
+    in
+    case ( Request.method route.request, route.route, model ) |> Debug.log "processRoute" of
+        ( GET, ChannelRoot, ModelReady state ) ->
             U2.pure component
-                |> U2.andMap (createChannel protocol)
+                |> U2.andMap (createChannel protocol route.route state)
 
-        ( POST, ChannelRoot ) ->
+        ( POST, ChannelRoot, ModelReady state ) ->
             U2.pure component
-                |> U2.andMap (createChannel protocol)
+                |> U2.andMap (createChannel protocol route.route state)
 
-        ( POST, Channel _ ) ->
+        ( POST, Channel _, ModelReady _ ) ->
             let
                 _ =
                     Debug.log "EventLog.processRoute"
@@ -102,36 +106,26 @@ processRoute protocol route component =
     * Return a confirmation that everything has been set up.
 
 -}
-createChannel : Protocol (Component a) msg model -> Component a -> ( model, Cmd msg )
-createChannel protocol component =
+createChannel : Protocol (Component a) msg model -> Route -> ReadyState -> Component a -> ( model, Cmd msg )
+createChannel protocol route state component =
     let
-        model =
-            component.eventLog
+        ( channelName, nextSeed ) =
+            Random.step nameGenerator state.seed
+
+        _ =
+            Debug.log "createChannel" channelName
     in
-    case model of
-        ModelReady state ->
-            let
-                ( channelName, nextSeed ) =
-                    Random.step nameGenerator state.seed
-
-                _ =
-                    Debug.log "createChannel" channelName
-            in
-            U2.pure { state | seed = nextSeed }
-                |> U2.andMap (switchState ModelReady)
-                |> Tuple.mapFirst (setModel component)
-                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.mmOpen channelName
-                    { apiKey = component.momentoApiKey
-                    , cache = cacheName channelName
-                    }
-
-        _ ->
-            U2.pure component
-                |> protocol.onUpdate
+    U2.pure { seed = nextSeed }
+        |> U2.andMap (ModelProcessing PostChannelRootStart |> switchState)
+        |> Tuple.mapFirst (setModel component)
+        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+        |> protocol.mmOpen channelName
+            { apiKey = component.momentoApiKey
+            , cache = cacheName channelName
+            }
 
 
-{-| Invoked once the momento channel is confirmed open. Create a webhook on the save topic.
+{-| Invoked when a momento channel is confirmed open.
 -}
 mmOpened : Protocol (Component a) msg model -> String -> Component a -> ( model, Cmd msg )
 mmOpened protocol channelId component =
@@ -143,9 +137,9 @@ mmOpened protocol channelId component =
             Debug.log "mmOpened" ("channel " ++ channelId)
     in
     case model of
-        ModelReady state ->
+        ModelProcessing PostChannelRootStart state ->
             U2.pure state
-                |> U2.andMap (switchState ModelReady)
+                |> U2.andMap (ModelProcessing PostChannelRootChannelCreated |> switchState)
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.mmOps channelId
@@ -176,6 +170,44 @@ mmError protocol id error component =
         |> protocol.onUpdate
 
 
+mmOpsComplete : Protocol (Component a) msg model -> String -> Component a -> ( model, Cmd msg )
+mmOpsComplete protocol id component =
+    let
+        model =
+            component.eventLog
+
+        _ =
+            Debug.log "mmOpened" ("channel " ++ id)
+    in
+    case model of
+        ModelProcessing PostChannelRootChannelCreated state ->
+            U2.pure component
+                |> protocol.onUpdate
+
+        _ ->
+            U2.pure component
+                |> protocol.onUpdate
+
+
+dynamoResult : Protocol (Component a) msg model -> String -> Component a -> ( model, Cmd msg )
+dynamoResult protocol id component =
+    let
+        model =
+            component.eventLog
+
+        _ =
+            Debug.log "mmOpened" ("channel " ++ id)
+    in
+    case model of
+        ModelProcessing PostChannelRootChannelCreated state ->
+            U2.pure component
+                |> protocol.onUpdate
+
+        _ ->
+            U2.pure component
+                |> protocol.onUpdate
+
+
 
 -- Save Channel Events
 
@@ -204,6 +236,15 @@ type Msg
 type Model
     = ModelStart StartState
     | ModelReady ReadyState
+    | ModelProcessing StateMachines ReadyState
+
+
+type StateMachines
+    = -- PostChannelRoute
+      PostChannelRootStart
+    | PostChannelRootChannelCreated
+      -- Post Channel
+    | PostChannel
 
 
 switchState : (a -> Model) -> a -> ( Model, Cmd Msg )
@@ -219,7 +260,6 @@ type alias StartState =
 
 type alias ReadyState =
     { seed : Random.Seed
-    , requests : Dict String Route
     }
 
 
@@ -232,7 +272,6 @@ update protocol msg component =
     case ( model, msg ) of
         ( ModelStart _, RandomSeed seed ) ->
             { seed = seed
-            , requests = Dict.empty
             }
                 |> U2.pure
                 |> U2.andMap (switchState ModelReady)
