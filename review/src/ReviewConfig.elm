@@ -20,7 +20,7 @@ import NoImportingEverything
 import NoMissingTypeAnnotation
 import NoMissingTypeExpose
 import NoSimpleLetBody
-import No   Unused.Dependencies
+import NoUnused.Dependencies
 import NoUnused.Exports
 import NoUnused.Modules
 import NoUnused.Parameters

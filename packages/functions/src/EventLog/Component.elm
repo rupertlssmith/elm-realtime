@@ -3,6 +3,7 @@ module EventLog.Component exposing (Component, Model(..), Msg(..), Protocol, Ran
 {-| API for managing realtime channels.
 -}
 
+import AWS.Dynamo as Dynamo
 import Json.Encode as Encode
 import Momento exposing (Error, Op(..), OpenParams)
 import Random

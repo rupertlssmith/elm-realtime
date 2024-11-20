@@ -43,6 +43,7 @@ type Ports = {
     mmSend: { subscribe: any };
     mmOnMessage: { send: any };
     mmPushList: { subscribe: any };
+    mmCreateWebhook: { subscribe: any };
     mmOnError: { send: any };
 }
 
@@ -53,14 +54,6 @@ export class MomentoPorts {
     constructor(app: any) {
         console.info("Momento.constructor");
         this.app = app;
-
-        this.onMessage = this.onMessage.bind(this);
-        this.open = this.open.bind(this);
-        this.subscribe = this.subscribe.bind(this);
-        this.send = this.send.bind(this);
-        this.close = this.close.bind(this);
-        this.pushList = this.pushList.bind(this);
-        this.createWebhook = this.createWebhook.bind(this);
 
         ports.checkPortsExist(app, [
             "mmOpen",
@@ -84,8 +77,8 @@ export class MomentoPorts {
     }
 
     // === Cache session lifecycle.
-    async open(args: OpenArgs) {
-        console.log("Momento.open");
+    open = async (args: OpenArgs) => {
+        console.log("Momento.open without bind");
         console.log(args);
 
         // Connect to the Momento Cache.
@@ -132,7 +125,7 @@ export class MomentoPorts {
         this.app.ports.mmOnOpen.send(args.id);
     }
 
-    close(id: string) {
+    close = (id: string) => {
         console.log("Momento.close");
         console.log(id);
 
@@ -145,7 +138,7 @@ export class MomentoPorts {
     }
 
     // === Topics
-    async subscribe(args: SubscribeArgs) {
+    subscribe = async (args: SubscribeArgs) => {
         const session = this.sessions[args.id];
 
         if (session) {
@@ -177,7 +170,7 @@ export class MomentoPorts {
         }
     }
 
-    async send(args: SendArgs) {
+    send = async (args: SendArgs) => {
         console.log("Momento.send");
         console.log(args);
 
@@ -197,7 +190,7 @@ export class MomentoPorts {
         }
     }
 
-    onMessage(id: string, payload: string) {
+    onMessage = (id: string, payload: string) => {
         console.log("Momento.onMessage");
         console.log(payload);
 
@@ -209,7 +202,7 @@ export class MomentoPorts {
     }
 
     // === Lists
-    async pushList(args: any) {
+    pushList = async (args: any) => {
         console.log("Momento.pushList");
 
         const session = this.sessions[args.id];
@@ -233,7 +226,7 @@ export class MomentoPorts {
     }
 
     // == Webhooks
-    async createWebhook(args: any) {
+    createWebhook = async (args: any) => {
         console.log("Momento.createWebhook");
         console.log(args);
 

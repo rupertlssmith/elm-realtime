@@ -2,7 +2,7 @@ import {Elm} from './elm.js';
 import * as util from "util";
 import * as elmServerless from "./bridge/index.js";
 import {Resource} from "sst";
-import {MomentoPorts} from "./momento";
+import {MomentoPorts} from "../../shared/src/js/momento";
 
 const momentoSecret = JSON.parse(Resource.MomentoApiKey.value);
 const channelApiUrl = Resource.ChannelApi.url;
