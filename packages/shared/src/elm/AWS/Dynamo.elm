@@ -324,60 +324,67 @@ type alias BatchPut =
 
 
 
---
 --batchPut :
 --    String
 --    -> (a -> Value)
 --    -> List a
 --    -> (Msg msg -> msg)
 --    -> (PutResponse -> msg)
---batchPut table encoder vals tagger responseFn =
---    batchPutInner table tagger responseFn (List.map encoder vals)
---
---
+
+
+batchPut batchPutProps tagger responseFn =
+    batchPutInner table tagger responseFn (List.map encoder vals)
+
+
+
 --batchPutInner :
 --    String
 --    -> (Msg msg -> msg)
 --    -> (PutResponse -> msg)
 --    -> List Value
---batchPutInner table tagger responseFn vals =
---    let
---        firstBatch =
---            List.take 25 vals
---
---        remainder =
---            List.drop 25 vals
---    in
---    dynamoBatchWritePort
---        (batchPutEncoder { tableName = table, items = firstBatch })
---        (\val ->
---            BatchPutLoop (putResponseDecoder val) table tagger responseFn remainder |> tagger
---        )
---
---
---batchPutEncoder : BatchPut Value -> Value
---batchPutEncoder putOp =
---    let
---        encodeItem item =
---            Encode.object
---                [ ( "PutRequest"
---                  , Encode.object
---                        [ ( "Item", item ) ]
---                  )
---                ]
---    in
---    Encode.object
---        [ ( "RequestItems"
---          , Encode.object
---                [ ( putOp.tableName
---                  , Encode.list encodeItem putOp.items
---                  )
---                ]
---          )
---        ]
---
---
---
+
+
+batchPutInner table tagger responseFn vals =
+    let
+        firstBatch =
+            List.take 25 vals
+
+        remainder =
+            List.drop 25 vals
+    in
+    dynamoBatchWritePort
+        (batchPutEncoder { tableName = table, items = firstBatch })
+        (\val ->
+            BatchPutLoop (putResponseDecoder val) table tagger responseFn remainder |> tagger
+        )
+
+
+
+-- batchPutEncoder : BatchPut Value -> Value
+
+
+batchPutEncoder putOp =
+    let
+        encodeItem item =
+            Encode.object
+                [ ( "PutRequest"
+                  , Encode.object
+                        [ ( "Item", item ) ]
+                  )
+                ]
+    in
+    Encode.object
+        [ ( "RequestItems"
+          , Encode.object
+                [ ( putOp.tableName
+                  , Encode.list encodeItem putOp.items
+                  )
+                ]
+          )
+        ]
+
+
+
 ---- Batch Get
 --
 --
