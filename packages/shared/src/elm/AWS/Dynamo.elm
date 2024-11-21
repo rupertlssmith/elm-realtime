@@ -1,70 +1,31 @@
-module AWS.Dynamo
-    exposing
-    --( Msg, update
-    --, put
-    --, get
-    --, batchGet
-    --, batchPut
-    --, updateKey
-    --, Query, Order(..), query, queryIndex, partitionKeyEquals, limitResults, orderResults
-    --, AttributeValue, KeyCondition
-    --, rangeKeyEquals, rangeKeyLessThan, rangeKeyLessThanOrEqual, rangeKeyGreaterThan
-    --, rangeKeyGreaterThanOrEqual, rangeKeyBetween
-    --, int, string
-    --)
-    (..)
+module AWS.Dynamo exposing
+    ( Put, put
+    , Get, get
+    )
 
 {-| A wrapper around the AWS DynamoDB Document API.
 
-
-# TEA model.
-
-@docs Msg, update
-
-
-# Simple Database Operations
-
-@docs put
-@docs get
-@docs batchGet
-@docs batchPut
-@docs updateKey
-
-
-# Database Queries
-
-@docs Query, Order, query, queryIndex, partitionKeyEquals, limitResults, orderResults
-@docs AttributeValue, KeyCondition
-@docs rangeKeyEquals, rangeKeyLessThan, rangeKeyLessThanOrEqual, rangeKeyGreaterThan
-@docs rangeKeyGreaterThanOrEqual, rangeKeyBetween
-@docs int, string
+@docs Put, put
+@docs Get, get
 
 -}
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
-import Maybe.Extra
+import Procedure
+import Procedure.Channel as Channel
+import Procedure.Program
 import Result.Extra
-import ResultME exposing (ResultME)
-import Task.Extra
 
 
-type alias Ports =
-    { get : ( String, Value ) -> Cmd Msg
-    , put : ( String, Value ) -> Cmd Msg
-    , delete : ( String, Value ) -> Cmd Msg
-    , batchGet : ( String, Value ) -> Cmd Msg
-    , batchWrite : ( String, Value ) -> Cmd Msg
-    , query : ( String, Value ) -> Cmd Msg
-    , response : (( String, Value ) -> Msg) -> Sub Msg
-    }
-
-
-type alias Protocol submodel msg model =
-    { toMsg : Msg -> msg
-    , ports : Ports
-    , onUpdate : ( submodel, Cmd msg ) -> ( model, Cmd msg )
-    , onResponse : String -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
+type alias Ports msg =
+    { get : ( String, Value ) -> Cmd msg
+    , put : ( String, Value ) -> Cmd msg
+    , delete : ( String, Value ) -> Cmd msg
+    , batchGet : ( String, Value ) -> Cmd msg
+    , batchWrite : ( String, Value ) -> Cmd msg
+    , query : ( String, Value ) -> Cmd msg
+    , response : (( String, Value ) -> msg) -> Sub msg
     }
 
 
@@ -72,43 +33,9 @@ type alias Protocol submodel msg model =
 -- Database operations
 
 
-type Op
-    = PutOp Put
-    | GetOp Get
-    | DeleteOp Delete
-    | UpdateKeyOp UpdateKey
-    | BatchPutOp BatchPut
-    | BatchGetOp BatchGet
-    | QueryOp Query
-
-
 type Error
-    = Error Op String
-
-
-type OpResult
-    = Completed Op
-    | NotFound Op
-    | GetItem Get Value
-    | GetItemNotFound Get
-    | BatchGetItems BatchGet (List Value)
-    | QueryItems Query (Maybe Value) (List Value)
-
-
-type Response
-    = Response (ResultME Error (List OpResult))
-
-
-type alias Put =
-    { tableName : String
-    , item : Value
-    }
-
-
-type alias Get =
-    { tableName : String
-    , key : Value
-    }
+    = Error String
+    | DecodeError String
 
 
 type alias Delete =
@@ -124,12 +51,6 @@ type alias UpdateKey =
     }
 
 
-type alias BatchPut =
-    { tableName : String
-    , items : List Value
-    }
-
-
 type alias BatchGet =
     { tableName : String
     , keys : List Value
@@ -137,18 +58,8 @@ type alias BatchGet =
 
 
 
--- Internal event handling.
-
-
-type alias Model =
-    {}
-
-
-type Msg
-    = Msg
-
-
-
+-- Looping operations
+--
 --type Msg
 --    = BatchPutLoop PutResponse String (PutResponse -> msg) (List Value)
 --    | QueryLoop (List Value) String Query (QueryResponse Value -> msg) (QueryResponse Value)
@@ -199,98 +110,113 @@ type Msg
 --
 --
 ---- Put a document in DynamoDB
---
---
---put :
---    String
---    -> (a -> Value)
---    -> a
---    -> (PutResponse -> msg)
---put table encoder val responseFn =
---    dynamoPutPort
---        (putEncoder encoder { tableName = table, item = val })
---        (putResponseDecoder >> responseFn)
---
---
---putEncoder : (a -> Value) -> Put -> Value
---putEncoder encoder putOp =
---    Encode.object
---        [ ( "TableName", Encode.string putOp.tableName )
---        , ( "Item", encoder putOp.item )
---        ]
---
---
---putResponseDecoder : Value -> PutResponse
---putResponseDecoder val =
---    let
---        decoder =
---            Decode.field "type_" Decode.string
---                |> Decode.andThen
---                    (\type_ ->
---                        case type_ of
---                            "Ok" ->
---                                Decode.succeed PutOk
---
---                            _ ->
---                                Decode.field "errorMsg" Decode.string
---                                    |> Decode.map PutError
---                    )
---    in
---    Decode.decodeValue decoder val
---        |> Result.mapError (Decode.errorToString >> PutError)
---        |> Result.Extra.merge
---
---
---
+
+
+type alias Put =
+    { tableName : String
+    , item : Value
+    }
+
+
+put :
+    Ports msg
+    -> Put
+    -> (Procedure.Program.Msg msg -> msg)
+    -> (Result Error () -> msg)
+    -> Cmd msg
+put ports putProps pt dt =
+    Channel.open (\key -> ports.put ( key, putEncoder putProps ))
+        |> Channel.connect ports.response
+        |> Channel.acceptOne
+        |> Procedure.run pt (\( _, res ) -> putResponseDecoder res |> dt)
+
+
+putEncoder : Put -> Value
+putEncoder putOp =
+    Encode.object
+        [ ( "TableName", Encode.string putOp.tableName )
+        , ( "Item", putOp.item )
+        ]
+
+
+putResponseDecoder : Value -> Result Error ()
+putResponseDecoder val =
+    let
+        decoder =
+            Decode.field "type_" Decode.string
+                |> Decode.andThen
+                    (\type_ ->
+                        case type_ of
+                            "Ok" ->
+                                Decode.succeed (Ok ())
+
+                            _ ->
+                                Decode.field "errorMsg" Decode.string
+                                    |> Decode.map (Error >> Err)
+                    )
+    in
+    Decode.decodeValue decoder val
+        |> Result.mapError (Decode.errorToString >> DecodeError >> Err)
+        |> Result.Extra.merge
+
+
+
 ---- Get a document from DynamoDB
---
---
---get :
---    String
---    -> (k -> Value)
---    -> k
---    -> Decoder a
---    -> (GetResponse a -> msg)
---get table encoder key decoder responseFn conn =
---    dynamoGetPort
---        (getEncoder encoder { tableName = table, key = key })
---        (getResponseDecoder decoder >> responseFn)
---
---
---getEncoder : (k -> Value) -> Get k -> Value
---getEncoder encoder getOp =
---    Encode.object
---        [ ( "TableName", Encode.string getOp.tableName )
---        , ( "Key", encoder getOp.key )
---        ]
---
---
---getResponseDecoder : Decoder a -> Value -> GetResponse a
---getResponseDecoder itemDecoder val =
---    let
---        decoder =
---            Decode.field "type_" Decode.string
---                |> Decode.andThen
---                    (\type_ ->
---                        case type_ of
---                            "Item" ->
---                                Decode.at [ "item", "Item" ] itemDecoder
---                                    |> Decode.map GetItem
---
---                            "ItemNotFound" ->
---                                Decode.succeed GetItemNotFound
---
---                            _ ->
---                                Decode.field "errorMsg" Decode.string
---                                    |> Decode.map GetError
---                    )
---    in
---    Decode.decodeValue decoder val
---        |> Result.mapError (Decode.errorToString >> GetError)
---        |> Result.Extra.merge
---
---
---
+
+
+type alias Get =
+    { tableName : String
+    , key : Value
+    }
+
+
+get :
+    Ports msg
+    -> Get
+    -> (Procedure.Program.Msg msg -> msg)
+    -> (Result Error (Maybe Value) -> msg)
+    -> Cmd msg
+get ports getProps pt dt =
+    Channel.open (\key -> ports.get ( key, getEncoder getProps ))
+        |> Channel.connect ports.response
+        |> Channel.acceptOne
+        |> Procedure.run pt (\( _, res ) -> getResponseDecoder res |> dt)
+
+
+getEncoder : Get -> Value
+getEncoder getOp =
+    Encode.object
+        [ ( "TableName", Encode.string getOp.tableName )
+        , ( "Key", getOp.key )
+        ]
+
+
+getResponseDecoder : Value -> Result Error (Maybe Value)
+getResponseDecoder val =
+    let
+        decoder =
+            Decode.field "type_" Decode.string
+                |> Decode.andThen
+                    (\type_ ->
+                        case type_ of
+                            "Item" ->
+                                Decode.at [ "item", "Item" ] Decode.value
+                                    |> Decode.map (Just >> Ok)
+
+                            "ItemNotFound" ->
+                                Decode.succeed (Ok Nothing)
+
+                            _ ->
+                                Decode.field "errorMsg" Decode.string
+                                    |> Decode.map (Error >> Err)
+                    )
+    in
+    Decode.decodeValue decoder val
+        |> Result.mapError (Decode.errorToString >> DecodeError >> Err)
+        |> Result.Extra.merge
+
+
+
 ---- Delete
 --
 --
@@ -389,7 +315,15 @@ type Msg
 --
 --
 ---- Batch Put
---
+
+
+type alias BatchPut =
+    { tableName : String
+    , items : List Value
+    }
+
+
+
 --
 --batchPut :
 --    String
