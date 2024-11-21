@@ -34,6 +34,13 @@ export default $config({
             }
         );
 
+        api.route("ANY /clear",
+            {
+                handler: "packages/functions/src/clear.main",
+                link: [momentoApiKey]
+            }
+        );
+
         // Deploy the Elm app
         const site = new sst.aws.StaticSite("ChatSite", {
             path: "packages/web",
