@@ -274,7 +274,7 @@ notifyTopicName channel =
 
 cacheName : String -> String
 cacheName channel =
-    channel ++ "-cache"
+    "elm-realtime" ++ "-cache"
 
 
 saveListName : String -> String

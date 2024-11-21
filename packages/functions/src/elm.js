@@ -3831,7 +3831,7 @@ var $author$project$Serverless$Conn$Request$body = function (_v0) {
 };
 var $author$project$EventLog$Component$PostChannelRootStart = {$: 'PostChannelRootStart'};
 var $author$project$EventLog$Component$cacheName = function (channel) {
-	return channel + '-cache';
+	return 'elm-realtime' + '-cache';
 };
 var $elm$core$Basics$abs = function (n) {
 	return (n < 0) ? (-n) : n;
