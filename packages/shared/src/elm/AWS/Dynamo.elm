@@ -1,12 +1,14 @@
 module AWS.Dynamo exposing
     ( Put, put
     , Get, get
+    , Delete, delete
     )
 
 {-| A wrapper around the AWS DynamoDB Document API.
 
 @docs Put, put
 @docs Get, get
+@docs Delete, delete
 
 -}
 
@@ -36,12 +38,6 @@ type alias Ports msg =
 type Error
     = Error String
     | DecodeError String
-
-
-type alias Delete =
-    { tableName : String
-    , key : Value
-    }
 
 
 type alias UpdateKey =
@@ -119,14 +115,15 @@ type alias Put =
 
 
 put :
-    Ports msg
+    (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
     -> Put
-    -> (Procedure.Program.Msg msg -> msg)
     -> (Result Error () -> msg)
     -> Cmd msg
-put ports putProps pt dt =
+put pt ports putProps dt =
     Channel.open (\key -> ports.put ( key, putEncoder putProps ))
         |> Channel.connect ports.response
+        |> Channel.filter (\key ( respKey, _ ) -> respKey == key)
         |> Channel.acceptOne
         |> Procedure.run pt (\( _, res ) -> putResponseDecoder res |> dt)
 
@@ -171,14 +168,15 @@ type alias Get =
 
 
 get :
-    Ports msg
+    (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
     -> Get
-    -> (Procedure.Program.Msg msg -> msg)
     -> (Result Error (Maybe Value) -> msg)
     -> Cmd msg
-get ports getProps pt dt =
+get pt ports getProps dt =
     Channel.open (\key -> ports.get ( key, getEncoder getProps ))
         |> Channel.connect ports.response
+        |> Channel.filter (\key ( respKey, _ ) -> respKey == key)
         |> Channel.acceptOne
         |> Procedure.run pt (\( _, res ) -> getResponseDecoder res |> dt)
 
@@ -218,49 +216,58 @@ getResponseDecoder val =
 
 
 ---- Delete
---
---
---delete :
---    String
---    -> (k -> Value)
---    -> k
---    -> (DeleteResponse -> msg)
---delete table encoder key responseFn conn =
---    dynamoDeletePort
---        (deleteEncoder encoder { tableName = table, key = key })
---        (deleteResponseDecoder >> responseFn)
---
---
---deleteEncoder : (k -> Value) -> Delete k -> Value
---deleteEncoder encoder deleteOp =
---    Encode.object
---        [ ( "TableName", Encode.string deleteOp.tableName )
---        , ( "Key", encoder deleteOp.key )
---        ]
---
---
---deleteResponseDecoder : Value -> DeleteResponse
---deleteResponseDecoder val =
---    let
---        decoder =
---            Decode.field "type_" Decode.string
---                |> Decode.andThen
---                    (\type_ ->
---                        case type_ of
---                            "Ok" ->
---                                Decode.succeed DeleteOk
---
---                            _ ->
---                                Decode.field "errorMsg" Decode.string
---                                    |> Decode.map DeleteError
---                    )
---    in
---    Decode.decodeValue decoder val
---        |> Result.mapError (Decode.errorToString >> DeleteError)
---        |> Result.Extra.merge
---
---
---
+
+
+type alias Delete =
+    { tableName : String
+    , key : Value
+    }
+
+
+delete :
+    (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
+    -> Delete
+    -> (Result Error () -> msg)
+    -> Cmd msg
+delete pt ports deleteProps dt =
+    Channel.open (\key -> ports.delete ( key, deleteEncoder deleteProps ))
+        |> Channel.connect ports.response
+        |> Channel.filter (\key ( respKey, _ ) -> respKey == key)
+        |> Channel.acceptOne
+        |> Procedure.run pt (\( _, res ) -> deleteResponseDecoder res |> dt)
+
+
+deleteEncoder : Delete -> Value
+deleteEncoder deleteOp =
+    Encode.object
+        [ ( "TableName", Encode.string deleteOp.tableName )
+        , ( "Key", deleteOp.key )
+        ]
+
+
+deleteResponseDecoder : Value -> Result Error ()
+deleteResponseDecoder val =
+    let
+        decoder =
+            Decode.field "type_" Decode.string
+                |> Decode.andThen
+                    (\type_ ->
+                        case type_ of
+                            "Ok" ->
+                                Decode.succeed (Ok ())
+
+                            _ ->
+                                Decode.field "errorMsg" Decode.string
+                                    |> Decode.map (Error >> Err)
+                    )
+    in
+    Decode.decodeValue decoder val
+        |> Result.mapError (Decode.errorToString >> DecodeError >> Err)
+        |> Result.Extra.merge
+
+
+
 ---- Update Key
 --
 --
@@ -330,61 +337,61 @@ type alias BatchPut =
 --    -> List a
 --    -> (Msg msg -> msg)
 --    -> (PutResponse -> msg)
-
-
-batchPut batchPutProps tagger responseFn =
-    batchPutInner table tagger responseFn (List.map encoder vals)
-
-
-
+--
+--
+--batchPut batchPutProps tagger responseFn =
+--    batchPutInner table tagger responseFn (List.map encoder vals)
+--
+--
+--
 --batchPutInner :
 --    String
 --    -> (Msg msg -> msg)
 --    -> (PutResponse -> msg)
 --    -> List Value
-
-
-batchPutInner table tagger responseFn vals =
-    let
-        firstBatch =
-            List.take 25 vals
-
-        remainder =
-            List.drop 25 vals
-    in
-    dynamoBatchWritePort
-        (batchPutEncoder { tableName = table, items = firstBatch })
-        (\val ->
-            BatchPutLoop (putResponseDecoder val) table tagger responseFn remainder |> tagger
-        )
-
-
-
+--
+--
+--batchPutInner table tagger responseFn vals =
+--    let
+--        firstBatch =
+--            List.take 25 vals
+--
+--        remainder =
+--            List.drop 25 vals
+--    in
+--    dynamoBatchWritePort
+--        (batchPutEncoder { tableName = table, items = firstBatch })
+--        (\val ->
+--            BatchPutLoop (putResponseDecoder val) table tagger responseFn remainder |> tagger
+--        )
+--
+--
+--
 -- batchPutEncoder : BatchPut Value -> Value
-
-
-batchPutEncoder putOp =
-    let
-        encodeItem item =
-            Encode.object
-                [ ( "PutRequest"
-                  , Encode.object
-                        [ ( "Item", item ) ]
-                  )
-                ]
-    in
-    Encode.object
-        [ ( "RequestItems"
-          , Encode.object
-                [ ( putOp.tableName
-                  , Encode.list encodeItem putOp.items
-                  )
-                ]
-          )
-        ]
-
-
-
+--
+--
+--batchPutEncoder putOp =
+--    let
+--        encodeItem item =
+--            Encode.object
+--                [ ( "PutRequest"
+--                  , Encode.object
+--                        [ ( "Item", item ) ]
+--                  )
+--                ]
+--    in
+--    Encode.object
+--        [ ( "RequestItems"
+--          , Encode.object
+--                [ ( putOp.tableName
+--                  , Encode.list encodeItem putOp.items
+--                  )
+--                ]
+--          )
+--        ]
+--
+--
+--
 ---- Batch Get
 --
 --
@@ -478,144 +485,142 @@ type alias Query =
     }
 
 
+{-| From AWS DynamoDB docs, the encoding of key conditions as strings looks like:
 
---
---
---{-| From AWS DynamoDB docs, the encoding of key conditions as strings looks like:
---
---    a = b — true if the attribute a is equal to the value b
---    a < b — true if a is less than b
---    a <= b — true if a is less than or equal to b
---    a > b — true if a is greater than b
---    a >= b — true if a is greater than or equal to b
---    a BETWEEN b AND c — true if a is greater than or equal to b, and less than or equal to c.
---
---Values must be encoded as attribute with names like ":someAttr", and these get encoded
---into the "ExpressionAttributeValues" part of the query JSON. An indexing scheme is used
---to ensure all the needed attributes get unique names.
---
----}
---keyConditionAsStringAndAttrs : List KeyCondition -> ( String, List ( String, Value ) )
---keyConditionAsStringAndAttrs keyConditions =
---    let
---        encodeKeyConditions index keyCondition =
---            let
---                attrName =
---                    ":attr" ++ String.fromInt index
---            in
---            case keyCondition of
---                Equals field attr ->
---                    ( field ++ " = " ++ attrName, [ ( attrName, encodeAttr attr ) ] )
---
---                LessThan field attr ->
---                    ( field ++ " < " ++ attrName, [ ( attrName, encodeAttr attr ) ] )
---
---                LessThenOrEqual field attr ->
---                    ( field ++ " <= " ++ attrName, [ ( attrName, encodeAttr attr ) ] )
---
---                GreaterThan field attr ->
---                    ( field ++ " > " ++ attrName, [ ( attrName, encodeAttr attr ) ] )
---
---                GreaterThanOrEqual field attr ->
---                    ( field ++ " >= " ++ attrName, [ ( attrName, encodeAttr attr ) ] )
---
---                Between field lowAttr highAttr ->
---                    let
---                        lowAttrName =
---                            ":lowattr" ++ String.fromInt index
---
---                        highAttrName =
---                            ":highattr" ++ String.fromInt index
---                    in
---                    ( field ++ " BETWEEN " ++ lowAttrName ++ " AND " ++ highAttrName
---                    , [ ( lowAttrName, encodeAttr lowAttr )
---                      , ( highAttrName, encodeAttr highAttr )
---                      ]
---                    )
---    in
---    keyConditions
---        |> List.indexedMap encodeKeyConditions
---        |> List.unzip
---        |> Tuple.mapFirst (String.join " AND ")
---        |> Tuple.mapSecond List.concat
---
---
---int : Int -> AttributeValue
---int val =
---    NumberAttr val
---
---
---string : String -> AttributeValue
---string val =
---    StringAttr val
---
---
---encodeAttr : AttributeValue -> Value
---encodeAttr attr =
---    case attr of
---        StringAttr val ->
---            Encode.string val
---
---        NumberAttr val ->
---            Encode.int val
---
---
---partitionKeyEquals : String -> String -> Query
---partitionKeyEquals key val =
---    { partitionKeyName = key
---    , partitionKeyValue = StringAttr val
---    , rangeKeyCondition = Nothing
---    , order = Forward
---    , limit = Nothing
---    , exclusiveStartKey = Nothing
---    }
---
---
---rangeKeyEquals : String -> AttributeValue -> Query -> Query
---rangeKeyEquals keyName attr q =
---    { q | rangeKeyCondition = Equals keyName attr |> Just }
---
---
---rangeKeyLessThan : String -> AttributeValue -> Query -> Query
---rangeKeyLessThan keyName attr q =
---    { q | rangeKeyCondition = LessThan keyName attr |> Just }
---
---
---rangeKeyLessThanOrEqual : String -> AttributeValue -> Query -> Query
---rangeKeyLessThanOrEqual keyName attr q =
---    { q | rangeKeyCondition = LessThenOrEqual keyName attr |> Just }
---
---
---rangeKeyGreaterThan : String -> AttributeValue -> Query -> Query
---rangeKeyGreaterThan keyName attr q =
---    { q | rangeKeyCondition = GreaterThan keyName attr |> Just }
---
---
---rangeKeyGreaterThanOrEqual : String -> AttributeValue -> Query -> Query
---rangeKeyGreaterThanOrEqual keyName attr q =
---    { q | rangeKeyCondition = GreaterThanOrEqual keyName attr |> Just }
---
---
---rangeKeyBetween : String -> AttributeValue -> AttributeValue -> Query -> Query
---rangeKeyBetween keyName lowAttr highAttr q =
---    { q | rangeKeyCondition = Between keyName lowAttr highAttr |> Just }
---
---
---orderResults : Order -> Query -> Query
---orderResults ord q =
---    { q | order = ord }
---
---
---limitResults : Int -> Query -> Query
---limitResults limit q =
---    { q | limit = Just limit }
---
---
---nextPage : Value -> Query -> Query
---nextPage lastEvalKey q =
---    { q | exclusiveStartKey = Just lastEvalKey }
---
---
+    a = b — true if the attribute a is equal to the value b
+    a < b — true if a is less than b
+    a <= b — true if a is less than or equal to b
+    a > b — true if a is greater than b
+    a >= b — true if a is greater than or equal to b
+    a BETWEEN b AND c — true if a is greater than or equal to b, and less than or equal to c.
+
+Values must be encoded as attribute with names like ":someAttr", and these get encoded
+into the "ExpressionAttributeValues" part of the query JSON. An indexing scheme is used
+to ensure all the needed attributes get unique names.
+
+-}
+keyConditionAsStringAndAttrs : List KeyCondition -> ( String, List ( String, Value ) )
+keyConditionAsStringAndAttrs keyConditions =
+    let
+        encodeKeyConditions index keyCondition =
+            let
+                attrName =
+                    ":attr" ++ String.fromInt index
+            in
+            case keyCondition of
+                Equals field attr ->
+                    ( field ++ " = " ++ attrName, [ ( attrName, encodeAttr attr ) ] )
+
+                LessThan field attr ->
+                    ( field ++ " < " ++ attrName, [ ( attrName, encodeAttr attr ) ] )
+
+                LessThenOrEqual field attr ->
+                    ( field ++ " <= " ++ attrName, [ ( attrName, encodeAttr attr ) ] )
+
+                GreaterThan field attr ->
+                    ( field ++ " > " ++ attrName, [ ( attrName, encodeAttr attr ) ] )
+
+                GreaterThanOrEqual field attr ->
+                    ( field ++ " >= " ++ attrName, [ ( attrName, encodeAttr attr ) ] )
+
+                Between field lowAttr highAttr ->
+                    let
+                        lowAttrName =
+                            ":lowattr" ++ String.fromInt index
+
+                        highAttrName =
+                            ":highattr" ++ String.fromInt index
+                    in
+                    ( field ++ " BETWEEN " ++ lowAttrName ++ " AND " ++ highAttrName
+                    , [ ( lowAttrName, encodeAttr lowAttr )
+                      , ( highAttrName, encodeAttr highAttr )
+                      ]
+                    )
+    in
+    keyConditions
+        |> List.indexedMap encodeKeyConditions
+        |> List.unzip
+        |> Tuple.mapFirst (String.join " AND ")
+        |> Tuple.mapSecond List.concat
+
+
+int : Int -> AttributeValue
+int val =
+    NumberAttr val
+
+
+string : String -> AttributeValue
+string val =
+    StringAttr val
+
+
+encodeAttr : AttributeValue -> Value
+encodeAttr attr =
+    case attr of
+        StringAttr val ->
+            Encode.string val
+
+        NumberAttr val ->
+            Encode.int val
+
+
+partitionKeyEquals : String -> String -> Query
+partitionKeyEquals key val =
+    { partitionKeyName = key
+    , partitionKeyValue = StringAttr val
+    , rangeKeyCondition = Nothing
+    , order = Forward
+    , limit = Nothing
+    , exclusiveStartKey = Nothing
+    }
+
+
+rangeKeyEquals : String -> AttributeValue -> Query -> Query
+rangeKeyEquals keyName attr q =
+    { q | rangeKeyCondition = Equals keyName attr |> Just }
+
+
+rangeKeyLessThan : String -> AttributeValue -> Query -> Query
+rangeKeyLessThan keyName attr q =
+    { q | rangeKeyCondition = LessThan keyName attr |> Just }
+
+
+rangeKeyLessThanOrEqual : String -> AttributeValue -> Query -> Query
+rangeKeyLessThanOrEqual keyName attr q =
+    { q | rangeKeyCondition = LessThenOrEqual keyName attr |> Just }
+
+
+rangeKeyGreaterThan : String -> AttributeValue -> Query -> Query
+rangeKeyGreaterThan keyName attr q =
+    { q | rangeKeyCondition = GreaterThan keyName attr |> Just }
+
+
+rangeKeyGreaterThanOrEqual : String -> AttributeValue -> Query -> Query
+rangeKeyGreaterThanOrEqual keyName attr q =
+    { q | rangeKeyCondition = GreaterThanOrEqual keyName attr |> Just }
+
+
+rangeKeyBetween : String -> AttributeValue -> AttributeValue -> Query -> Query
+rangeKeyBetween keyName lowAttr highAttr q =
+    { q | rangeKeyCondition = Between keyName lowAttr highAttr |> Just }
+
+
+orderResults : Order -> Query -> Query
+orderResults ord q =
+    { q | order = ord }
+
+
+limitResults : Int -> Query -> Query
+limitResults limit q =
+    { q | limit = Just limit }
+
+
+nextPage : Value -> Query -> Query
+nextPage lastEvalKey q =
+    { q | exclusiveStartKey = Just lastEvalKey }
+
+
+
 --query :
 --    String
 --    -> Query
