@@ -40,13 +40,6 @@ type Error
     | DecodeError String
 
 
-type alias UpdateKey =
-    { tableName : String
-    , oldKey : Value
-    , item : Value
-    }
-
-
 type alias BatchGet =
     { tableName : String
     , keys : List Value
@@ -269,27 +262,28 @@ deleteResponseDecoder val =
 
 
 ---- Update Key
+--type alias UpdateKey =
+--    { tableName : String
+--    , oldKey : Value
+--    , item : Value
+--    }
 --
 --
 --updateKey :
---    String
---    -> (k -> Value)
---    -> (a -> Value)
---    -> k
---    -> a
---    -> (PutResponse -> msg)
---updateKey table keyEncoder itemEncoder oldKey newItem responseFn conn =
---    dynamoBatchWritePort
---        (updateKeyEncoder
---            { tableName = table
---            , oldKey = keyEncoder oldKey
---            , item = itemEncoder newItem
---            }
---        )
---        (putResponseDecoder >> responseFn)
+--    (Procedure.Program.Msg msg -> msg)
+--    -> Ports msg
+--    -> UpdateKey
+--    -> (Result Error () -> msg)
+--    -> Cmd msg
+--updateKey pt ports updateKeyProps dt =
+--    Channel.open (\key -> ports.updateKey ( key, updateKeyEncoder updateKeyProps ))
+--        |> Channel.connect ports.response
+--        |> Channel.filter (\key ( respKey, _ ) -> respKey == key)
+--        |> Channel.acceptOne
+--        |> Procedure.run pt (\( _, res ) -> updateKeyResponseDecoder res |> dt)
 --
 --
---updateKeyEncoder : UpdateKey Value Value -> Value
+--updateKeyEncoder : UpdateKey -> Value
 --updateKeyEncoder updateKeyOp =
 --    let
 --        encodeItem item =
@@ -319,6 +313,26 @@ deleteResponseDecoder val =
 --          )
 --        ]
 --
+--
+--updateKeyResponseDecoder : Value -> Result Error ()
+--updateKeyResponseDecoder val =
+--    let
+--        decoder =
+--            Decode.field "type_" Decode.string
+--                |> Decode.andThen
+--                    (\type_ ->
+--                        case type_ of
+--                            "Ok" ->
+--                                Decode.succeed (Ok ())
+--
+--                            _ ->
+--                                Decode.field "errorMsg" Decode.string
+--                                    |> Decode.map (Error >> Err)
+--                    )
+--    in
+--    Decode.decodeValue decoder val
+--        |> Result.mapError (Decode.errorToString >> DecodeError >> Err)
+--        |> Result.Extra.merge
 --
 --
 ---- Batch Put
