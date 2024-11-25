@@ -14,6 +14,7 @@ module AWS.Dynamo exposing
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
+import Maybe.Extra
 import Procedure
 import Procedure.Channel as Channel
 import Procedure.Program
@@ -541,104 +542,110 @@ nextPage lastEvalKey q =
     { q | exclusiveStartKey = Just lastEvalKey }
 
 
+query :
+    (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
+    -> String
+    -> Maybe String
+    -> Query
+    -> (Result Error (List Value) -> msg)
+    -> Cmd msg
+query pt ports table maybeIndex q dt =
+    queryInner ports table maybeIndex q []
+        |> Procedure.run pt (\( _, res ) -> dt res)
 
---===
---queryLoop accum table q tagger responseFn results model =
---    case results of
---        QueryItems Nothing items ->
---            ( model, QueryItems Nothing (accum ++ items) |> responseFn |> Task.Extra.message )
---
---        QueryItems (Just lastEvaluatedKey) items ->
---            queryInner (accum ++ items)
---                table
---                (nextPage lastEvaluatedKey q)
---                tagger
---                responseFn
---
---        QueryError dbErrorMsg ->
---            ( model, QueryError dbErrorMsg |> responseFn |> Task.Extra.message )
---===
---query :
---    String
---    -> Query
---    -> (Msg msg -> msg)
---    -> (QueryResponse Value -> msg)
---query table q tagger responseFn =
---    queryInner [] table q tagger responseFn
---
---
---queryInner :
---    List Value
---    -> String
---    -> Query
---    -> (Msg msg -> msg)
---    -> (QueryResponse Value -> msg)
---queryInner accum table q tagger responseFn =
---    dynamoQueryPort
---        (queryEncoder table Nothing q)
---        (\val -> QueryLoop accum table q tagger responseFn (queryResponseDecoder Decode.value val) |> tagger)
---
---
---queryIndex :
---    String
---    -> String
---    -> Query
---    -> Decoder a
---    -> (QueryResponse a -> msg)
---queryIndex table index q decoder responseFn =
---    dynamoQueryPort
---        (queryEncoder table (Just index) q)
---        (queryResponseDecoder decoder >> responseFn)
---
---
---queryEncoder : String -> Maybe String -> Query -> Value
---queryEncoder table maybeIndex q =
---    let
---        ( keyExpressionsString, attrVals ) =
---            [ Equals q.partitionKeyName q.partitionKeyValue |> Just
---            , q.rangeKeyCondition
---            ]
---                |> Maybe.Extra.values
---                |> keyConditionAsStringAndAttrs
---
---        encodedAttrVals =
---            Encode.object attrVals
---    in
---    [ ( "TableName", Encode.string table ) |> Just
---    , Maybe.map (\index -> ( "IndexName", Encode.string index )) maybeIndex
---    , ( "KeyConditionExpression", Encode.string keyExpressionsString ) |> Just
---    , ( "ExpressionAttributeValues", encodedAttrVals ) |> Just
---    , case q.order of
---        Forward ->
---            ( "ScanIndexForward", Encode.bool True ) |> Just
---
---        Reverse ->
---            ( "ScanIndexForward", Encode.bool False ) |> Just
---    , Maybe.map (\limit -> ( "Limit", Encode.int limit )) q.limit
---    , Maybe.map (\exclusiveStartKey -> ( "ExclusiveStartKey", exclusiveStartKey )) q.exclusiveStartKey
---    ]
---        |> Maybe.Extra.values
---        |> Encode.object
---
---
---queryResponseDecoder : Decoder a -> Value -> QueryResponse a
---queryResponseDecoder itemDecoder val =
---    let
---        decoder =
---            Decode.field "type_" Decode.string
---                |> Decode.andThen
---                    (\type_ ->
---                        case type_ of
---                            "Items" ->
---                                Decode.map2 QueryItems
---                                    (Decode.maybe (Decode.field "lastEvaluatedKey" Decode.value))
---                                    (Decode.field "items" (Decode.list itemDecoder))
---
---                            _ ->
---                                Decode.field "errorMsg" Decode.string
---                                    |> Decode.map QueryError
---                    )
---    in
---    Decode.decodeValue decoder val
---        |> Result.mapError (Decode.errorToString >> QueryError)
---        |> Result.Extra.merge
+
+queryIndex :
+    (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
+    -> String
+    -> String
+    -> Query
+    -> (Result Error (List Value) -> msg)
+    -> Cmd msg
+queryIndex pt ports table index q dt =
+    queryInner ports table (Just index) q []
+        |> Procedure.run pt (\( _, res ) -> dt res)
+
+
+queryInner :
+    Ports msg
+    -> String
+    -> Maybe String
+    -> Query
+    -> List Value
+    -> Procedure.Procedure e ( String, Result Error (List Value) ) msg
+queryInner ports table maybeIndex q accum =
+    Channel.open (\key -> ports.query ( key, queryEncoder table maybeIndex q ))
+        |> Channel.connect ports.response
+        |> Channel.filter (\key ( respKey, _ ) -> respKey == key)
+        |> Channel.acceptOne
+        |> Procedure.andThen
+            (\( key, val ) ->
+                case queryResponseDecoder val of
+                    Ok ( Nothing, items ) ->
+                        Procedure.provide ( key, Ok items )
+
+                    Ok ( Just lastEvaluatedKey, items ) ->
+                        queryInner ports
+                            table
+                            maybeIndex
+                            (nextPage lastEvaluatedKey q)
+                            (accum ++ items)
+
+                    Err err ->
+                        Procedure.provide ( key, Err err )
+            )
+
+
+queryEncoder : String -> Maybe String -> Query -> Value
+queryEncoder table maybeIndex q =
+    let
+        ( keyExpressionsString, attrVals ) =
+            [ Equals q.partitionKeyName q.partitionKeyValue |> Just
+            , q.rangeKeyCondition
+            ]
+                |> Maybe.Extra.values
+                |> keyConditionAsStringAndAttrs
+
+        encodedAttrVals =
+            Encode.object attrVals
+    in
+    [ ( "TableName", Encode.string table ) |> Just
+    , Maybe.map (\index -> ( "IndexName", Encode.string index )) maybeIndex
+    , ( "KeyConditionExpression", Encode.string keyExpressionsString ) |> Just
+    , ( "ExpressionAttributeValues", encodedAttrVals ) |> Just
+    , case q.order of
+        Forward ->
+            ( "ScanIndexForward", Encode.bool True ) |> Just
+
+        Reverse ->
+            ( "ScanIndexForward", Encode.bool False ) |> Just
+    , Maybe.map (\limit -> ( "Limit", Encode.int limit )) q.limit
+    , Maybe.map (\exclusiveStartKey -> ( "ExclusiveStartKey", exclusiveStartKey )) q.exclusiveStartKey
+    ]
+        |> Maybe.Extra.values
+        |> Encode.object
+
+
+queryResponseDecoder : Value -> Result Error ( Maybe Value, List Value )
+queryResponseDecoder val =
+    let
+        decoder =
+            Decode.field "type_" Decode.string
+                |> Decode.andThen
+                    (\type_ ->
+                        case type_ of
+                            "Items" ->
+                                Decode.map2 (\lastKey vals -> Tuple.pair lastKey vals |> Ok)
+                                    (Decode.maybe (Decode.field "lastEvaluatedKey" Decode.value))
+                                    (Decode.field "items" (Decode.list Decode.value))
+
+                            _ ->
+                                Decode.field "errorMsg" Decode.string
+                                    |> Decode.map (Error >> Err)
+                    )
+    in
+    Decode.decodeValue decoder val
+        |> Result.mapError (Decode.errorToString >> DecodeError >> Err)
+        |> Result.Extra.merge
