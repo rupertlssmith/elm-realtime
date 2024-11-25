@@ -49,6 +49,29 @@ type alias Ports msg =
     }
 
 
+type alias DynamoApi msg =
+    { get : Get -> (Result Error (Maybe Value) -> msg) -> Cmd msg
+    , put : Put -> (Result Error () -> msg) -> Cmd msg
+    , delete : Delete -> (Result Error () -> msg) -> Cmd msg
+    , batchGet : BatchGet -> (Result Error (Maybe (List Value)) -> msg) -> Cmd msg
+    , batchWrite : BatchPut -> (Result Error () -> msg) -> Cmd msg
+    , query : String -> Maybe String -> Query -> (Result Error (List Value) -> msg) -> Cmd msg
+    , queryIndex : String -> String -> Query -> (Result Error (List Value) -> msg) -> Cmd msg
+    }
+
+
+buildApi : (Procedure.Program.Msg msg -> msg) -> Ports msg -> DynamoApi msg
+buildApi pt ports =
+    { get = get pt ports
+    , put = put pt ports
+    , delete = delete pt ports
+    , batchGet = batchGet pt ports
+    , batchWrite = batchPut pt ports
+    , query = query pt ports
+    , queryIndex = queryIndex pt ports
+    }
+
+
 
 -- Database operations
 
@@ -238,17 +261,16 @@ batchPut :
     -> (Result Error () -> msg)
     -> Cmd msg
 batchPut pt ports batchPutProps dt =
-    batchPutInner pt ports batchPutProps.tableName batchPutProps.items
+    batchPutInner ports batchPutProps.tableName batchPutProps.items
         |> Procedure.run pt (\( _, res ) -> dt res)
 
 
 batchPutInner :
-    (Procedure.Program.Msg msg -> msg)
-    -> Ports msg
+    Ports msg
     -> String
     -> List Value
     -> Procedure.Procedure e ( String, Result Error () ) msg
-batchPutInner pt ports table vals =
+batchPutInner ports table vals =
     let
         firstBatch =
             List.take 25 vals
@@ -269,7 +291,7 @@ batchPutInner pt ports table vals =
                                 Procedure.provide ( key, Ok res )
 
                             moreItems ->
-                                batchPutInner pt ports table moreItems
+                                batchPutInner ports table moreItems
 
                     Err err ->
                         Procedure.provide ( key, Err err )
