@@ -1,5 +1,5 @@
-import { DynamoDB } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";
+import {DynamoDB} from "@aws-sdk/client-dynamodb";
+import {DynamoDBDocument} from "@aws-sdk/lib-dynamodb";
 import * as ports from "./ports" ;
 
 const client = new DynamoDB({});
@@ -58,22 +58,31 @@ export class DynamoPorts {
     dynamoPut = ([correlationId, params]) => {
         console.log("dynamoPut: called");
 
-        documentClient.put(params, (error, result) => {
-            var putResponse;
+        try {
+            documentClient.put(params, (error, result) => {
+                var putResponse;
 
-            if (error) {
-                putResponse = {
-                    type_: "Error",
-                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(params, null, 2)
-                };
-            } else {
-                putResponse = {
-                    type_: "Ok"
+                if (error) {
+                    putResponse = {
+                        type_: "Error",
+                        errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(params, null, 2)
+                    };
+                } else {
+                    putResponse = {
+                        type_: "Ok"
+                    }
                 }
-            }
 
-            this.app.ports.dynamoResponse.send([correlationId, putResponse]);
-        });
+                this.app.ports.dynamoResponse.send([correlationId, putResponse]);
+            });
+        } catch (error) {
+            var errorResponse = {
+                type_: "Error",
+                errorMsg: error.toString()
+            };
+
+            this.app.ports.dynamoResponse.send([correlationId, errorResponse]);
+        }
     }
 
     dynamoDelete = ([correlationId, params]) => {
