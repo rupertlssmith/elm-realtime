@@ -53,20 +53,20 @@ type alias DynamoApi msg =
     { get : Get -> (Result Error (Maybe Value) -> msg) -> Cmd msg
     , put : Put -> (Result Error () -> msg) -> Cmd msg
     , delete : Delete -> (Result Error () -> msg) -> Cmd msg
-    , batchGet : BatchGet -> (Result Error (Maybe (List Value)) -> msg) -> Cmd msg
-    , batchWrite : BatchPut -> (Result Error () -> msg) -> Cmd msg
+    , batchGet : BatchGet -> (Result Error (List Value) -> msg) -> Cmd msg
+    , batchPut : BatchPut -> (Result Error () -> msg) -> Cmd msg
     , query : String -> Maybe String -> Query -> (Result Error (List Value) -> msg) -> Cmd msg
     , queryIndex : String -> String -> Query -> (Result Error (List Value) -> msg) -> Cmd msg
     }
 
 
-buildApi : (Procedure.Program.Msg msg -> msg) -> Ports msg -> DynamoApi msg
-buildApi pt ports =
+dynamoApi : (Procedure.Program.Msg msg -> msg) -> Ports msg -> DynamoApi msg
+dynamoApi pt ports =
     { get = get pt ports
     , put = put pt ports
     , delete = delete pt ports
     , batchGet = batchGet pt ports
-    , batchWrite = batchPut pt ports
+    , batchPut = batchPut pt ports
     , query = query pt ports
     , queryIndex = queryIndex pt ports
     }
@@ -355,7 +355,7 @@ batchGet :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
     -> BatchGet
-    -> (Result Error (Maybe (List Value)) -> msg)
+    -> (Result Error (List Value) -> msg)
     -> Cmd msg
 batchGet pt ports batchGetProps dt =
     Channel.open
@@ -387,7 +387,7 @@ batchGetEncoder getOp =
         ]
 
 
-batchGetResponseDecoder : String -> Value -> Result Error (Maybe (List Value))
+batchGetResponseDecoder : String -> Value -> Result Error (List Value)
 batchGetResponseDecoder tableName val =
     let
         decoder =
@@ -397,7 +397,7 @@ batchGetResponseDecoder tableName val =
                         case type_ of
                             "Item" ->
                                 Decode.at [ "item", "Responses", tableName ] (Decode.list Decode.value)
-                                    |> Decode.map (Just >> Ok)
+                                    |> Decode.map Ok
 
                             _ ->
                                 Decode.field "errorMsg" Decode.string
