@@ -1,9 +1,9 @@
 import { DynamoDB } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";
 import * as ports from "./ports" ;
 
 const client = new DynamoDB({});
-const documentClient = DynamoDBDocumentClient.from(client);
+const documentClient = DynamoDBDocument.from(client);
 
 export class DynamoPorts {
     //app: { ports: Ports };
@@ -31,7 +31,7 @@ export class DynamoPorts {
         app.ports.dynamoQuery.subscribe(this.dynamoQuery);
     }
 
-    dynamoGet = (correlationId, params) => {
+    dynamoGet = ([correlationId, params]) => {
         documentClient.get(params, (error, result) => {
             var getResponse;
 
@@ -55,29 +55,28 @@ export class DynamoPorts {
         });
     }
 
-    dynamoPut = (correlationId, params) => {
-        console.log("=== dynamoPut: called");
-        //this.app.ports.dynamoResponse.send([correlationId, { type_: "Ok" }]);
+    dynamoPut = ([correlationId, params]) => {
+        console.log("dynamoPut: called");
 
-        // documentClient.put(params, (error, result) => {
-        //     var putResponse;
-        //
-        //     if (error) {
-        //         putResponse = {
-        //             type_: "Error",
-        //             errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(params, null, 2)
-        //         };
-        //     } else {
-        //         putResponse = {
-        //             type_: "Ok"
-        //         }
-        //     }
-        //
-        //     this.app.ports.dynamoResponse.send([correlationId, putResponse]);
-        // });
+        documentClient.put(params, (error, result) => {
+            var putResponse;
+
+            if (error) {
+                putResponse = {
+                    type_: "Error",
+                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(params, null, 2)
+                };
+            } else {
+                putResponse = {
+                    type_: "Ok"
+                }
+            }
+
+            this.app.ports.dynamoResponse.send([correlationId, putResponse]);
+        });
     }
 
-    dynamoDelete = (correlationId, params) => {
+    dynamoDelete = ([correlationId, params]) => {
         documentClient.delete(params, (error, result) => {
             var deleteResponse;
 
@@ -96,7 +95,7 @@ export class DynamoPorts {
         });
     }
 
-    dynamoBatchGet = (correlationId, params) => {
+    dynamoBatchGet = ([correlationId, params]) => {
         documentClient.batchGet(params, (error, result) => {
             var getResponse;
 
@@ -121,7 +120,7 @@ export class DynamoPorts {
         });
     }
 
-    dynamoBatchWrite = (correlationId, params) => {
+    dynamoBatchWrite = ([correlationId, params]) => {
         documentClient.batchWrite(params, (error, result) => {
             var putResponse;
 
@@ -140,7 +139,7 @@ export class DynamoPorts {
         });
     }
 
-    dynamoQuery = (correlationId, params) => {
+    dynamoQuery = ([correlationId, params]) => {
         documentClient.query(params, (error, result) => {
             var getResponse;
 
