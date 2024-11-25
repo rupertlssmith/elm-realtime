@@ -261,80 +261,6 @@ deleteResponseDecoder val =
 
 
 
----- Update Key
---type alias UpdateKey =
---    { tableName : String
---    , oldKey : Value
---    , item : Value
---    }
---
---
---updateKey :
---    (Procedure.Program.Msg msg -> msg)
---    -> Ports msg
---    -> UpdateKey
---    -> (Result Error () -> msg)
---    -> Cmd msg
---updateKey pt ports updateKeyProps dt =
---    Channel.open (\key -> ports.updateKey ( key, updateKeyEncoder updateKeyProps ))
---        |> Channel.connect ports.response
---        |> Channel.filter (\key ( respKey, _ ) -> respKey == key)
---        |> Channel.acceptOne
---        |> Procedure.run pt (\( _, res ) -> updateKeyResponseDecoder res |> dt)
---
---
---updateKeyEncoder : UpdateKey -> Value
---updateKeyEncoder updateKeyOp =
---    let
---        encodeItem item =
---            Encode.object
---                [ ( "PutRequest"
---                  , Encode.object [ ( "Item", item ) ]
---                  )
---                ]
---
---        encodeKey key =
---            Encode.object
---                [ ( "DeleteRequest"
---                  , Encode.object [ ( "Key", key ) ]
---                  )
---                ]
---    in
---    Encode.object
---        [ ( "RequestItems"
---          , Encode.object
---                [ ( updateKeyOp.tableName
---                  , Encode.list identity
---                        [ encodeItem updateKeyOp.item
---                        , encodeKey updateKeyOp.oldKey
---                        ]
---                  )
---                ]
---          )
---        ]
---
---
---updateKeyResponseDecoder : Value -> Result Error ()
---updateKeyResponseDecoder val =
---    let
---        decoder =
---            Decode.field "type_" Decode.string
---                |> Decode.andThen
---                    (\type_ ->
---                        case type_ of
---                            "Ok" ->
---                                Decode.succeed (Ok ())
---
---                            _ ->
---                                Decode.field "errorMsg" Decode.string
---                                    |> Decode.map (Error >> Err)
---                    )
---    in
---    Decode.decodeValue decoder val
---        |> Result.mapError (Decode.errorToString >> DecodeError >> Err)
---        |> Result.Extra.merge
---
---
 ---- Batch Put
 
 
@@ -344,68 +270,95 @@ type alias BatchPut =
     }
 
 
+batchPut :
+    (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
+    -> BatchPut
+    -> (Result Error () -> msg)
+    -> Cmd msg
+batchPut pt ports batchPutProps dt =
+    batchPutInner pt ports batchPutProps.tableName batchPutProps.items
+        |> Procedure.run pt (\( _, res ) -> dt res)
 
---batchPut :
---    String
---    -> (a -> Value)
---    -> List a
---    -> (Msg msg -> msg)
---    -> (PutResponse -> msg)
---
---
---batchPut batchPutProps tagger responseFn =
---    batchPutInner table tagger responseFn (List.map encoder vals)
---
---
---
---batchPutInner :
---    String
---    -> (Msg msg -> msg)
---    -> (PutResponse -> msg)
---    -> List Value
---
---
---batchPutInner table tagger responseFn vals =
---    let
---        firstBatch =
---            List.take 25 vals
---
---        remainder =
---            List.drop 25 vals
---    in
---    dynamoBatchWritePort
---        (batchPutEncoder { tableName = table, items = firstBatch })
---        (\val ->
---            BatchPutLoop (putResponseDecoder val) table tagger responseFn remainder |> tagger
---        )
---
---
---
--- batchPutEncoder : BatchPut Value -> Value
---
---
---batchPutEncoder putOp =
---    let
---        encodeItem item =
---            Encode.object
---                [ ( "PutRequest"
---                  , Encode.object
---                        [ ( "Item", item ) ]
---                  )
---                ]
---    in
---    Encode.object
---        [ ( "RequestItems"
---          , Encode.object
---                [ ( putOp.tableName
---                  , Encode.list encodeItem putOp.items
---                  )
---                ]
---          )
---        ]
---
---
---
+
+batchPutInner :
+    (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
+    -> String
+    -> List Value
+    -> Procedure.Procedure e ( String, Result Error () ) msg
+batchPutInner pt ports table vals =
+    let
+        firstBatch =
+            List.take 25 vals
+
+        remainder =
+            List.drop 25 vals
+    in
+    Channel.open (\key -> ports.batchWrite ( key, batchPutEncoder { tableName = table, items = firstBatch } ))
+        |> Channel.connect ports.response
+        |> Channel.filter (\key ( respKey, _ ) -> respKey == key)
+        |> Channel.acceptOne
+        |> Procedure.andThen
+            (\( key, val ) ->
+                case batchPutResponseDecoder val of
+                    Ok res ->
+                        case remainder of
+                            [] ->
+                                Procedure.provide ( key, Ok res )
+
+                            moreItems ->
+                                batchPutInner pt ports table moreItems
+
+                    Err err ->
+                        Procedure.provide ( key, Err err )
+            )
+
+
+batchPutEncoder : BatchPut -> Value
+batchPutEncoder putOp =
+    let
+        encodeItem item =
+            Encode.object
+                [ ( "PutRequest"
+                  , Encode.object
+                        [ ( "Item", item ) ]
+                  )
+                ]
+    in
+    Encode.object
+        [ ( "RequestItems"
+          , Encode.object
+                [ ( putOp.tableName
+                  , Encode.list encodeItem putOp.items
+                  )
+                ]
+          )
+        ]
+
+
+batchPutResponseDecoder : Value -> Result Error ()
+batchPutResponseDecoder val =
+    let
+        decoder =
+            Decode.field "type_" Decode.string
+                |> Decode.andThen
+                    (\type_ ->
+                        case type_ of
+                            "Ok" ->
+                                Decode.succeed (Ok ())
+
+                            _ ->
+                                Decode.field "errorMsg" Decode.string
+                                    |> Decode.map (Error >> Err)
+                    )
+    in
+    Decode.decodeValue decoder val
+        |> Result.mapError (Decode.errorToString >> DecodeError >> Err)
+        |> Result.Extra.merge
+
+
+
 ---- Batch Get
 --
 --
