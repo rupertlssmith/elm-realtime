@@ -2,13 +2,30 @@ module AWS.Dynamo exposing
     ( Put, put
     , Get, get
     , Delete, delete
+    , Query, Order(..), query, queryIndex, partitionKeyEquals, limitResults, orderResults
+    , rangeKeyEquals, rangeKeyLessThan, rangeKeyLessThanOrEqual, rangeKeyGreaterThan
+    , rangeKeyGreaterThanOrEqual, rangeKeyBetween
+    , int, string
     )
 
 {-| A wrapper around the AWS DynamoDB Document API.
 
+
+# Read and Write Operations
+
 @docs Put, put
 @docs Get, get
 @docs Delete, delete
+@docs BatchPut, batchPut
+@docs BatchGet, batchGet
+
+
+# Database Queries
+
+@docs Query, Order, query, queryIndex, partitionKeyEquals, limitResults, orderResults
+@docs rangeKeyEquals, rangeKeyLessThan, rangeKeyLessThanOrEqual, rangeKeyGreaterThan
+@docs rangeKeyGreaterThanOrEqual, rangeKeyBetween
+@docs int, string
 
 -}
 
