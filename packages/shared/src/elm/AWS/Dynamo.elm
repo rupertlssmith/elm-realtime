@@ -40,64 +40,7 @@ type Error
     | DecodeError String
 
 
-type alias BatchGet =
-    { tableName : String
-    , keys : List Value
-    }
 
-
-
--- Looping operations
---
---type Msg
---    = BatchPutLoop PutResponse String (PutResponse -> msg) (List Value)
---    | QueryLoop (List Value) String Query (QueryResponse Value -> msg) (QueryResponse Value)
---
---
---update : Protocol Model Msg model -> Msg -> Model -> ( model, Cmd msg )
---update msg model =
---    case msg of
---        BatchPutLoop response table tagger responseFn remainder ->
---            batchPutLoop response table tagger responseFn remainder model
---
---        QueryLoop accum table q tagger responseFn results ->
---            queryLoop accum table q tagger responseFn results model
---
---
---batchPutLoop response table tagger responseFn remainder model =
---    case response of
---        PutOk ->
---            case remainder of
---                [] ->
---                    ( model, responseFn PutOk |> Task.Extra.message )
---
---                _ ->
---                    batchPutInner table
---                        tagger
---                        responseFn
---                        remainder
---
---        PutError dbErrorMsg ->
---            ( model, PutError dbErrorMsg |> responseFn |> Task.Extra.message )
---
---
---queryLoop accum table q tagger responseFn results model =
---    case results of
---        QueryItems Nothing items ->
---            ( model, QueryItems Nothing (accum ++ items) |> responseFn |> Task.Extra.message )
---
---        QueryItems (Just lastEvaluatedKey) items ->
---            queryInner (accum ++ items)
---                table
---                (nextPage lastEvaluatedKey q)
---                tagger
---                responseFn
---
---        QueryError dbErrorMsg ->
---            ( model, QueryError dbErrorMsg |> responseFn |> Task.Extra.message )
---
---
---
 ---- Put a document in DynamoDB
 
 
@@ -360,63 +303,74 @@ batchPutResponseDecoder val =
 
 
 ---- Batch Get
---
---
---batchGet :
---    String
---    -> (k -> Value)
---    -> List k
---    -> Decoder a
---    -> (BatchGetResponse a -> msg)
---batchGet table encoder keys decoder responseFn =
---    dynamoBatchGetPort
---        (batchGetEncoder encoder { tableName = table, keys = keys })
---        (batchGetResponseDecoder table decoder >> responseFn)
---
---
---batchGetEncoder : (k -> Value) -> BatchGet k -> Value
---batchGetEncoder encoder getOp =
---    Encode.object
---        [ ( "RequestItems"
---          , Encode.object
---                [ ( getOp.tableName
---                  , Encode.object
---                        [ ( "Keys"
---                          , Encode.list encoder getOp.keys
---                          )
---                        ]
---                  )
---                ]
---          )
---        ]
---
---
---batchGetResponseDecoder : String -> Decoder a -> Value -> BatchGetResponse a
---batchGetResponseDecoder tableName itemDecoder val =
---    let
---        decoder =
---            Decode.field "type_" Decode.string
---                |> Decode.andThen
---                    (\type_ ->
---                        case type_ of
---                            "Item" ->
---                                Decode.at [ "item", "Responses", tableName ] (Decode.list itemDecoder)
---                                    |> Decode.map BatchGetItems
---
---                            _ ->
---                                Decode.field "errorMsg" Decode.string
---                                    |> Decode.map BatchGetError
---                    )
---    in
---    Decode.decodeValue decoder val
---        |> Result.mapError (Decode.errorToString >> BatchGetError)
---        |> Result.Extra.merge
---
---
---
+
+
+type alias BatchGet =
+    { tableName : String
+    , keys : List Value
+    }
+
+
+batchGet :
+    (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
+    -> BatchGet
+    -> (Result Error (Maybe (List Value)) -> msg)
+    -> Cmd msg
+batchGet pt ports batchGetProps dt =
+    Channel.open
+        (\key ->
+            ports.batchWrite
+                ( key
+                , batchGetEncoder
+                    { tableName = batchGetProps.tableName
+                    , keys = batchGetProps.keys
+                    }
+                )
+        )
+        |> Channel.connect ports.response
+        |> Channel.filter (\key ( respKey, _ ) -> respKey == key)
+        |> Channel.acceptOne
+        |> Procedure.run pt (\( _, res ) -> batchGetResponseDecoder batchGetProps.tableName res |> dt)
+
+
+batchGetEncoder getOp =
+    Encode.object
+        [ ( "RequestItems"
+          , Encode.object
+                [ ( getOp.tableName
+                  , Encode.object
+                        [ ( "Keys", Encode.list identity getOp.keys ) ]
+                  )
+                ]
+          )
+        ]
+
+
+batchGetResponseDecoder : String -> Value -> Result Error (Maybe (List Value))
+batchGetResponseDecoder tableName val =
+    let
+        decoder =
+            Decode.field "type_" Decode.string
+                |> Decode.andThen
+                    (\type_ ->
+                        case type_ of
+                            "Item" ->
+                                Decode.at [ "item", "Responses", tableName ] (Decode.list Decode.value)
+                                    |> Decode.map (Just >> Ok)
+
+                            _ ->
+                                Decode.field "errorMsg" Decode.string
+                                    |> Decode.map (Error >> Err)
+                    )
+    in
+    Decode.decodeValue decoder val
+        |> Result.mapError (Decode.errorToString >> DecodeError >> Err)
+        |> Result.Extra.merge
+
+
+
 ---- Queries
---
---
 
 
 type AttributeValue
@@ -588,6 +542,22 @@ nextPage lastEvalKey q =
 
 
 
+--===
+--queryLoop accum table q tagger responseFn results model =
+--    case results of
+--        QueryItems Nothing items ->
+--            ( model, QueryItems Nothing (accum ++ items) |> responseFn |> Task.Extra.message )
+--
+--        QueryItems (Just lastEvaluatedKey) items ->
+--            queryInner (accum ++ items)
+--                table
+--                (nextPage lastEvaluatedKey q)
+--                tagger
+--                responseFn
+--
+--        QueryError dbErrorMsg ->
+--            ( model, QueryError dbErrorMsg |> responseFn |> Task.Extra.message )
+--===
 --query :
 --    String
 --    -> Query
