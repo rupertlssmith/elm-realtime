@@ -1,7 +1,10 @@
 module AWS.Dynamo exposing
-    ( Put, put
+    ( Ports
+    , dynamoApi, DynamoApi
+    , Put, put
     , Get, get
     , Delete, delete
+    , Error
     , Query, Order(..), query, queryIndex, partitionKeyEquals, limitResults, orderResults
     , rangeKeyEquals, rangeKeyLessThan, rangeKeyLessThanOrEqual, rangeKeyGreaterThan
     , rangeKeyGreaterThanOrEqual, rangeKeyBetween
@@ -11,6 +14,16 @@ module AWS.Dynamo exposing
 {-| A wrapper around the AWS DynamoDB Document API.
 
 
+# Ports
+
+@docs Ports
+
+
+# Packaged API
+
+@docs dynamoApi, DynamoApi
+
+
 # Read and Write Operations
 
 @docs Put, put
@@ -18,6 +31,7 @@ module AWS.Dynamo exposing
 @docs Delete, delete
 @docs BatchPut, batchPut
 @docs BatchGet, batchGet
+@docs Error
 
 
 # Database Queries

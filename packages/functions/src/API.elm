@@ -99,6 +99,7 @@ subscriptions model =
     Sub.batch
         [ Api.subscriptions (apiProtocol model) model.api
         , Momento.subscriptions (momentoProtocol model) model.momento
+        , EventLog.subscriptions eventLogProtocol model
         ]
 
 

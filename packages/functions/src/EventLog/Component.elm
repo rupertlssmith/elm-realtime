@@ -1,12 +1,38 @@
-module EventLog.Component exposing (Component, Model(..), Msg(..), Protocol, ReadyState, Route(..), StartState, cacheName, createChannel, init, mmError, mmOpened, modelTopicName, nameGenerator, notifyTopicName, processRoute, randomize, routeParser, saveChannelEvent, saveListName, setModel, switchState, update)
+module EventLog.Component exposing
+    ( Component
+    , Model(..)
+    , Msg(..)
+    , Protocol
+    , ReadyState
+    , Route(..)
+    , StartState
+    , cacheName
+    , createChannel
+    , init
+    , mmError
+    , mmOpened
+    , modelTopicName
+    , nameGenerator
+    , notifyTopicName
+    , processRoute
+    , randomize
+    , routeParser
+    , saveChannelEvent
+    , saveListName
+    , setModel
+    , subscriptions
+    , switchState
+    , update
+    )
 
 {-| API for managing realtime channels.
 -}
 
 import AWS.Dynamo as Dynamo
-import Dict exposing (Dict)
 import Json.Encode as Encode
 import Momento exposing (Error, Op(..), OpenParams)
+import Ports
+import Procedure.Program
 import Random
 import Random.Char
 import Random.String
@@ -111,8 +137,11 @@ createChannel protocol route state component =
         _ =
             Debug.log "createChannel" channelName
     in
-    U2.pure { seed = nextSeed }
-        |> U2.andMap (ModelProcessing PostChannelRootStart |> switchState)
+    U2.pure
+        { seed = nextSeed
+        , procedure = state.procedure
+        }
+        |> U2.andMap (ModelReady |> switchState)
         |> Tuple.mapFirst (setModel component)
         |> Tuple.mapSecond (Cmd.map protocol.toMsg)
         |> protocol.mmOpen channelName
@@ -133,17 +162,25 @@ mmOpened protocol channelId component =
             Debug.log "mmOpened" ("channel " ++ channelId)
     in
     case model of
-        ModelProcessing PostChannelRootStart state ->
-            U2.pure state
-                |> U2.andMap (ModelProcessing PostChannelRootChannelCreated |> switchState)
+        ModelReady state ->
+            --U2.pure state
+            ( state
+            , dynamoApi.put
+                { tableName = "someTable"
+                , item = Encode.object [ ( "test", Encode.string "val" ) ]
+                }
+                DynamoResponse
+            )
+                |> U2.andMap (ModelReady |> switchState)
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.mmOps channelId
-                    [ Webhook
-                        { topic = notifyTopicName channelId
-                        , url = component.channelApiUrl ++ "/v1/channel/" ++ channelId
-                        }
-                    ]
+                --|> protocol.mmOps channelId
+                --    [ Webhook
+                --        { topic = notifyTopicName channelId
+                --        , url = component.channelApiUrl ++ "/v1/channel/" ++ channelId
+                --        }
+                --    ]
+                |> protocol.onUpdate
 
         _ ->
             U2.pure component
@@ -176,7 +213,7 @@ dynamoResult protocol id component =
             Debug.log "mmOpened" ("channel " ++ id)
     in
     case model of
-        ModelProcessing PostChannelRootChannelCreated state ->
+        ModelReady state ->
             U2.pure component
                 |> protocol.onUpdate
 
@@ -195,7 +232,7 @@ mmOpsComplete protocol id component =
             Debug.log "mmOpened" ("channel " ++ id)
     in
     case model of
-        ModelProcessing PostChannelRootChannelCreated state ->
+        ModelReady state ->
             U2.pure component
                 |> protocol.onUpdate
 
@@ -225,22 +262,32 @@ saveChannelEvent =
 -- Internal Side Effects
 
 
+dynamoPorts : Dynamo.Ports msg
+dynamoPorts =
+    { get = Ports.dynamoGet
+    , put = Ports.dynamoPut
+    , delete = Ports.dynamoDelete
+    , batchGet = Ports.dynamoBatchGet
+    , batchWrite = Ports.dynamoBatchWrite
+    , query = Ports.dynamoQuery
+    , response = Ports.dynamoResponse
+    }
+
+
+dynamoApi : Dynamo.DynamoApi Msg
+dynamoApi =
+    Dynamo.dynamoApi ProcedureMsg dynamoPorts
+
+
 type Msg
-    = RandomSeed Random.Seed
+    = ProcedureMsg (Procedure.Program.Msg Msg)
+    | RandomSeed Random.Seed
+    | DynamoResponse (Result Dynamo.Error ())
 
 
 type Model
     = ModelStart StartState
     | ModelReady ReadyState
-    | ModelProcessing StateMachines ReadyState
-
-
-type StateMachines
-    = -- PostChannelRoute
-      PostChannelRootStart
-    | PostChannelRootChannelCreated
-      -- Post Channel
-    | PostChannel
 
 
 switchState : (a -> Model) -> a -> ( Model, Cmd Msg )
@@ -256,7 +303,23 @@ type alias StartState =
 
 type alias ReadyState =
     { seed : Random.Seed
+    , procedure : Procedure.Program.Model Msg
     }
+
+
+subscriptions : Protocol (Component a) msg model -> Component a -> Sub msg
+subscriptions protocol component =
+    let
+        model =
+            component.eventLog
+    in
+    case model |> Debug.log "EventLog.subscriptions" of
+        ModelReady state ->
+            Procedure.Program.subscriptions state.procedure
+                |> Sub.map protocol.toMsg
+
+        _ ->
+            Sub.none
 
 
 update : Protocol (Component a) msg model -> Msg -> Component a -> ( model, Cmd msg )
@@ -266,13 +329,35 @@ update protocol msg component =
             component.eventLog
     in
     case ( model, msg ) of
+        ( ModelReady state, ProcedureMsg innerMsg ) ->
+            let
+                ( procMdl, procMsg ) =
+                    Procedure.Program.update
+                        innerMsg
+                        state.procedure
+            in
+            ( { state | procedure = procMdl }, procMsg )
+                |> U2.andMap (switchState ModelReady)
+                |> Tuple.mapFirst (setModel component)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
         ( ModelStart _, RandomSeed seed ) ->
             { seed = seed
+            , procedure = Procedure.Program.init
             }
                 |> U2.pure
                 |> U2.andMap (switchState ModelReady)
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
+        ( _, DynamoResponse res ) ->
+            let
+                _ =
+                    Debug.log "=== DynamoResponse" res
+            in
+            U2.pure component
                 |> protocol.onUpdate
 
         _ ->
