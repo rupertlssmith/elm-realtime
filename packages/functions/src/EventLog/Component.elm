@@ -28,7 +28,7 @@ module EventLog.Component exposing
 
 import AWS.Dynamo as Dynamo
 import Json.Encode as Encode
-import Momento exposing (Error, Op(..), OpenParams, SessionKey)
+import Momento exposing (Error, SessionKey)
 import Ports
 import Procedure
 import Procedure.Program
@@ -194,13 +194,11 @@ setupChannelWebhook component channelName sessionKey =
         _ =
             Debug.log "procedure" "momentoApi.processOps"
     in
-    momentoApi.processOps
+    momentoApi.webhook
         sessionKey
-        [ Momento.webhookOp
-            { topic = notifyTopicName channelName
-            , url = component.channelApiUrl ++ "/v1/channel/" ++ channelName
-            }
-        ]
+        { topic = notifyTopicName channelName
+        , url = component.channelApiUrl ++ "/v1/channel/" ++ channelName
+        }
         |> Procedure.fetchResult
         |> Procedure.map (always ())
         |> Procedure.mapError (always "Momento error")

@@ -3885,95 +3885,34 @@ var $author$project$Momento$open = F4(
 									{apiKey: openParams.apiKey, cache: openParams.cache, id: key});
 							})))));
 	});
-var $brian_watkins$elm_procedure$Procedure$do = function (command) {
-	return $brian_watkins$elm_procedure$Procedure$Internal$Procedure(
-		F3(
-			function (procId, msgTagger, resultTagger) {
-				return A2(
-					$elm$core$Task$perform,
-					function (_v0) {
-						var nextCommand = A2(
-							$elm$core$Task$perform,
-							A2($elm$core$Basics$composeL, resultTagger, $elm$core$Result$Ok),
-							$elm$core$Task$succeed(_Utils_Tuple0));
-						return msgTagger(
-							A2(
-								$brian_watkins$elm_procedure$Procedure$Internal$Execute,
-								procId,
-								$elm$core$Platform$Cmd$batch(
-									_List_fromArray(
-										[command, nextCommand]))));
-					},
-					$elm$core$Task$succeed(_Utils_Tuple0));
-			}));
-};
-var $brian_watkins$elm_procedure$Procedure$map = function (mapper) {
-	return $brian_watkins$elm_procedure$Procedure$andThen(
-		A2($elm$core$Basics$composeL, $brian_watkins$elm_procedure$Procedure$provide, mapper));
-};
-var $author$project$Momento$processOp = F4(
-	function (ports, id, _v0, op) {
+var $author$project$Momento$pushList = F5(
+	function (pt, ports, _v0, _v1, dt) {
 		var sessionKey = _v0.a;
-		switch (op.$) {
-			case 'Publish':
-				var topic = op.a.topic;
-				var payload = op.a.payload;
-				return ports.publish(
-					{id: id, payload: payload, session: sessionKey, topic: topic});
-			case 'PushList':
-				var list = op.a.list;
-				var payload = op.a.payload;
-				return ports.pushList(
-					{id: id, list: list, payload: payload, session: sessionKey});
-			default:
-				var topic = op.a.topic;
-				var url = op.a.url;
-				return ports.createWebhook(
-					{id: id, session: sessionKey, topic: topic, url: url});
-		}
-	});
-var $author$project$Momento$innerProcessOps = F3(
-	function (ports, _v0, ops) {
-		var sessionKey = _v0.a;
-		if (!ops.b) {
-			return $brian_watkins$elm_procedure$Procedure$provide(
-				$elm$core$Result$Ok(_Utils_Tuple0));
-		} else {
-			var op = ops.a;
-			var remOps = ops.b;
-			return A2(
-				$brian_watkins$elm_procedure$Procedure$andThen,
-				function (_v2) {
-					return A3(
-						$author$project$Momento$innerProcessOps,
-						ports,
-						$author$project$Momento$SessionKey(sessionKey),
-						remOps);
-				},
-				A2(
-					$brian_watkins$elm_procedure$Procedure$map,
-					$elm$core$Result$Ok,
-					$brian_watkins$elm_procedure$Procedure$do(
-						A4(
-							$author$project$Momento$processOp,
-							ports,
-							'',
-							$author$project$Momento$SessionKey(sessionKey),
-							op))));
-		}
-	});
-var $author$project$Momento$processOps = F5(
-	function (pt, ports, _v0, ops, dt) {
-		var sessionKey = _v0.a;
+		var list = _v1.list;
+		var payload = _v1.payload;
 		return A3(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
-			dt,
-			A3(
-				$author$project$Momento$innerProcessOps,
-				ports,
-				$author$project$Momento$SessionKey(sessionKey),
-				ops));
+			function (res) {
+				return dt(
+					$author$project$Momento$decodeResponse(res));
+			},
+			$brian_watkins$elm_procedure$Procedure$Channel$acceptOne(
+				A2(
+					$brian_watkins$elm_procedure$Procedure$Channel$filter,
+					F2(
+						function (key, _v2) {
+							var id = _v2.id;
+							return _Utils_eq(id, key);
+						}),
+					A2(
+						$brian_watkins$elm_procedure$Procedure$Channel$connect,
+						ports.response,
+						$brian_watkins$elm_procedure$Procedure$Channel$open(
+							function (key) {
+								return ports.pushList(
+									{id: key, list: list, payload: payload, session: sessionKey});
+							})))));
 	});
 var $author$project$Momento$subscribe = F5(
 	function (pt, ports, _v0, subscribeParams, dt) {
@@ -4002,12 +3941,42 @@ var $author$project$Momento$subscribe = F5(
 									{id: key, session: sessionKey, topic: subscribeParams.topic});
 							})))));
 	});
+var $author$project$Momento$webhook = F5(
+	function (pt, ports, _v0, _v1, dt) {
+		var sessionKey = _v0.a;
+		var topic = _v1.topic;
+		var url = _v1.url;
+		return A3(
+			$brian_watkins$elm_procedure$Procedure$run,
+			pt,
+			function (res) {
+				return dt(
+					$author$project$Momento$decodeResponse(res));
+			},
+			$brian_watkins$elm_procedure$Procedure$Channel$acceptOne(
+				A2(
+					$brian_watkins$elm_procedure$Procedure$Channel$filter,
+					F2(
+						function (key, _v2) {
+							var id = _v2.id;
+							return _Utils_eq(id, key);
+						}),
+					A2(
+						$brian_watkins$elm_procedure$Procedure$Channel$connect,
+						ports.response,
+						$brian_watkins$elm_procedure$Procedure$Channel$open(
+							function (key) {
+								return ports.createWebhook(
+									{id: key, session: sessionKey, topic: topic, url: url});
+							})))));
+	});
 var $author$project$Momento$momentoApi = F2(
 	function (pt, ports) {
 		return {
 			open: A2($author$project$Momento$open, pt, ports),
-			processOps: A2($author$project$Momento$processOps, pt, ports),
-			subscribe: A2($author$project$Momento$subscribe, pt, ports)
+			pushList: A2($author$project$Momento$pushList, pt, ports),
+			subscribe: A2($author$project$Momento$subscribe, pt, ports),
+			webhook: A2($author$project$Momento$webhook, pt, ports)
 		};
 	});
 var $author$project$Ports$mmAsyncError = _Platform_incomingPort(
@@ -5234,6 +5203,10 @@ var $author$project$Ports$dynamoResponse = _Platform_incomingPort(
 		A2($elm$json$Json$Decode$index, 0, $elm$json$Json$Decode$string)));
 var $author$project$EventLog$Component$dynamoPorts = {batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse};
 var $author$project$EventLog$Component$dynamoApi = A2($author$project$AWS$Dynamo$dynamoApi, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$dynamoPorts);
+var $brian_watkins$elm_procedure$Procedure$map = function (mapper) {
+	return $brian_watkins$elm_procedure$Procedure$andThen(
+		A2($elm$core$Basics$composeL, $brian_watkins$elm_procedure$Procedure$provide, mapper));
+};
 var $author$project$EventLog$Component$recordChannelToDB = function (sessionKey) {
 	var _v0 = A2($elm$core$Debug$log, 'procedure', 'dynamoApi.put');
 	return A2(
@@ -5264,12 +5237,6 @@ var $author$project$EventLog$Component$setModel = F2(
 var $author$project$EventLog$Component$notifyTopicName = function (channel) {
 	return channel + '-savetopic';
 };
-var $author$project$Momento$Webhook = function (a) {
-	return {$: 'Webhook', a: a};
-};
-var $author$project$Momento$webhookOp = function (args) {
-	return $author$project$Momento$Webhook(args);
-};
 var $author$project$EventLog$Component$setupChannelWebhook = F3(
 	function (component, channelName, sessionKey) {
 		var _v0 = A2($elm$core$Debug$log, 'procedure', 'momentoApi.processOps');
@@ -5281,16 +5248,12 @@ var $author$project$EventLog$Component$setupChannelWebhook = F3(
 				$elm$core$Basics$always(_Utils_Tuple0),
 				$brian_watkins$elm_procedure$Procedure$fetchResult(
 					A2(
-						$author$project$EventLog$Component$momentoApi.processOps,
+						$author$project$EventLog$Component$momentoApi.webhook,
 						sessionKey,
-						_List_fromArray(
-							[
-								$author$project$Momento$webhookOp(
-								{
-									topic: $author$project$EventLog$Component$notifyTopicName(channelName),
-									url: component.channelApiUrl + ('/v1/channel/' + channelName)
-								})
-							])))));
+						{
+							topic: $author$project$EventLog$Component$notifyTopicName(channelName),
+							url: component.channelApiUrl + ('/v1/channel/' + channelName)
+						}))));
 	});
 var $author$project$EventLog$Component$createChannel = F4(
 	function (protocol, route, state, component) {
