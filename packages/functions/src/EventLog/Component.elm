@@ -10,7 +10,6 @@ module EventLog.Component exposing
     , createChannel
     , init
     , mmError
-    , mmOpened
     , modelTopicName
     , nameGenerator
     , notifyTopicName
@@ -32,6 +31,7 @@ import AWS.Dynamo as Dynamo
 import Json.Encode as Encode
 import Momento exposing (Error, Op(..), OpenParams)
 import Ports
+import Procedure
 import Procedure.Program
 import Random
 import Random.Char
@@ -59,8 +59,6 @@ setModel m x =
 type alias Protocol submodel msg model =
     { toMsg : Msg -> msg
     , onUpdate : ( submodel, Cmd msg ) -> ( model, Cmd msg )
-    , mmOpen : String -> OpenParams -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
-    , mmOps : String -> List Op -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
     }
 
 
@@ -136,63 +134,69 @@ createChannel protocol route state component =
 
         _ =
             Debug.log "createChannel" channelName
-    in
-    U2.pure
-        { seed = nextSeed
-        , procedure = state.procedure
-        }
-        |> U2.andMap (ModelReady |> switchState)
-        |> Tuple.mapFirst (setModel component)
-        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-        |> protocol.mmOpen channelName
-            { apiKey = component.momentoApiKey
-            , cache = cacheName channelName
-            }
-
-
-{-| Invoked when a momento channel is confirmed open.
--}
-mmOpened : Protocol (Component a) msg model -> String -> Component a -> ( model, Cmd msg )
-mmOpened protocol channelId component =
-    let
-        model =
-            component.eventLog
-
-        _ =
-            Debug.log "mmOpened" ("channel " ++ channelId)
 
         _ =
             dynamoApi.put
                 { tableName = "someTable"
                 , item = Encode.object [ ( "test", Encode.string "val" ) ]
                 }
-                DynamoResponse
-    in
-    case model of
-        ModelReady state ->
-            --U2.pure state
-            ( state
-              --, dynamoApi.put
-              --    { tableName = "someTable"
-              --    , item = Encode.object [ ( "test", Encode.string "val" ) ]
-              --    }
-              --    DynamoResponse
-            , Cmd.none
-            )
-                |> U2.andMap (ModelReady |> switchState)
-                |> Tuple.mapFirst (setModel component)
-                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                --|> protocol.onUpdate
-                |> protocol.mmOps channelId
-                    [ Momento.webhook
-                        { topic = notifyTopicName channelId
-                        , url = component.channelApiUrl ++ "/v1/channel/" ++ channelId
-                        }
-                    ]
 
-        _ ->
-            U2.pure component
-                |> protocol.onUpdate
+        procedure : Procedure.Procedure String () Msg
+        procedure =
+            Procedure.provide {}
+                |> Procedure.andThen
+                    (\_ ->
+                        let
+                            _ =
+                                Debug.log "procedure" "momentoApi.open"
+                        in
+                        momentoApi.open
+                            { apiKey = component.momentoApiKey
+                            , cache = cacheName channelName
+                            }
+                            |> Procedure.fetchResult
+                            |> Procedure.mapError (always "Momento error")
+                    )
+                |> Procedure.andThen
+                    (\sessionKey ->
+                        let
+                            _ =
+                                Debug.log "procedure" "dynamoApi.put"
+                        in
+                        dynamoApi.put
+                            { tableName = "someTable"
+                            , item = Encode.object [ ( "test", Encode.string "val" ) ]
+                            }
+                            |> Procedure.fetchResult
+                            |> Procedure.map (always sessionKey)
+                            |> Procedure.mapError (always "Dynamo error")
+                    )
+                |> Procedure.andThen
+                    (\sessionKey ->
+                        let
+                            _ =
+                                Debug.log "procedure" "momentoApi.processOps"
+                        in
+                        momentoApi.processOps
+                            sessionKey
+                            [ Momento.webhook
+                                { topic = notifyTopicName channelName
+                                , url = component.channelApiUrl ++ "/v1/channel/" ++ channelName
+                                }
+                            ]
+                            |> Procedure.fetchResult
+                            |> Procedure.mapError (always "Momento error")
+                    )
+    in
+    ( { seed = nextSeed
+      , procedure = state.procedure
+      }
+    , Procedure.try ProcedureMsg CreateChannelResponse procedure
+    )
+        |> U2.andMap (ModelReady |> switchState)
+        |> Tuple.mapFirst (setModel component)
+        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+        |> protocol.onUpdate
 
 
 nameGenerator : Random.Generator String
@@ -209,44 +213,6 @@ mmError protocol id error component =
     component
         |> U2.pure
         |> protocol.onUpdate
-
-
-dynamoResult : Protocol (Component a) msg model -> String -> Component a -> ( model, Cmd msg )
-dynamoResult protocol id component =
-    let
-        model =
-            component.eventLog
-
-        _ =
-            Debug.log "mmOpened" ("channel " ++ id)
-    in
-    case model of
-        ModelReady state ->
-            U2.pure component
-                |> protocol.onUpdate
-
-        _ ->
-            U2.pure component
-                |> protocol.onUpdate
-
-
-mmOpsComplete : Protocol (Component a) msg model -> String -> Component a -> ( model, Cmd msg )
-mmOpsComplete protocol id component =
-    let
-        model =
-            component.eventLog
-
-        _ =
-            Debug.log "mmOpened" ("channel " ++ id)
-    in
-    case model of
-        ModelReady state ->
-            U2.pure component
-                |> protocol.onUpdate
-
-        _ ->
-            U2.pure component
-                |> protocol.onUpdate
 
 
 
@@ -287,10 +253,30 @@ dynamoApi =
     Dynamo.dynamoApi ProcedureMsg dynamoPorts
 
 
+momentoPorts : Momento.Ports msg
+momentoPorts =
+    { open = Ports.mmOpen
+    , onOpen = Ports.mmOnOpen
+    , close = Ports.mmClose
+    , subscribe = Ports.mmSubscribe
+    , onSubscribe = Ports.mmOnSubscribe
+    , publish = Ports.mmSend
+    , onMessage = Ports.mmOnMessage
+    , pushList = Ports.mmPushList
+    , createWebhook = Ports.mmCreateWebhook
+    , onError = Ports.mmOnError
+    }
+
+
+momentoApi : Momento.MomentoApi Msg
+momentoApi =
+    Momento.momentoApi ProcedureMsg momentoPorts
+
+
 type Msg
     = ProcedureMsg (Procedure.Program.Msg Msg)
     | RandomSeed Random.Seed
-    | DynamoResponse (Result Dynamo.Error ())
+    | CreateChannelResponse (Result String ())
 
 
 type Model
@@ -360,10 +346,10 @@ update protocol msg component =
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 
-        ( _, DynamoResponse res ) ->
+        ( _, CreateChannelResponse res ) ->
             let
                 _ =
-                    Debug.log "=== DynamoResponse" res
+                    Debug.log "=== CreateChannelResponse" res
             in
             U2.pure component
                 |> protocol.onUpdate

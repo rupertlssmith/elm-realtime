@@ -19,7 +19,7 @@ new MomentoPorts(app);
 new DynamoPorts(app);
 
 export async function main(event, context) {
-    //console.log(event);
+    console.log(event);
 
     const handler = elmServerless.httpApi({
         app: app,
@@ -29,12 +29,8 @@ export async function main(event, context) {
     });
     const asyncHandler = util.promisify(handler);
 
-    try {
-        const response = await asyncHandler(event, context);
-        return response;
-    } catch (e) {
-        console.error(e);
-    }
+    const response = await asyncHandler(event, context);
+    return response;
 }
 
 const silent = {
