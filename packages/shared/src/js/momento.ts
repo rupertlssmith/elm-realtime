@@ -38,15 +38,14 @@ type SendArgs = {
 
 type Ports = {
     mmOpen: { subscribe: any };
-    mmOnOpen: { send: any };
     mmClose: { subscribe: any };
     mmSubscribe: { subscribe: any };
-    mmOnSubscribe: { send: any };
-    mmSend: { subscribe: any };
+    mmPublish: { subscribe: any };
     mmOnMessage: { send: any };
     mmPushList: { subscribe: any };
     mmCreateWebhook: { subscribe: any };
-    mmOnError: { send: any };
+    mmResponse: { send: any };
+    mmAsyncError: { send: any };
 }
 
 export class MomentoPorts {
@@ -60,19 +59,18 @@ export class MomentoPorts {
             "mmOpen",
             "mmClose",
             "mmSubscribe",
-            "mmSend",
-            "mmPushList",
-            "mmOnOpen",
-            "mmOnSubscribe",
+            "mmPublish",
             "mmOnMessage",
-            "mmOnError",
-            "mmCreateWebhook"
+            "mmPushList",
+            "mmCreateWebhook",
+            "mmResponse",
+            "mmAsyncError"
         ]);
 
         app.ports.mmOpen.subscribe(this.open);
         app.ports.mmClose.subscribe(this.close);
         app.ports.mmSubscribe.subscribe(this.subscribe);
-        app.ports.mmSend.subscribe(this.send);
+        app.ports.mmPublish.subscribe(this.send);
         app.ports.mmPushList.subscribe(this.pushList);
         app.ports.mmCreateWebhook.subscribe(this.createWebhook);
     }
@@ -101,9 +99,10 @@ export class MomentoPorts {
             case CreateCacheResponse.Error:
                 console.log("Momento.open.onError");
 
-                this.app.ports.mmOnError.send({
+                this.app.ports.mmResponse.send({
                     id: args.id,
-                    error: createCacheResponse.innerException()
+                    type_: "Error",
+                    response: createCacheResponse.innerException()
                 });
         }
 
@@ -123,9 +122,10 @@ export class MomentoPorts {
         };
 
         console.log("Momento.open: Sent to port.");
-        this.app.ports.mmOnOpen.send({
+        this.app.ports.mmResponse.send({
             id: args.id,
-            session: session
+            type_: "Ok",
+            response: session
         });
     }
 
@@ -141,7 +141,12 @@ export class MomentoPorts {
         // Set up the topic.
         const topicSubscribeResponse =
             await args.session.topicClient.subscribe(args.session.cache, args.topic, {
-                onError: () => {
+                onError: (err) => {
+                    this.app.ports.mmAsyncError.send({
+                        id: args.id,
+                        response: err.toString()
+                    });
+
                     return;
                 },
                 onItem: (item) => {
@@ -157,13 +162,18 @@ export class MomentoPorts {
                 console.log(`Successfully subscribed to topic '${args.topic}'`);
                 break;
             case TopicSubscribeResponse.Error:
+                this.app.ports.mmResponse.send({
+                    id: args.id,
+                    type_: "Error",
+                    response: topicSubscribeResponse.innerException()
+                });
         }
 
         console.log("Momento.mmOnSubscribe: Sent to port.");
-        this.app.ports.mmOnSubscribe.send({
+        this.app.ports.mmResponse.send({
             id: args.id,
-            session: args.session,
-            topic: args.topic
+            type_: "Ok",
+            response: args.session
         });
     }
 
@@ -180,6 +190,12 @@ export class MomentoPorts {
                 break;
             case TopicPublishResponse.Error:
                 console.log(`Error publishing value: ${publishResponse.toString()}`);
+
+                this.app.ports.mmAsyncError.send({
+                    id: args.id,
+                    response: publishResponse.innerException()
+                });
+
                 break;
         }
     }
@@ -210,9 +226,10 @@ export class MomentoPorts {
             case CacheListPushBackResponse.Error:
                 console.log("Momento.pusList.Error");
 
-                this.app.ports.mmOnError.send({
+                this.app.ports.mmResponse.send({
                     id: args.id,
-                    error: pushResponse.innerException()
+                    type_: "Error",
+                    response: pushResponse.innerException()
                 });
         }
     }
@@ -240,9 +257,10 @@ export class MomentoPorts {
                 console.log("Momento.createWebhook.Error");
                 console.error(webhookResponse.innerException());
 
-                this.app.ports.mmOnError.send({
+                this.app.ports.mmResponse.send({
                     id: args.id,
-                    error: webhookResponse.innerException()
+                    type_: "Error",
+                    response: webhookResponse.innerException()
                 });
         }
     }

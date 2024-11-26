@@ -1,8 +1,9 @@
 port module Ports exposing
     ( requestPort, responsePort
-    , mmClose, mmOnClose, mmOnError, mmOnMessage, mmOnOpen, mmOpen, mmPushList
-    , mmSend, mmOnSubscribe, mmSubscribe
-    , mmCreateWebhook
+    , mmOpen, mmClose
+    , mmSubscribe, mmPublish, mmOnMessage
+    , mmPushList, mmCreateWebhook
+    , mmResponse, mmAsyncError
     , dynamoBatchGet, dynamoBatchWrite, dynamoDelete, dynamoGet, dynamoPut
     , dynamoQuery, dynamoResponse
     )
@@ -17,9 +18,10 @@ port module Ports exposing
 
 # Momento Cache
 
-@docs mmClose, mmOnClose, mmOnError, mmOnMessage, mmOnOpen, mmOpen, mmPushList
-@docs mmSend, mmOnSubscribe, mmSubscribe
-@docs mmCreateWebhook
+@docs mmOpen, mmClose
+@docs mmSubscribe, mmPublish, mmOnMessage
+@docs mmPushList, mmCreateWebhook
+@docs mmResponse, mmAsyncError
 
 
 # AWS Dynamo DB
@@ -49,22 +51,13 @@ port responsePort : ( String, Value, Value ) -> Cmd msg
 port mmOpen : { id : String, cache : String, apiKey : String } -> Cmd msg
 
 
-port mmOnOpen : ({ id : String, session : Value } -> msg) -> Sub msg
-
-
 port mmClose : { id : String, session : Value } -> Cmd msg
-
-
-port mmOnClose : (String -> msg) -> Sub msg
 
 
 port mmSubscribe : { id : String, session : Value, topic : String } -> Cmd msg
 
 
-port mmOnSubscribe : ({ id : String, session : Value, topic : String } -> msg) -> Sub msg
-
-
-port mmSend : { id : String, session : Value, topic : String, payload : String } -> Cmd msg
+port mmPublish : { id : String, session : Value, topic : String, payload : String } -> Cmd msg
 
 
 port mmOnMessage : ({ id : String, session : Value, payload : String } -> msg) -> Sub msg
@@ -76,7 +69,10 @@ port mmPushList : { id : String, session : Value, list : String, payload : Strin
 port mmCreateWebhook : { id : String, session : Value, topic : String, url : String } -> Cmd msg
 
 
-port mmOnError : ({ id : String, error : Value } -> msg) -> Sub msg
+port mmResponse : ({ id : String, type_ : String, response : Value } -> msg) -> Sub msg
+
+
+port mmAsyncError : ({ id : String, error : Value } -> msg) -> Sub msg
 
 
 
