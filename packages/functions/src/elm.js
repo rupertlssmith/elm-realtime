@@ -3320,10 +3320,6 @@ var $author$project$EventLog$Component$ModelReady = function (a) {
 var $author$project$EventLog$Component$ProcedureMsg = function (a) {
 	return {$: 'ProcedureMsg', a: a};
 };
-var $elm$core$Basics$always = F2(
-	function (a, _v0) {
-		return a;
-	});
 var $elm$core$Basics$composeL = F3(
 	function (g, f, x) {
 		return g(
@@ -3539,8 +3535,191 @@ var $brian_watkins$elm_procedure$Procedure$andThen = F2(
 				}
 			});
 	});
+var $elm$core$Debug$log = _Debug_log;
+var $elm$core$Tuple$mapFirst = F2(
+	function (func, _v0) {
+		var x = _v0.a;
+		var y = _v0.b;
+		return _Utils_Tuple2(
+			func(x),
+			y);
+	});
+var $elm$core$Basics$abs = function (n) {
+	return (n < 0) ? (-n) : n;
+};
+var $elm$random$Random$andThen = F2(
+	function (callback, _v0) {
+		var genA = _v0.a;
+		return $elm$random$Random$Generator(
+			function (seed) {
+				var _v1 = genA(seed);
+				var result = _v1.a;
+				var newSeed = _v1.b;
+				var _v2 = callback(result);
+				var genB = _v2.a;
+				return genB(newSeed);
+			});
+	});
+var $elm$random$Random$float = F2(
+	function (a, b) {
+		return $elm$random$Random$Generator(
+			function (seed0) {
+				var seed1 = $elm$random$Random$next(seed0);
+				var range = $elm$core$Basics$abs(b - a);
+				var n1 = $elm$random$Random$peel(seed1);
+				var n0 = $elm$random$Random$peel(seed0);
+				var lo = (134217727 & n1) * 1.0;
+				var hi = (67108863 & n0) * 1.0;
+				var val = ((hi * 134217728.0) + lo) / 9007199254740992.0;
+				var scaled = (val * range) + a;
+				return _Utils_Tuple2(
+					scaled,
+					$elm$random$Random$next(seed1));
+			});
+	});
+var $elm$core$Tuple$second = function (_v0) {
+	var y = _v0.b;
+	return y;
+};
+var $elm$core$List$sum = function (numbers) {
+	return A3($elm$core$List$foldl, $elm$core$Basics$add, 0, numbers);
+};
+var $elm_community$random_extra$Random$Extra$frequency = F2(
+	function (head, pairs) {
+		var total = $elm$core$List$sum(
+			A2(
+				$elm$core$List$map,
+				A2($elm$core$Basics$composeL, $elm$core$Basics$abs, $elm$core$Tuple$first),
+				A2($elm$core$List$cons, head, pairs)));
+		var pick = F2(
+			function (someChoices, n) {
+				pick:
+				while (true) {
+					if (someChoices.b) {
+						var _v1 = someChoices.a;
+						var k = _v1.a;
+						var g = _v1.b;
+						var rest = someChoices.b;
+						if (_Utils_cmp(n, k) < 1) {
+							return g;
+						} else {
+							var $temp$someChoices = rest,
+								$temp$n = n - k;
+							someChoices = $temp$someChoices;
+							n = $temp$n;
+							continue pick;
+						}
+					} else {
+						return head.b;
+					}
+				}
+			});
+		return A2(
+			$elm$random$Random$andThen,
+			pick(
+				A2($elm$core$List$cons, head, pairs)),
+			A2($elm$random$Random$float, 0, total));
+	});
+var $elm_community$random_extra$Random$Extra$choices = F2(
+	function (hd, gens) {
+		return A2(
+			$elm_community$random_extra$Random$Extra$frequency,
+			_Utils_Tuple2(1, hd),
+			A2(
+				$elm$core$List$map,
+				function (g) {
+					return _Utils_Tuple2(1, g);
+				},
+				gens));
+	});
+var $elm$core$Char$fromCode = _Char_fromCode;
+var $elm_community$random_extra$Random$Char$char = F2(
+	function (start, end) {
+		return A2(
+			$elm$random$Random$map,
+			$elm$core$Char$fromCode,
+			A2($elm$random$Random$int, start, end));
+	});
+var $elm_community$random_extra$Random$Char$lowerCaseLatin = A2($elm_community$random_extra$Random$Char$char, 97, 122);
+var $elm_community$random_extra$Random$Char$upperCaseLatin = A2($elm_community$random_extra$Random$Char$char, 65, 90);
+var $elm_community$random_extra$Random$Char$latin = A2(
+	$elm_community$random_extra$Random$Extra$choices,
+	$elm_community$random_extra$Random$Char$lowerCaseLatin,
+	_List_fromArray(
+		[$elm_community$random_extra$Random$Char$upperCaseLatin]));
+var $elm_community$random_extra$Random$Char$english = $elm_community$random_extra$Random$Char$latin;
+var $elm$core$String$fromList = _String_fromList;
+var $elm$random$Random$listHelp = F4(
+	function (revList, n, gen, seed) {
+		listHelp:
+		while (true) {
+			if (n < 1) {
+				return _Utils_Tuple2(revList, seed);
+			} else {
+				var _v0 = gen(seed);
+				var value = _v0.a;
+				var newSeed = _v0.b;
+				var $temp$revList = A2($elm$core$List$cons, value, revList),
+					$temp$n = n - 1,
+					$temp$gen = gen,
+					$temp$seed = newSeed;
+				revList = $temp$revList;
+				n = $temp$n;
+				gen = $temp$gen;
+				seed = $temp$seed;
+				continue listHelp;
+			}
+		}
+	});
+var $elm$random$Random$list = F2(
+	function (n, _v0) {
+		var gen = _v0.a;
+		return $elm$random$Random$Generator(
+			function (seed) {
+				return A4($elm$random$Random$listHelp, _List_Nil, n, gen, seed);
+			});
+	});
+var $elm_community$random_extra$Random$String$string = F2(
+	function (stringLength, charGenerator) {
+		return A2(
+			$elm$random$Random$map,
+			$elm$core$String$fromList,
+			A2($elm$random$Random$list, stringLength, charGenerator));
+	});
+var $author$project$EventLog$Component$nameGenerator = A2($elm_community$random_extra$Random$String$string, 10, $elm_community$random_extra$Random$Char$english);
+var $elm$core$Basics$always = F2(
+	function (a, _v0) {
+		return a;
+	});
 var $author$project$EventLog$Component$cacheName = function (channel) {
 	return 'elm-realtime' + '-cache';
+};
+var $brian_watkins$elm_procedure$Procedure$fetchResult = function (generator) {
+	return $brian_watkins$elm_procedure$Procedure$Internal$Procedure(
+		F3(
+			function (_v0, _v1, tagger) {
+				return generator(tagger);
+			}));
+};
+var $brian_watkins$elm_procedure$Procedure$provide = A2($elm$core$Basics$composeL, $brian_watkins$elm_procedure$Procedure$fromTask, $elm$core$Task$succeed);
+var $brian_watkins$elm_procedure$Procedure$mapError = F2(
+	function (mapper, procedure) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$next,
+			procedure,
+			function (aResult) {
+				if (aResult.$ === 'Ok') {
+					var aData = aResult.a;
+					return $brian_watkins$elm_procedure$Procedure$provide(aData);
+				} else {
+					var eData = aResult.a;
+					return $brian_watkins$elm_procedure$Procedure$break(
+						mapper(eData));
+				}
+			});
+	});
+var $author$project$Momento$SessionKey = function (a) {
+	return {$: 'SessionKey', a: a};
 };
 var $brian_watkins$elm_procedure$Procedure$Internal$Continue = {$: 'Continue'};
 var $brian_watkins$elm_procedure$Procedure$Internal$Subscribe = F3(
@@ -3604,6 +3783,230 @@ var $brian_watkins$elm_procedure$Procedure$Channel$acceptUntil = F2(
 	});
 var $brian_watkins$elm_procedure$Procedure$Channel$acceptOne = $brian_watkins$elm_procedure$Procedure$Channel$acceptUntil(
 	$elm$core$Basics$always(true));
+var $brian_watkins$elm_procedure$Procedure$Channel$Channel = function (a) {
+	return {$: 'Channel', a: a};
+};
+var $brian_watkins$elm_procedure$Procedure$Channel$defaultPredicate = F2(
+	function (_v0, _v1) {
+		return true;
+	});
+var $brian_watkins$elm_procedure$Procedure$Channel$connect = F2(
+	function (generator, _v0) {
+		var requestGenerator = _v0.a;
+		return $brian_watkins$elm_procedure$Procedure$Channel$Channel(
+			{request: requestGenerator, shouldAccept: $brian_watkins$elm_procedure$Procedure$Channel$defaultPredicate, subscription: generator});
+	});
+var $brian_watkins$elm_procedure$Procedure$Channel$filter = F2(
+	function (predicate, _v0) {
+		var channel = _v0.a;
+		return $brian_watkins$elm_procedure$Procedure$Channel$Channel(
+			_Utils_update(
+				channel,
+				{shouldAccept: predicate}));
+	});
+var $brian_watkins$elm_procedure$Procedure$Channel$ChannelRequest = function (a) {
+	return {$: 'ChannelRequest', a: a};
+};
+var $brian_watkins$elm_procedure$Procedure$Channel$open = $brian_watkins$elm_procedure$Procedure$Channel$ChannelRequest;
+var $elm$core$Basics$never = function (_v0) {
+	never:
+	while (true) {
+		var nvr = _v0.a;
+		var $temp$_v0 = nvr;
+		_v0 = $temp$_v0;
+		continue never;
+	}
+};
+var $brian_watkins$elm_procedure$Procedure$Internal$Initiate = function (a) {
+	return {$: 'Initiate', a: a};
+};
+var $brian_watkins$elm_procedure$Procedure$try = F3(
+	function (msgTagger, tagger, _v0) {
+		var procedure = _v0.a;
+		return A2(
+			$elm$core$Task$perform,
+			A2($elm$core$Basics$composeL, msgTagger, $brian_watkins$elm_procedure$Procedure$Internal$Initiate),
+			$elm$core$Task$succeed(
+				function (procId) {
+					return A3(procedure, procId, msgTagger, tagger);
+				}));
+	});
+var $brian_watkins$elm_procedure$Procedure$run = F2(
+	function (msgTagger, tagger) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$try,
+			msgTagger,
+			function (result) {
+				if (result.$ === 'Ok') {
+					var data = result.a;
+					return tagger(data);
+				} else {
+					var e = result.a;
+					return $elm$core$Basics$never(e);
+				}
+			});
+	});
+var $author$project$Momento$open = F4(
+	function (pt, ports, openParams, dt) {
+		return A3(
+			$brian_watkins$elm_procedure$Procedure$run,
+			pt,
+			function (_v1) {
+				var session = _v1.session;
+				return dt(
+					$elm$core$Result$Ok(
+						$author$project$Momento$SessionKey(session)));
+			},
+			$brian_watkins$elm_procedure$Procedure$Channel$acceptOne(
+				A2(
+					$brian_watkins$elm_procedure$Procedure$Channel$filter,
+					F2(
+						function (key, _v0) {
+							var id = _v0.id;
+							var session = _v0.session;
+							return _Utils_eq(id, key);
+						}),
+					A2(
+						$brian_watkins$elm_procedure$Procedure$Channel$connect,
+						ports.onOpen,
+						$brian_watkins$elm_procedure$Procedure$Channel$open(
+							function (key) {
+								return ports.open(
+									{apiKey: openParams.apiKey, cache: openParams.cache, id: key});
+							})))));
+	});
+var $brian_watkins$elm_procedure$Procedure$do = function (command) {
+	return $brian_watkins$elm_procedure$Procedure$Internal$Procedure(
+		F3(
+			function (procId, msgTagger, resultTagger) {
+				return A2(
+					$elm$core$Task$perform,
+					function (_v0) {
+						var nextCommand = A2(
+							$elm$core$Task$perform,
+							A2($elm$core$Basics$composeL, resultTagger, $elm$core$Result$Ok),
+							$elm$core$Task$succeed(_Utils_Tuple0));
+						return msgTagger(
+							A2(
+								$brian_watkins$elm_procedure$Procedure$Internal$Execute,
+								procId,
+								$elm$core$Platform$Cmd$batch(
+									_List_fromArray(
+										[command, nextCommand]))));
+					},
+					$elm$core$Task$succeed(_Utils_Tuple0));
+			}));
+};
+var $brian_watkins$elm_procedure$Procedure$map = function (mapper) {
+	return $brian_watkins$elm_procedure$Procedure$andThen(
+		A2($elm$core$Basics$composeL, $brian_watkins$elm_procedure$Procedure$provide, mapper));
+};
+var $author$project$Momento$processOp = F4(
+	function (ports, id, _v0, op) {
+		var sessionKey = _v0.a;
+		switch (op.$) {
+			case 'Publish':
+				var topic = op.a.topic;
+				var payload = op.a.payload;
+				return ports.publish(
+					{id: id, payload: payload, session: sessionKey, topic: topic});
+			case 'PushList':
+				var list = op.a.list;
+				var payload = op.a.payload;
+				return ports.pushList(
+					{id: id, list: list, payload: payload, session: sessionKey});
+			default:
+				var topic = op.a.topic;
+				var url = op.a.url;
+				return ports.createWebhook(
+					{id: id, session: sessionKey, topic: topic, url: url});
+		}
+	});
+var $author$project$Momento$innerProcessOps = F3(
+	function (ports, _v0, ops) {
+		var sessionKey = _v0.a;
+		if (!ops.b) {
+			return $brian_watkins$elm_procedure$Procedure$provide(
+				$elm$core$Result$Ok(_Utils_Tuple0));
+		} else {
+			var op = ops.a;
+			var remOps = ops.b;
+			return A2(
+				$brian_watkins$elm_procedure$Procedure$andThen,
+				function (_v2) {
+					return A3(
+						$author$project$Momento$innerProcessOps,
+						ports,
+						$author$project$Momento$SessionKey(sessionKey),
+						remOps);
+				},
+				A2(
+					$brian_watkins$elm_procedure$Procedure$map,
+					$elm$core$Result$Ok,
+					$brian_watkins$elm_procedure$Procedure$do(
+						A4(
+							$author$project$Momento$processOp,
+							ports,
+							'',
+							$author$project$Momento$SessionKey(sessionKey),
+							op))));
+		}
+	});
+var $author$project$Momento$processOps = F5(
+	function (pt, ports, _v0, ops, dt) {
+		var sessionKey = _v0.a;
+		return A3(
+			$brian_watkins$elm_procedure$Procedure$run,
+			pt,
+			dt,
+			A3(
+				$author$project$Momento$innerProcessOps,
+				ports,
+				$author$project$Momento$SessionKey(sessionKey),
+				ops));
+	});
+var $author$project$Momento$subscribe = F5(
+	function (pt, ports, _v0, subscribeParams, dt) {
+		var sessionKey = _v0.a;
+		return A3(
+			$brian_watkins$elm_procedure$Procedure$run,
+			pt,
+			function (_v2) {
+				var session = _v2.session;
+				var topic = _v2.topic;
+				return dt(
+					$elm$core$Result$Ok(
+						{
+							session: $author$project$Momento$SessionKey(session),
+							topic: topic
+						}));
+			},
+			$brian_watkins$elm_procedure$Procedure$Channel$acceptOne(
+				A2(
+					$brian_watkins$elm_procedure$Procedure$Channel$filter,
+					F2(
+						function (key, _v1) {
+							var id = _v1.id;
+							var session = _v1.session;
+							return _Utils_eq(id, key);
+						}),
+					A2(
+						$brian_watkins$elm_procedure$Procedure$Channel$connect,
+						ports.onSubscribe,
+						$brian_watkins$elm_procedure$Procedure$Channel$open(
+							function (key) {
+								return ports.subscribe(
+									{id: key, session: sessionKey, topic: subscribeParams.topic});
+							})))));
+	});
+var $author$project$Momento$momentoApi = F2(
+	function (pt, ports) {
+		return {
+			open: A2($author$project$Momento$open, pt, ports),
+			processOps: A2($author$project$Momento$processOps, pt, ports),
+			subscribe: A2($author$project$Momento$subscribe, pt, ports)
+		};
+	});
 var $elm$json$Json$Encode$object = function (pairs) {
 	return _Json_wrap(
 		A3(
@@ -3617,6 +4020,195 @@ var $elm$json$Json$Encode$object = function (pairs) {
 			_Json_emptyObject(_Utils_Tuple0),
 			pairs));
 };
+var $author$project$Ports$mmClose = _Platform_outgoingPort(
+	'mmClose',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session))
+				]));
+	});
+var $author$project$Ports$mmCreateWebhook = _Platform_outgoingPort(
+	'mmCreateWebhook',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session)),
+					_Utils_Tuple2(
+					'topic',
+					$elm$json$Json$Encode$string($.topic)),
+					_Utils_Tuple2(
+					'url',
+					$elm$json$Json$Encode$string($.url))
+				]));
+	});
+var $author$project$Ports$mmOnError = _Platform_incomingPort(
+	'mmOnError',
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (id) {
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (error) {
+					return $elm$json$Json$Decode$succeed(
+						{error: error, id: id});
+				},
+				A2($elm$json$Json$Decode$field, 'error', $elm$json$Json$Decode$value));
+		},
+		A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string)));
+var $author$project$Ports$mmOnMessage = _Platform_incomingPort(
+	'mmOnMessage',
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (session) {
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (payload) {
+					return A2(
+						$elm$json$Json$Decode$andThen,
+						function (id) {
+							return $elm$json$Json$Decode$succeed(
+								{id: id, payload: payload, session: session});
+						},
+						A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
+				},
+				A2($elm$json$Json$Decode$field, 'payload', $elm$json$Json$Decode$string));
+		},
+		A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value)));
+var $author$project$Ports$mmOnOpen = _Platform_incomingPort(
+	'mmOnOpen',
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (session) {
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (id) {
+					return $elm$json$Json$Decode$succeed(
+						{id: id, session: session});
+				},
+				A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
+		},
+		A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value)));
+var $author$project$Ports$mmOnSubscribe = _Platform_incomingPort(
+	'mmOnSubscribe',
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (topic) {
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (session) {
+					return A2(
+						$elm$json$Json$Decode$andThen,
+						function (id) {
+							return $elm$json$Json$Decode$succeed(
+								{id: id, session: session, topic: topic});
+						},
+						A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
+				},
+				A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value));
+		},
+		A2($elm$json$Json$Decode$field, 'topic', $elm$json$Json$Decode$string)));
+var $author$project$Ports$mmOpen = _Platform_outgoingPort(
+	'mmOpen',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'apiKey',
+					$elm$json$Json$Encode$string($.apiKey)),
+					_Utils_Tuple2(
+					'cache',
+					$elm$json$Json$Encode$string($.cache)),
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id))
+				]));
+	});
+var $author$project$Ports$mmPushList = _Platform_outgoingPort(
+	'mmPushList',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'list',
+					$elm$json$Json$Encode$string($.list)),
+					_Utils_Tuple2(
+					'payload',
+					$elm$json$Json$Encode$string($.payload)),
+					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session))
+				]));
+	});
+var $author$project$Ports$mmSend = _Platform_outgoingPort(
+	'mmSend',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'payload',
+					$elm$json$Json$Encode$string($.payload)),
+					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session)),
+					_Utils_Tuple2(
+					'topic',
+					$elm$json$Json$Encode$string($.topic))
+				]));
+	});
+var $author$project$Ports$mmSubscribe = _Platform_outgoingPort(
+	'mmSubscribe',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session)),
+					_Utils_Tuple2(
+					'topic',
+					$elm$json$Json$Encode$string($.topic))
+				]));
+	});
+var $author$project$EventLog$Component$momentoPorts = {close: $author$project$Ports$mmClose, createWebhook: $author$project$Ports$mmCreateWebhook, onError: $author$project$Ports$mmOnError, onMessage: $author$project$Ports$mmOnMessage, onOpen: $author$project$Ports$mmOnOpen, onSubscribe: $author$project$Ports$mmOnSubscribe, open: $author$project$Ports$mmOpen, publish: $author$project$Ports$mmSend, pushList: $author$project$Ports$mmPushList, subscribe: $author$project$Ports$mmSubscribe};
+var $author$project$EventLog$Component$momentoApi = A2($author$project$Momento$momentoApi, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$momentoPorts);
+var $author$project$EventLog$Component$openMomentoCache = F2(
+	function (component, channelName) {
+		var _v0 = A2($elm$core$Debug$log, 'procedure', 'momentoApi.open');
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$mapError,
+			$elm$core$Basics$always('Momento error'),
+			$brian_watkins$elm_procedure$Procedure$fetchResult(
+				$author$project$EventLog$Component$momentoApi.open(
+					{
+						apiKey: component.momentoApiKey,
+						cache: $author$project$EventLog$Component$cacheName(channelName)
+					})));
+	});
 var $author$project$AWS$Dynamo$batchGetEncoder = function (getOp) {
 	return $elm$json$Json$Encode$object(
 		_List_fromArray(
@@ -3695,69 +4287,6 @@ var $author$project$AWS$Dynamo$batchGetResponseDecoder = F2(
 					$elm$json$Json$Decode$errorToString,
 					A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err)),
 				A2($elm$json$Json$Decode$decodeValue, decoder, val)));
-	});
-var $brian_watkins$elm_procedure$Procedure$Channel$Channel = function (a) {
-	return {$: 'Channel', a: a};
-};
-var $brian_watkins$elm_procedure$Procedure$Channel$defaultPredicate = F2(
-	function (_v0, _v1) {
-		return true;
-	});
-var $brian_watkins$elm_procedure$Procedure$Channel$connect = F2(
-	function (generator, _v0) {
-		var requestGenerator = _v0.a;
-		return $brian_watkins$elm_procedure$Procedure$Channel$Channel(
-			{request: requestGenerator, shouldAccept: $brian_watkins$elm_procedure$Procedure$Channel$defaultPredicate, subscription: generator});
-	});
-var $brian_watkins$elm_procedure$Procedure$Channel$filter = F2(
-	function (predicate, _v0) {
-		var channel = _v0.a;
-		return $brian_watkins$elm_procedure$Procedure$Channel$Channel(
-			_Utils_update(
-				channel,
-				{shouldAccept: predicate}));
-	});
-var $brian_watkins$elm_procedure$Procedure$Channel$ChannelRequest = function (a) {
-	return {$: 'ChannelRequest', a: a};
-};
-var $brian_watkins$elm_procedure$Procedure$Channel$open = $brian_watkins$elm_procedure$Procedure$Channel$ChannelRequest;
-var $elm$core$Basics$never = function (_v0) {
-	never:
-	while (true) {
-		var nvr = _v0.a;
-		var $temp$_v0 = nvr;
-		_v0 = $temp$_v0;
-		continue never;
-	}
-};
-var $brian_watkins$elm_procedure$Procedure$Internal$Initiate = function (a) {
-	return {$: 'Initiate', a: a};
-};
-var $brian_watkins$elm_procedure$Procedure$try = F3(
-	function (msgTagger, tagger, _v0) {
-		var procedure = _v0.a;
-		return A2(
-			$elm$core$Task$perform,
-			A2($elm$core$Basics$composeL, msgTagger, $brian_watkins$elm_procedure$Procedure$Internal$Initiate),
-			$elm$core$Task$succeed(
-				function (procId) {
-					return A3(procedure, procId, msgTagger, tagger);
-				}));
-	});
-var $brian_watkins$elm_procedure$Procedure$run = F2(
-	function (msgTagger, tagger) {
-		return A2(
-			$brian_watkins$elm_procedure$Procedure$try,
-			msgTagger,
-			function (result) {
-				if (result.$ === 'Ok') {
-					var data = result.a;
-					return tagger(data);
-				} else {
-					var e = result.a;
-					return $elm$core$Basics$never(e);
-				}
-			});
 	});
 var $author$project$AWS$Dynamo$batchGet = F4(
 	function (pt, ports, batchGetProps, dt) {
@@ -3862,7 +4391,6 @@ var $elm$core$List$drop = F2(
 			}
 		}
 	});
-var $brian_watkins$elm_procedure$Procedure$provide = A2($elm$core$Basics$composeL, $brian_watkins$elm_procedure$Procedure$fromTask, $elm$core$Task$succeed);
 var $elm$core$List$takeReverse = F3(
 	function (n, list, kept) {
 		takeReverse:
@@ -4282,14 +4810,6 @@ var $author$project$AWS$Dynamo$encodeAttr = function (attr) {
 		return $elm$json$Json$Encode$int(val);
 	}
 };
-var $elm$core$Tuple$mapFirst = F2(
-	function (func, _v0) {
-		var x = _v0.a;
-		var y = _v0.b;
-		return _Utils_Tuple2(
-			func(x),
-			y);
-	});
 var $elm$core$List$unzip = function (pairs) {
 	var step = F2(
 		function (_v0, _v1) {
@@ -4725,515 +5245,26 @@ var $author$project$Ports$dynamoResponse = _Platform_incomingPort(
 		A2($elm$json$Json$Decode$index, 0, $elm$json$Json$Decode$string)));
 var $author$project$EventLog$Component$dynamoPorts = {batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse};
 var $author$project$EventLog$Component$dynamoApi = A2($author$project$AWS$Dynamo$dynamoApi, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$dynamoPorts);
-var $brian_watkins$elm_procedure$Procedure$fetchResult = function (generator) {
-	return $brian_watkins$elm_procedure$Procedure$Internal$Procedure(
-		F3(
-			function (_v0, _v1, tagger) {
-				return generator(tagger);
-			}));
-};
-var $elm$core$Debug$log = _Debug_log;
-var $brian_watkins$elm_procedure$Procedure$map = function (mapper) {
-	return $brian_watkins$elm_procedure$Procedure$andThen(
-		A2($elm$core$Basics$composeL, $brian_watkins$elm_procedure$Procedure$provide, mapper));
-};
-var $brian_watkins$elm_procedure$Procedure$mapError = F2(
-	function (mapper, procedure) {
-		return A2(
-			$brian_watkins$elm_procedure$Procedure$next,
-			procedure,
-			function (aResult) {
-				if (aResult.$ === 'Ok') {
-					var aData = aResult.a;
-					return $brian_watkins$elm_procedure$Procedure$provide(aData);
-				} else {
-					var eData = aResult.a;
-					return $brian_watkins$elm_procedure$Procedure$break(
-						mapper(eData));
-				}
-			});
-	});
-var $author$project$Momento$SessionKey = function (a) {
-	return {$: 'SessionKey', a: a};
-};
-var $author$project$Momento$open = F4(
-	function (pt, ports, openParams, dt) {
-		return A3(
-			$brian_watkins$elm_procedure$Procedure$run,
-			pt,
-			function (_v1) {
-				var session = _v1.session;
-				return dt(
-					$elm$core$Result$Ok(
-						$author$project$Momento$SessionKey(session)));
-			},
-			$brian_watkins$elm_procedure$Procedure$Channel$acceptOne(
-				A2(
-					$brian_watkins$elm_procedure$Procedure$Channel$filter,
-					F2(
-						function (key, _v0) {
-							var id = _v0.id;
-							var session = _v0.session;
-							return _Utils_eq(id, key);
-						}),
-					A2(
-						$brian_watkins$elm_procedure$Procedure$Channel$connect,
-						ports.onOpen,
-						$brian_watkins$elm_procedure$Procedure$Channel$open(
-							function (key) {
-								return ports.open(
-									{apiKey: openParams.apiKey, cache: openParams.cache, id: key});
-							})))));
-	});
-var $brian_watkins$elm_procedure$Procedure$do = function (command) {
-	return $brian_watkins$elm_procedure$Procedure$Internal$Procedure(
-		F3(
-			function (procId, msgTagger, resultTagger) {
-				return A2(
-					$elm$core$Task$perform,
-					function (_v0) {
-						var nextCommand = A2(
-							$elm$core$Task$perform,
-							A2($elm$core$Basics$composeL, resultTagger, $elm$core$Result$Ok),
-							$elm$core$Task$succeed(_Utils_Tuple0));
-						return msgTagger(
-							A2(
-								$brian_watkins$elm_procedure$Procedure$Internal$Execute,
-								procId,
-								$elm$core$Platform$Cmd$batch(
-									_List_fromArray(
-										[command, nextCommand]))));
-					},
-					$elm$core$Task$succeed(_Utils_Tuple0));
-			}));
-};
-var $author$project$Momento$processOp = F4(
-	function (ports, id, _v0, op) {
-		var sessionKey = _v0.a;
-		switch (op.$) {
-			case 'Publish':
-				var topic = op.a.topic;
-				var payload = op.a.payload;
-				return ports.publish(
-					{id: id, payload: payload, session: sessionKey, topic: topic});
-			case 'PushList':
-				var list = op.a.list;
-				var payload = op.a.payload;
-				return ports.pushList(
-					{id: id, list: list, payload: payload, session: sessionKey});
-			default:
-				var topic = op.a.topic;
-				var url = op.a.url;
-				return ports.createWebhook(
-					{id: id, session: sessionKey, topic: topic, url: url});
-		}
-	});
-var $author$project$Momento$innerProcessOps = F3(
-	function (ports, _v0, ops) {
-		var sessionKey = _v0.a;
-		if (!ops.b) {
-			return $brian_watkins$elm_procedure$Procedure$provide(
-				$elm$core$Result$Ok(_Utils_Tuple0));
-		} else {
-			var op = ops.a;
-			var remOps = ops.b;
-			return A2(
-				$brian_watkins$elm_procedure$Procedure$andThen,
-				function (_v2) {
-					return A3(
-						$author$project$Momento$innerProcessOps,
-						ports,
-						$author$project$Momento$SessionKey(sessionKey),
-						remOps);
-				},
-				A2(
-					$brian_watkins$elm_procedure$Procedure$map,
-					$elm$core$Result$Ok,
-					$brian_watkins$elm_procedure$Procedure$do(
-						A4(
-							$author$project$Momento$processOp,
-							ports,
-							'',
-							$author$project$Momento$SessionKey(sessionKey),
-							op))));
-		}
-	});
-var $author$project$Momento$processOps = F5(
-	function (pt, ports, _v0, ops, dt) {
-		var sessionKey = _v0.a;
-		return A3(
-			$brian_watkins$elm_procedure$Procedure$run,
-			pt,
-			dt,
-			A3(
-				$author$project$Momento$innerProcessOps,
-				ports,
-				$author$project$Momento$SessionKey(sessionKey),
-				ops));
-	});
-var $author$project$Momento$subscribe = F5(
-	function (pt, ports, _v0, subscribeParams, dt) {
-		var sessionKey = _v0.a;
-		return A3(
-			$brian_watkins$elm_procedure$Procedure$run,
-			pt,
-			function (_v2) {
-				var session = _v2.session;
-				var topic = _v2.topic;
-				return dt(
-					$elm$core$Result$Ok(
-						{
-							session: $author$project$Momento$SessionKey(session),
-							topic: topic
-						}));
-			},
-			$brian_watkins$elm_procedure$Procedure$Channel$acceptOne(
-				A2(
-					$brian_watkins$elm_procedure$Procedure$Channel$filter,
-					F2(
-						function (key, _v1) {
-							var id = _v1.id;
-							var session = _v1.session;
-							return _Utils_eq(id, key);
-						}),
-					A2(
-						$brian_watkins$elm_procedure$Procedure$Channel$connect,
-						ports.onSubscribe,
-						$brian_watkins$elm_procedure$Procedure$Channel$open(
-							function (key) {
-								return ports.subscribe(
-									{id: key, session: sessionKey, topic: subscribeParams.topic});
-							})))));
-	});
-var $author$project$Momento$momentoApi = F2(
-	function (pt, ports) {
-		return {
-			open: A2($author$project$Momento$open, pt, ports),
-			processOps: A2($author$project$Momento$processOps, pt, ports),
-			subscribe: A2($author$project$Momento$subscribe, pt, ports)
-		};
-	});
-var $author$project$Ports$mmClose = _Platform_outgoingPort(
-	'mmClose',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id)),
-					_Utils_Tuple2(
-					'session',
-					$elm$core$Basics$identity($.session))
-				]));
-	});
-var $author$project$Ports$mmCreateWebhook = _Platform_outgoingPort(
-	'mmCreateWebhook',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id)),
-					_Utils_Tuple2(
-					'session',
-					$elm$core$Basics$identity($.session)),
-					_Utils_Tuple2(
-					'topic',
-					$elm$json$Json$Encode$string($.topic)),
-					_Utils_Tuple2(
-					'url',
-					$elm$json$Json$Encode$string($.url))
-				]));
-	});
-var $author$project$Ports$mmOnError = _Platform_incomingPort(
-	'mmOnError',
-	A2(
-		$elm$json$Json$Decode$andThen,
-		function (id) {
-			return A2(
-				$elm$json$Json$Decode$andThen,
-				function (error) {
-					return $elm$json$Json$Decode$succeed(
-						{error: error, id: id});
-				},
-				A2($elm$json$Json$Decode$field, 'error', $elm$json$Json$Decode$value));
-		},
-		A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string)));
-var $author$project$Ports$mmOnMessage = _Platform_incomingPort(
-	'mmOnMessage',
-	A2(
-		$elm$json$Json$Decode$andThen,
-		function (session) {
-			return A2(
-				$elm$json$Json$Decode$andThen,
-				function (payload) {
-					return A2(
-						$elm$json$Json$Decode$andThen,
-						function (id) {
-							return $elm$json$Json$Decode$succeed(
-								{id: id, payload: payload, session: session});
-						},
-						A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
-				},
-				A2($elm$json$Json$Decode$field, 'payload', $elm$json$Json$Decode$string));
-		},
-		A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value)));
-var $author$project$Ports$mmOnOpen = _Platform_incomingPort(
-	'mmOnOpen',
-	A2(
-		$elm$json$Json$Decode$andThen,
-		function (session) {
-			return A2(
-				$elm$json$Json$Decode$andThen,
-				function (id) {
-					return $elm$json$Json$Decode$succeed(
-						{id: id, session: session});
-				},
-				A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
-		},
-		A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value)));
-var $author$project$Ports$mmOnSubscribe = _Platform_incomingPort(
-	'mmOnSubscribe',
-	A2(
-		$elm$json$Json$Decode$andThen,
-		function (topic) {
-			return A2(
-				$elm$json$Json$Decode$andThen,
-				function (session) {
-					return A2(
-						$elm$json$Json$Decode$andThen,
-						function (id) {
-							return $elm$json$Json$Decode$succeed(
-								{id: id, session: session, topic: topic});
-						},
-						A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
-				},
-				A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value));
-		},
-		A2($elm$json$Json$Decode$field, 'topic', $elm$json$Json$Decode$string)));
-var $author$project$Ports$mmOpen = _Platform_outgoingPort(
-	'mmOpen',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'apiKey',
-					$elm$json$Json$Encode$string($.apiKey)),
-					_Utils_Tuple2(
-					'cache',
-					$elm$json$Json$Encode$string($.cache)),
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id))
-				]));
-	});
-var $author$project$Ports$mmPushList = _Platform_outgoingPort(
-	'mmPushList',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id)),
-					_Utils_Tuple2(
-					'list',
-					$elm$json$Json$Encode$string($.list)),
-					_Utils_Tuple2(
-					'payload',
-					$elm$json$Json$Encode$string($.payload)),
-					_Utils_Tuple2(
-					'session',
-					$elm$core$Basics$identity($.session))
-				]));
-	});
-var $author$project$Ports$mmSend = _Platform_outgoingPort(
-	'mmSend',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id)),
-					_Utils_Tuple2(
-					'payload',
-					$elm$json$Json$Encode$string($.payload)),
-					_Utils_Tuple2(
-					'session',
-					$elm$core$Basics$identity($.session)),
-					_Utils_Tuple2(
-					'topic',
-					$elm$json$Json$Encode$string($.topic))
-				]));
-	});
-var $author$project$Ports$mmSubscribe = _Platform_outgoingPort(
-	'mmSubscribe',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id)),
-					_Utils_Tuple2(
-					'session',
-					$elm$core$Basics$identity($.session)),
-					_Utils_Tuple2(
-					'topic',
-					$elm$json$Json$Encode$string($.topic))
-				]));
-	});
-var $author$project$EventLog$Component$momentoPorts = {close: $author$project$Ports$mmClose, createWebhook: $author$project$Ports$mmCreateWebhook, onError: $author$project$Ports$mmOnError, onMessage: $author$project$Ports$mmOnMessage, onOpen: $author$project$Ports$mmOnOpen, onSubscribe: $author$project$Ports$mmOnSubscribe, open: $author$project$Ports$mmOpen, publish: $author$project$Ports$mmSend, pushList: $author$project$Ports$mmPushList, subscribe: $author$project$Ports$mmSubscribe};
-var $author$project$EventLog$Component$momentoApi = A2($author$project$Momento$momentoApi, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$momentoPorts);
-var $elm$core$Basics$abs = function (n) {
-	return (n < 0) ? (-n) : n;
-};
-var $elm$random$Random$andThen = F2(
-	function (callback, _v0) {
-		var genA = _v0.a;
-		return $elm$random$Random$Generator(
-			function (seed) {
-				var _v1 = genA(seed);
-				var result = _v1.a;
-				var newSeed = _v1.b;
-				var _v2 = callback(result);
-				var genB = _v2.a;
-				return genB(newSeed);
-			});
-	});
-var $elm$random$Random$float = F2(
-	function (a, b) {
-		return $elm$random$Random$Generator(
-			function (seed0) {
-				var seed1 = $elm$random$Random$next(seed0);
-				var range = $elm$core$Basics$abs(b - a);
-				var n1 = $elm$random$Random$peel(seed1);
-				var n0 = $elm$random$Random$peel(seed0);
-				var lo = (134217727 & n1) * 1.0;
-				var hi = (67108863 & n0) * 1.0;
-				var val = ((hi * 134217728.0) + lo) / 9007199254740992.0;
-				var scaled = (val * range) + a;
-				return _Utils_Tuple2(
-					scaled,
-					$elm$random$Random$next(seed1));
-			});
-	});
-var $elm$core$Tuple$second = function (_v0) {
-	var y = _v0.b;
-	return y;
-};
-var $elm$core$List$sum = function (numbers) {
-	return A3($elm$core$List$foldl, $elm$core$Basics$add, 0, numbers);
-};
-var $elm_community$random_extra$Random$Extra$frequency = F2(
-	function (head, pairs) {
-		var total = $elm$core$List$sum(
-			A2(
-				$elm$core$List$map,
-				A2($elm$core$Basics$composeL, $elm$core$Basics$abs, $elm$core$Tuple$first),
-				A2($elm$core$List$cons, head, pairs)));
-		var pick = F2(
-			function (someChoices, n) {
-				pick:
-				while (true) {
-					if (someChoices.b) {
-						var _v1 = someChoices.a;
-						var k = _v1.a;
-						var g = _v1.b;
-						var rest = someChoices.b;
-						if (_Utils_cmp(n, k) < 1) {
-							return g;
-						} else {
-							var $temp$someChoices = rest,
-								$temp$n = n - k;
-							someChoices = $temp$someChoices;
-							n = $temp$n;
-							continue pick;
-						}
-					} else {
-						return head.b;
-					}
-				}
-			});
-		return A2(
-			$elm$random$Random$andThen,
-			pick(
-				A2($elm$core$List$cons, head, pairs)),
-			A2($elm$random$Random$float, 0, total));
-	});
-var $elm_community$random_extra$Random$Extra$choices = F2(
-	function (hd, gens) {
-		return A2(
-			$elm_community$random_extra$Random$Extra$frequency,
-			_Utils_Tuple2(1, hd),
-			A2(
-				$elm$core$List$map,
-				function (g) {
-					return _Utils_Tuple2(1, g);
-				},
-				gens));
-	});
-var $elm$core$Char$fromCode = _Char_fromCode;
-var $elm_community$random_extra$Random$Char$char = F2(
-	function (start, end) {
-		return A2(
-			$elm$random$Random$map,
-			$elm$core$Char$fromCode,
-			A2($elm$random$Random$int, start, end));
-	});
-var $elm_community$random_extra$Random$Char$lowerCaseLatin = A2($elm_community$random_extra$Random$Char$char, 97, 122);
-var $elm_community$random_extra$Random$Char$upperCaseLatin = A2($elm_community$random_extra$Random$Char$char, 65, 90);
-var $elm_community$random_extra$Random$Char$latin = A2(
-	$elm_community$random_extra$Random$Extra$choices,
-	$elm_community$random_extra$Random$Char$lowerCaseLatin,
-	_List_fromArray(
-		[$elm_community$random_extra$Random$Char$upperCaseLatin]));
-var $elm_community$random_extra$Random$Char$english = $elm_community$random_extra$Random$Char$latin;
-var $elm$core$String$fromList = _String_fromList;
-var $elm$random$Random$listHelp = F4(
-	function (revList, n, gen, seed) {
-		listHelp:
-		while (true) {
-			if (n < 1) {
-				return _Utils_Tuple2(revList, seed);
-			} else {
-				var _v0 = gen(seed);
-				var value = _v0.a;
-				var newSeed = _v0.b;
-				var $temp$revList = A2($elm$core$List$cons, value, revList),
-					$temp$n = n - 1,
-					$temp$gen = gen,
-					$temp$seed = newSeed;
-				revList = $temp$revList;
-				n = $temp$n;
-				gen = $temp$gen;
-				seed = $temp$seed;
-				continue listHelp;
-			}
-		}
-	});
-var $elm$random$Random$list = F2(
-	function (n, _v0) {
-		var gen = _v0.a;
-		return $elm$random$Random$Generator(
-			function (seed) {
-				return A4($elm$random$Random$listHelp, _List_Nil, n, gen, seed);
-			});
-	});
-var $elm_community$random_extra$Random$String$string = F2(
-	function (stringLength, charGenerator) {
-		return A2(
-			$elm$random$Random$map,
-			$elm$core$String$fromList,
-			A2($elm$random$Random$list, stringLength, charGenerator));
-	});
-var $author$project$EventLog$Component$nameGenerator = A2($elm_community$random_extra$Random$String$string, 10, $elm_community$random_extra$Random$Char$english);
-var $author$project$EventLog$Component$notifyTopicName = function (channel) {
-	return channel + '-savetopic';
+var $author$project$EventLog$Component$recordChannelToDB = function (sessionKey) {
+	var _v0 = A2($elm$core$Debug$log, 'procedure', 'dynamoApi.put');
+	return A2(
+		$brian_watkins$elm_procedure$Procedure$mapError,
+		$elm$core$Basics$always('Dynamo error'),
+		A2(
+			$brian_watkins$elm_procedure$Procedure$map,
+			$elm$core$Basics$always(sessionKey),
+			$brian_watkins$elm_procedure$Procedure$fetchResult(
+				$author$project$EventLog$Component$dynamoApi.put(
+					{
+						item: $elm$json$Json$Encode$object(
+							_List_fromArray(
+								[
+									_Utils_Tuple2(
+									'test',
+									$elm$json$Json$Encode$string('val'))
+								])),
+						tableName: 'someTable'
+					}))));
 };
 var $author$project$EventLog$Component$setModel = F2(
 	function (m, x) {
@@ -5241,12 +5272,37 @@ var $author$project$EventLog$Component$setModel = F2(
 			m,
 			{eventLog: x});
 	});
+var $author$project$EventLog$Component$notifyTopicName = function (channel) {
+	return channel + '-savetopic';
+};
 var $author$project$Momento$Webhook = function (a) {
 	return {$: 'Webhook', a: a};
 };
 var $author$project$Momento$webhook = function (args) {
 	return $author$project$Momento$Webhook(args);
 };
+var $author$project$EventLog$Component$setupChannelWebhook = F3(
+	function (component, channelName, sessionKey) {
+		var _v0 = A2($elm$core$Debug$log, 'procedure', 'momentoApi.processOps');
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$mapError,
+			$elm$core$Basics$always('Momento error'),
+			A2(
+				$brian_watkins$elm_procedure$Procedure$map,
+				$elm$core$Basics$always(_Utils_Tuple0),
+				$brian_watkins$elm_procedure$Procedure$fetchResult(
+					A2(
+						$author$project$EventLog$Component$momentoApi.processOps,
+						sessionKey,
+						_List_fromArray(
+							[
+								$author$project$Momento$webhook(
+								{
+									topic: $author$project$EventLog$Component$notifyTopicName(channelName),
+									url: component.channelApiUrl + ('/v1/channel/' + channelName)
+								})
+							])))));
+	});
 var $author$project$EventLog$Component$createChannel = F4(
 	function (protocol, route, state, component) {
 		var _v0 = A2($elm$random$Random$step, $author$project$EventLog$Component$nameGenerator, state.seed);
@@ -5254,75 +5310,15 @@ var $author$project$EventLog$Component$createChannel = F4(
 		var nextSeed = _v0.b;
 		var procedure = A2(
 			$brian_watkins$elm_procedure$Procedure$andThen,
-			function (sessionKey) {
-				var _v6 = A2($elm$core$Debug$log, 'procedure', 'momentoApi.processOps');
-				return A2(
-					$brian_watkins$elm_procedure$Procedure$mapError,
-					$elm$core$Basics$always('Momento error'),
-					$brian_watkins$elm_procedure$Procedure$fetchResult(
-						A2(
-							$author$project$EventLog$Component$momentoApi.processOps,
-							sessionKey,
-							_List_fromArray(
-								[
-									$author$project$Momento$webhook(
-									{
-										topic: $author$project$EventLog$Component$notifyTopicName(channelName),
-										url: component.channelApiUrl + ('/v1/channel/' + channelName)
-									})
-								]))));
-			},
+			A2($author$project$EventLog$Component$setupChannelWebhook, component, channelName),
 			A2(
 				$brian_watkins$elm_procedure$Procedure$andThen,
-				function (sessionKey) {
-					var _v5 = A2($elm$core$Debug$log, 'procedure', 'dynamoApi.put');
-					return A2(
-						$brian_watkins$elm_procedure$Procedure$mapError,
-						$elm$core$Basics$always('Dynamo error'),
-						A2(
-							$brian_watkins$elm_procedure$Procedure$map,
-							$elm$core$Basics$always(sessionKey),
-							$brian_watkins$elm_procedure$Procedure$fetchResult(
-								$author$project$EventLog$Component$dynamoApi.put(
-									{
-										item: $elm$json$Json$Encode$object(
-											_List_fromArray(
-												[
-													_Utils_Tuple2(
-													'test',
-													$elm$json$Json$Encode$string('val'))
-												])),
-										tableName: 'someTable'
-									}))));
-				},
+				$author$project$EventLog$Component$recordChannelToDB,
 				A2(
 					$brian_watkins$elm_procedure$Procedure$andThen,
-					function (_v3) {
-						var _v4 = A2($elm$core$Debug$log, 'procedure', 'momentoApi.open');
-						return A2(
-							$brian_watkins$elm_procedure$Procedure$mapError,
-							$elm$core$Basics$always('Momento error'),
-							$brian_watkins$elm_procedure$Procedure$fetchResult(
-								$author$project$EventLog$Component$momentoApi.open(
-									{
-										apiKey: component.momentoApiKey,
-										cache: $author$project$EventLog$Component$cacheName(channelName)
-									})));
-					},
-					$brian_watkins$elm_procedure$Procedure$provide(
-						{}))));
+					$author$project$EventLog$Component$openMomentoCache(component),
+					$brian_watkins$elm_procedure$Procedure$provide(channelName))));
 		var _v1 = A2($elm$core$Debug$log, 'createChannel', channelName);
-		var _v2 = $author$project$EventLog$Component$dynamoApi.put(
-			{
-				item: $elm$json$Json$Encode$object(
-					_List_fromArray(
-						[
-							_Utils_Tuple2(
-							'test',
-							$elm$json$Json$Encode$string('val'))
-						])),
-				tableName: 'someTable'
-			});
 		return protocol.onUpdate(
 			A2(
 				$elm$core$Tuple$mapSecond,

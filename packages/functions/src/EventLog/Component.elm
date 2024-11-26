@@ -9,7 +9,6 @@ module EventLog.Component exposing
     , cacheName
     , createChannel
     , init
-    , mmError
     , modelTopicName
     , nameGenerator
     , notifyTopicName
@@ -29,7 +28,7 @@ module EventLog.Component exposing
 
 import AWS.Dynamo as Dynamo
 import Json.Encode as Encode
-import Momento exposing (Error, Op(..), OpenParams)
+import Momento exposing (Error, Op(..), OpenParams, SessionKey)
 import Ports
 import Procedure
 import Procedure.Program
@@ -129,64 +128,18 @@ processRoute protocol route component =
 createChannel : Protocol (Component a) msg model -> Route -> ReadyState -> Component a -> ( model, Cmd msg )
 createChannel protocol route state component =
     let
-        ( channelName, nextSeed ) =
-            Random.step nameGenerator state.seed
-
         _ =
             Debug.log "createChannel" channelName
 
-        _ =
-            dynamoApi.put
-                { tableName = "someTable"
-                , item = Encode.object [ ( "test", Encode.string "val" ) ]
-                }
+        ( channelName, nextSeed ) =
+            Random.step nameGenerator state.seed
 
         procedure : Procedure.Procedure String () Msg
         procedure =
-            Procedure.provide {}
-                |> Procedure.andThen
-                    (\_ ->
-                        let
-                            _ =
-                                Debug.log "procedure" "momentoApi.open"
-                        in
-                        momentoApi.open
-                            { apiKey = component.momentoApiKey
-                            , cache = cacheName channelName
-                            }
-                            |> Procedure.fetchResult
-                            |> Procedure.mapError (always "Momento error")
-                    )
-                |> Procedure.andThen
-                    (\sessionKey ->
-                        let
-                            _ =
-                                Debug.log "procedure" "dynamoApi.put"
-                        in
-                        dynamoApi.put
-                            { tableName = "someTable"
-                            , item = Encode.object [ ( "test", Encode.string "val" ) ]
-                            }
-                            |> Procedure.fetchResult
-                            |> Procedure.map (always sessionKey)
-                            |> Procedure.mapError (always "Dynamo error")
-                    )
-                |> Procedure.andThen
-                    (\sessionKey ->
-                        let
-                            _ =
-                                Debug.log "procedure" "momentoApi.processOps"
-                        in
-                        momentoApi.processOps
-                            sessionKey
-                            [ Momento.webhook
-                                { topic = notifyTopicName channelName
-                                , url = component.channelApiUrl ++ "/v1/channel/" ++ channelName
-                                }
-                            ]
-                            |> Procedure.fetchResult
-                            |> Procedure.mapError (always "Momento error")
-                    )
+            Procedure.provide channelName
+                |> Procedure.andThen (openMomentoCache component)
+                |> Procedure.andThen recordChannelToDB
+                |> Procedure.andThen (setupChannelWebhook component channelName)
     in
     ( { seed = nextSeed
       , procedure = state.procedure
@@ -199,20 +152,63 @@ createChannel protocol route state component =
         |> protocol.onUpdate
 
 
+openMomentoCache :
+    Component a
+    -> String
+    -> Procedure.Procedure String SessionKey Msg
+openMomentoCache component channelName =
+    let
+        _ =
+            Debug.log "procedure" "momentoApi.open"
+    in
+    momentoApi.open
+        { apiKey = component.momentoApiKey
+        , cache = cacheName channelName
+        }
+        |> Procedure.fetchResult
+        |> Procedure.mapError (always "Momento error")
+
+
+recordChannelToDB : SessionKey -> Procedure.Procedure String SessionKey Msg
+recordChannelToDB sessionKey =
+    let
+        _ =
+            Debug.log "procedure" "dynamoApi.put"
+    in
+    dynamoApi.put
+        { tableName = "someTable"
+        , item = Encode.object [ ( "test", Encode.string "val" ) ]
+        }
+        |> Procedure.fetchResult
+        |> Procedure.map (always sessionKey)
+        |> Procedure.mapError (always "Dynamo error")
+
+
+setupChannelWebhook :
+    Component a
+    -> String
+    -> SessionKey
+    -> Procedure.Procedure String () Msg
+setupChannelWebhook component channelName sessionKey =
+    let
+        _ =
+            Debug.log "procedure" "momentoApi.processOps"
+    in
+    momentoApi.processOps
+        sessionKey
+        [ Momento.webhook
+            { topic = notifyTopicName channelName
+            , url = component.channelApiUrl ++ "/v1/channel/" ++ channelName
+            }
+        ]
+        |> Procedure.fetchResult
+        |> Procedure.map (always ())
+        |> Procedure.mapError (always "Momento error")
+
+
 nameGenerator : Random.Generator String
 nameGenerator =
     Random.String.string 10 Random.Char.english
-
-
-mmError : Protocol (Component a) msg model -> String -> Error -> Component a -> ( model, Cmd msg )
-mmError protocol id error component =
-    let
-        _ =
-            Debug.log "mmError" ("channel " ++ id ++ " " ++ Debug.toString error)
-    in
-    component
-        |> U2.pure
-        |> protocol.onUpdate
 
 
 

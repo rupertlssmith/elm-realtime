@@ -8,6 +8,7 @@ module Momento exposing
     , Ports
     , Protocol
     , Session(..)
+    , SessionKey
     , SubscribeParams
     , init
     , momentoApi
