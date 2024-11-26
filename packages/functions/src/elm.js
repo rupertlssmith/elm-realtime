@@ -3718,9 +3718,6 @@ var $brian_watkins$elm_procedure$Procedure$mapError = F2(
 				}
 			});
 	});
-var $author$project$Momento$SessionKey = function (a) {
-	return {$: 'SessionKey', a: a};
-};
 var $brian_watkins$elm_procedure$Procedure$Internal$Continue = {$: 'Continue'};
 var $brian_watkins$elm_procedure$Procedure$Internal$Subscribe = F3(
 	function (a, b, c) {
@@ -3796,6 +3793,22 @@ var $brian_watkins$elm_procedure$Procedure$Channel$connect = F2(
 		return $brian_watkins$elm_procedure$Procedure$Channel$Channel(
 			{request: requestGenerator, shouldAccept: $brian_watkins$elm_procedure$Procedure$Channel$defaultPredicate, subscription: generator});
 	});
+var $author$project$Momento$Failed = {$: 'Failed'};
+var $author$project$Momento$SessionKey = function (a) {
+	return {$: 'SessionKey', a: a};
+};
+var $author$project$Momento$decodeResponse = function (res) {
+	var _v0 = res.type_;
+	switch (_v0) {
+		case 'Ok':
+			return $elm$core$Result$Ok(
+				$author$project$Momento$SessionKey(res.response));
+		case 'Error':
+			return $elm$core$Result$Err($author$project$Momento$Failed);
+		default:
+			return $elm$core$Result$Err($author$project$Momento$Failed);
+	}
+};
 var $brian_watkins$elm_procedure$Procedure$Channel$filter = F2(
 	function (predicate, _v0) {
 		var channel = _v0.a;
@@ -3851,11 +3864,9 @@ var $author$project$Momento$open = F4(
 		return A3(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
-			function (_v1) {
-				var session = _v1.session;
+			function (res) {
 				return dt(
-					$elm$core$Result$Ok(
-						$author$project$Momento$SessionKey(session)));
+					$author$project$Momento$decodeResponse(res));
 			},
 			$brian_watkins$elm_procedure$Procedure$Channel$acceptOne(
 				A2(
@@ -3863,12 +3874,11 @@ var $author$project$Momento$open = F4(
 					F2(
 						function (key, _v0) {
 							var id = _v0.id;
-							var session = _v0.session;
 							return _Utils_eq(id, key);
 						}),
 					A2(
 						$brian_watkins$elm_procedure$Procedure$Channel$connect,
-						ports.onOpen,
+						ports.response,
 						$brian_watkins$elm_procedure$Procedure$Channel$open(
 							function (key) {
 								return ports.open(
@@ -3971,15 +3981,9 @@ var $author$project$Momento$subscribe = F5(
 		return A3(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
-			function (_v2) {
-				var session = _v2.session;
-				var topic = _v2.topic;
+			function (res) {
 				return dt(
-					$elm$core$Result$Ok(
-						{
-							session: $author$project$Momento$SessionKey(session),
-							topic: topic
-						}));
+					$author$project$Momento$decodeResponse(res));
 			},
 			$brian_watkins$elm_procedure$Procedure$Channel$acceptOne(
 				A2(
@@ -3987,12 +3991,11 @@ var $author$project$Momento$subscribe = F5(
 					F2(
 						function (key, _v1) {
 							var id = _v1.id;
-							var session = _v1.session;
 							return _Utils_eq(id, key);
 						}),
 					A2(
 						$brian_watkins$elm_procedure$Procedure$Channel$connect,
-						ports.onSubscribe,
+						ports.response,
 						$brian_watkins$elm_procedure$Procedure$Channel$open(
 							function (key) {
 								return ports.subscribe(
@@ -4007,6 +4010,20 @@ var $author$project$Momento$momentoApi = F2(
 			subscribe: A2($author$project$Momento$subscribe, pt, ports)
 		};
 	});
+var $author$project$Ports$mmAsyncError = _Platform_incomingPort(
+	'mmAsyncError',
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (id) {
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (error) {
+					return $elm$json$Json$Decode$succeed(
+						{error: error, id: id});
+				},
+				A2($elm$json$Json$Decode$field, 'error', $elm$json$Json$Decode$value));
+		},
+		A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string)));
 var $elm$json$Json$Encode$object = function (pairs) {
 	return _Json_wrap(
 		A3(
@@ -4054,20 +4071,6 @@ var $author$project$Ports$mmCreateWebhook = _Platform_outgoingPort(
 					$elm$json$Json$Encode$string($.url))
 				]));
 	});
-var $author$project$Ports$mmOnError = _Platform_incomingPort(
-	'mmOnError',
-	A2(
-		$elm$json$Json$Decode$andThen,
-		function (id) {
-			return A2(
-				$elm$json$Json$Decode$andThen,
-				function (error) {
-					return $elm$json$Json$Decode$succeed(
-						{error: error, id: id});
-				},
-				A2($elm$json$Json$Decode$field, 'error', $elm$json$Json$Decode$value));
-		},
-		A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string)));
 var $author$project$Ports$mmOnMessage = _Platform_incomingPort(
 	'mmOnMessage',
 	A2(
@@ -4087,39 +4090,6 @@ var $author$project$Ports$mmOnMessage = _Platform_incomingPort(
 				A2($elm$json$Json$Decode$field, 'payload', $elm$json$Json$Decode$string));
 		},
 		A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value)));
-var $author$project$Ports$mmOnOpen = _Platform_incomingPort(
-	'mmOnOpen',
-	A2(
-		$elm$json$Json$Decode$andThen,
-		function (session) {
-			return A2(
-				$elm$json$Json$Decode$andThen,
-				function (id) {
-					return $elm$json$Json$Decode$succeed(
-						{id: id, session: session});
-				},
-				A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
-		},
-		A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value)));
-var $author$project$Ports$mmOnSubscribe = _Platform_incomingPort(
-	'mmOnSubscribe',
-	A2(
-		$elm$json$Json$Decode$andThen,
-		function (topic) {
-			return A2(
-				$elm$json$Json$Decode$andThen,
-				function (session) {
-					return A2(
-						$elm$json$Json$Decode$andThen,
-						function (id) {
-							return $elm$json$Json$Decode$succeed(
-								{id: id, session: session, topic: topic});
-						},
-						A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
-				},
-				A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value));
-		},
-		A2($elm$json$Json$Decode$field, 'topic', $elm$json$Json$Decode$string)));
 var $author$project$Ports$mmOpen = _Platform_outgoingPort(
 	'mmOpen',
 	function ($) {
@@ -4135,6 +4105,26 @@ var $author$project$Ports$mmOpen = _Platform_outgoingPort(
 					_Utils_Tuple2(
 					'id',
 					$elm$json$Json$Encode$string($.id))
+				]));
+	});
+var $author$project$Ports$mmPublish = _Platform_outgoingPort(
+	'mmPublish',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'payload',
+					$elm$json$Json$Encode$string($.payload)),
+					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session)),
+					_Utils_Tuple2(
+					'topic',
+					$elm$json$Json$Encode$string($.topic))
 				]));
 	});
 var $author$project$Ports$mmPushList = _Platform_outgoingPort(
@@ -4157,26 +4147,25 @@ var $author$project$Ports$mmPushList = _Platform_outgoingPort(
 					$elm$core$Basics$identity($.session))
 				]));
 	});
-var $author$project$Ports$mmSend = _Platform_outgoingPort(
-	'mmSend',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id)),
-					_Utils_Tuple2(
-					'payload',
-					$elm$json$Json$Encode$string($.payload)),
-					_Utils_Tuple2(
-					'session',
-					$elm$core$Basics$identity($.session)),
-					_Utils_Tuple2(
-					'topic',
-					$elm$json$Json$Encode$string($.topic))
-				]));
-	});
+var $author$project$Ports$mmResponse = _Platform_incomingPort(
+	'mmResponse',
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (type_) {
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (response) {
+					return A2(
+						$elm$json$Json$Decode$andThen,
+						function (id) {
+							return $elm$json$Json$Decode$succeed(
+								{id: id, response: response, type_: type_});
+						},
+						A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
+				},
+				A2($elm$json$Json$Decode$field, 'response', $elm$json$Json$Decode$value));
+		},
+		A2($elm$json$Json$Decode$field, 'type_', $elm$json$Json$Decode$string)));
 var $author$project$Ports$mmSubscribe = _Platform_outgoingPort(
 	'mmSubscribe',
 	function ($) {
@@ -4194,7 +4183,7 @@ var $author$project$Ports$mmSubscribe = _Platform_outgoingPort(
 					$elm$json$Json$Encode$string($.topic))
 				]));
 	});
-var $author$project$EventLog$Component$momentoPorts = {close: $author$project$Ports$mmClose, createWebhook: $author$project$Ports$mmCreateWebhook, onError: $author$project$Ports$mmOnError, onMessage: $author$project$Ports$mmOnMessage, onOpen: $author$project$Ports$mmOnOpen, onSubscribe: $author$project$Ports$mmOnSubscribe, open: $author$project$Ports$mmOpen, publish: $author$project$Ports$mmSend, pushList: $author$project$Ports$mmPushList, subscribe: $author$project$Ports$mmSubscribe};
+var $author$project$EventLog$Component$momentoPorts = {asyncError: $author$project$Ports$mmAsyncError, close: $author$project$Ports$mmClose, createWebhook: $author$project$Ports$mmCreateWebhook, onMessage: $author$project$Ports$mmOnMessage, open: $author$project$Ports$mmOpen, publish: $author$project$Ports$mmPublish, pushList: $author$project$Ports$mmPushList, response: $author$project$Ports$mmResponse, subscribe: $author$project$Ports$mmSubscribe};
 var $author$project$EventLog$Component$momentoApi = A2($author$project$Momento$momentoApi, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$momentoPorts);
 var $author$project$EventLog$Component$openMomentoCache = F2(
 	function (component, channelName) {
@@ -5278,7 +5267,7 @@ var $author$project$EventLog$Component$notifyTopicName = function (channel) {
 var $author$project$Momento$Webhook = function (a) {
 	return {$: 'Webhook', a: a};
 };
-var $author$project$Momento$webhook = function (args) {
+var $author$project$Momento$webhookOp = function (args) {
 	return $author$project$Momento$Webhook(args);
 };
 var $author$project$EventLog$Component$setupChannelWebhook = F3(
@@ -5296,7 +5285,7 @@ var $author$project$EventLog$Component$setupChannelWebhook = F3(
 						sessionKey,
 						_List_fromArray(
 							[
-								$author$project$Momento$webhook(
+								$author$project$Momento$webhookOp(
 								{
 									topic: $author$project$EventLog$Component$notifyTopicName(channelName),
 									url: component.channelApiUrl + ('/v1/channel/' + channelName)

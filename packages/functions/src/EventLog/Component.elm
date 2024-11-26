@@ -196,7 +196,7 @@ setupChannelWebhook component channelName sessionKey =
     in
     momentoApi.processOps
         sessionKey
-        [ Momento.webhook
+        [ Momento.webhookOp
             { topic = notifyTopicName channelName
             , url = component.channelApiUrl ++ "/v1/channel/" ++ channelName
             }
@@ -252,15 +252,14 @@ dynamoApi =
 momentoPorts : Momento.Ports msg
 momentoPorts =
     { open = Ports.mmOpen
-    , onOpen = Ports.mmOnOpen
     , close = Ports.mmClose
     , subscribe = Ports.mmSubscribe
-    , onSubscribe = Ports.mmOnSubscribe
     , publish = Ports.mmPublish
     , onMessage = Ports.mmOnMessage
     , pushList = Ports.mmPushList
     , createWebhook = Ports.mmCreateWebhook
-    , onError = Ports.mmOnError
+    , response = Ports.mmResponse
+    , asyncError = Ports.mmAsyncError
     }
 
 

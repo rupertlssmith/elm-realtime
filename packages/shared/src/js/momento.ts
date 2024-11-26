@@ -232,6 +232,12 @@ export class MomentoPorts {
                     response: pushResponse.innerException()
                 });
         }
+
+        this.app.ports.mmResponse.send({
+            id: args.id,
+            type_: "Ok",
+            response: args.session
+        });
     }
 
     // == Webhooks
@@ -263,5 +269,11 @@ export class MomentoPorts {
                     response: webhookResponse.innerException()
                 });
         }
+
+        this.app.ports.mmResponse.send({
+            id: args.id,
+            type_: "Ok",
+            response: args.session
+        });
     }
 }
