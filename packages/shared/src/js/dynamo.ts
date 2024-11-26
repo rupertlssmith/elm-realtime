@@ -31,7 +31,7 @@ export class DynamoPorts {
         app.ports.dynamoQuery.subscribe(this.dynamoQuery);
     }
 
-    dynamoGet = ([correlationId, params]) => {
+    dynamoGet = async ([correlationId, params]) => {
         documentClient.get(params, (error, result) => {
             var getResponse;
 
@@ -55,37 +55,28 @@ export class DynamoPorts {
         });
     }
 
-    dynamoPut = ([correlationId, params]) => {
+    dynamoPut = async ([correlationId, params]) => {
         console.log("dynamoPut: called");
 
-        try {
-            documentClient.put(params, (error, result) => {
-                var putResponse;
+        documentClient.put(params, (error, result) => {
+            var putResponse;
 
-                if (error) {
-                    putResponse = {
-                        type_: "Error",
-                        errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(params, null, 2)
-                    };
-                } else {
-                    putResponse = {
-                        type_: "Ok"
-                    }
+            if (error) {
+                putResponse = {
+                    type_: "Error",
+                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(params, null, 2)
+                };
+            } else {
+                putResponse = {
+                    type_: "Ok"
                 }
+            }
 
-                this.app.ports.dynamoResponse.send([correlationId, putResponse]);
-            });
-        } catch (error) {
-            var errorResponse = {
-                type_: "Error",
-                errorMsg: error.toString()
-            };
-
-            this.app.ports.dynamoResponse.send([correlationId, errorResponse]);
-        }
+            this.app.ports.dynamoResponse.send([correlationId, putResponse]);
+        });
     }
 
-    dynamoDelete = ([correlationId, params]) => {
+    dynamoDelete = async ([correlationId, params]) => {
         documentClient.delete(params, (error, result) => {
             var deleteResponse;
 
@@ -104,7 +95,7 @@ export class DynamoPorts {
         });
     }
 
-    dynamoBatchGet = ([correlationId, params]) => {
+    dynamoBatchGet = async ([correlationId, params]) => {
         documentClient.batchGet(params, (error, result) => {
             var getResponse;
 
@@ -129,7 +120,7 @@ export class DynamoPorts {
         });
     }
 
-    dynamoBatchWrite = ([correlationId, params]) => {
+    dynamoBatchWrite = async ([correlationId, params]) => {
         documentClient.batchWrite(params, (error, result) => {
             var putResponse;
 
@@ -148,7 +139,7 @@ export class DynamoPorts {
         });
     }
 
-    dynamoQuery = ([correlationId, params]) => {
+    dynamoQuery = async ([correlationId, params]) => {
         documentClient.query(params, (error, result) => {
             var getResponse;
 

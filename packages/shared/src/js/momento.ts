@@ -125,7 +125,7 @@ export class MomentoPorts {
         this.app.ports.mmOnOpen.send(args.id);
     }
 
-    close = (id: string) => {
+    close = async (id: string) => {
         console.log("Momento.close");
         console.log(id);
 
