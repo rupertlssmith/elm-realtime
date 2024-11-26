@@ -240,9 +240,9 @@ innerProcessOps ports (SessionKey sessionKey) ops =
             Procedure.provide (Ok ())
 
         op :: remOps ->
-            --Channel.open (\key -> processOp ports key (SessionKey sessionKey) op)
             Procedure.do (processOp ports "" (SessionKey sessionKey) op)
                 |> Procedure.map Ok
+                |> Procedure.andThen (\_ -> innerProcessOps ports (SessionKey sessionKey) remOps)
 
 
 processOp : Ports msg -> String -> SessionKey -> Op -> Cmd msg
