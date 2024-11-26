@@ -184,7 +184,7 @@ mmOpened protocol channelId component =
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 --|> protocol.onUpdate
                 |> protocol.mmOps channelId
-                    [ Webhook
+                    [ Momento.webhook
                         { topic = notifyTopicName channelId
                         , url = component.channelApiUrl ++ "/v1/channel/" ++ channelId
                         }

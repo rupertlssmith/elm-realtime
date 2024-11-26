@@ -3500,9 +3500,6 @@ var $author$project$EventLog$Component$DynamoResponse = function (a) {
 var $author$project$EventLog$Component$ModelReady = function (a) {
 	return {$: 'ModelReady', a: a};
 };
-var $author$project$Momento$Webhook = function (a) {
-	return {$: 'Webhook', a: a};
-};
 var $author$project$EventLog$Component$ProcedureMsg = function (a) {
 	return {$: 'ProcedureMsg', a: a};
 };
@@ -4915,6 +4912,12 @@ var $author$project$EventLog$Component$setModel = F2(
 			m,
 			{eventLog: x});
 	});
+var $author$project$Momento$Webhook = function (a) {
+	return {$: 'Webhook', a: a};
+};
+var $author$project$Momento$webhook = function (args) {
+	return $author$project$Momento$Webhook(args);
+};
 var $author$project$EventLog$Component$mmOpened = F3(
 	function (protocol, channelId, component) {
 		var model = component.eventLog;
@@ -4939,7 +4942,7 @@ var $author$project$EventLog$Component$mmOpened = F3(
 				channelId,
 				_List_fromArray(
 					[
-						$author$project$Momento$Webhook(
+						$author$project$Momento$webhook(
 						{
 							topic: $author$project$EventLog$Component$notifyTopicName(channelId),
 							url: component.channelApiUrl + ('/v1/channel/' + channelId)

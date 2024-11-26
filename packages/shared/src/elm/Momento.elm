@@ -2,7 +2,7 @@ module Momento exposing
     ( Error(..)
     , Model
     , Msg(..)
-    , Op(..)
+    , Op
     , OpenParams
     , Ports
     , Protocol
@@ -16,6 +16,7 @@ module Momento exposing
     , subscribe
     , subscriptions
     , update
+    , webhook
     )
 
 import Dict exposing (Dict)
@@ -130,6 +131,10 @@ update protocol msg model =
                 |> protocol.onError id Failed
 
 
+
+--
+
+
 open : Protocol Model msg model -> String -> OpenParams -> Model -> ( model, Cmd msg )
 open protocol id props model =
     ( model
@@ -211,11 +216,14 @@ processOp protocol id key op =
 
 publish : { topic : String, payload : String } -> Op
 publish args =
-    { topic = args.topic, payload = args.payload }
-        |> Publish
+    Publish args
 
 
 pushList : { list : String, payload : String } -> Op
 pushList args =
-    { list = args.list, payload = args.payload }
-        |> PushList
+    PushList args
+
+
+webhook : { topic : String, url : String } -> Op
+webhook args =
+    Webhook args
