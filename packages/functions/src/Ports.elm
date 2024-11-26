@@ -49,31 +49,31 @@ port responsePort : ( String, Value, Value ) -> Cmd msg
 port mmOpen : { id : String, cache : String, apiKey : String } -> Cmd msg
 
 
-port mmOnOpen : (String -> msg) -> Sub msg
+port mmOnOpen : ({ id : String, session : Value } -> msg) -> Sub msg
 
 
-port mmClose : String -> Cmd msg
+port mmClose : { id : String, session : Value } -> Cmd msg
 
 
 port mmOnClose : (String -> msg) -> Sub msg
 
 
-port mmSubscribe : { id : String, topic : String } -> Cmd msg
+port mmSubscribe : { id : String, session : Value, topic : String } -> Cmd msg
 
 
-port mmOnSubscribe : ({ id : String, topic : String } -> msg) -> Sub msg
+port mmOnSubscribe : ({ id : String, session : Value, topic : String } -> msg) -> Sub msg
 
 
-port mmSend : { id : String, topic : String, payload : String } -> Cmd msg
+port mmSend : { id : String, session : Value, topic : String, payload : String } -> Cmd msg
 
 
-port mmOnMessage : ({ id : String, payload : String } -> msg) -> Sub msg
+port mmOnMessage : ({ id : String, session : Value, payload : String } -> msg) -> Sub msg
 
 
-port mmPushList : { id : String, list : String, payload : String } -> Cmd msg
+port mmPushList : { id : String, session : Value, list : String, payload : String } -> Cmd msg
 
 
-port mmCreateWebhook : { id : String, topic : String, url : String } -> Cmd msg
+port mmCreateWebhook : { id : String, session : Value, topic : String, url : String } -> Cmd msg
 
 
 port mmOnError : ({ id : String, error : Value } -> msg) -> Sub msg

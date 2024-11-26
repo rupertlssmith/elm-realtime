@@ -3204,8 +3204,6 @@ var $author$project$Server$API$init = function (toMsg) {
 		$the_sett$elm_update_helper$Update2$pure(
 			{}));
 };
-var $elm$json$Json$Encode$string = _Json_wrap;
-var $author$project$Ports$mmClose = _Platform_outgoingPort('mmClose', $elm$json$Json$Encode$string);
 var $elm$json$Json$Encode$object = function (pairs) {
 	return _Json_wrap(
 		A3(
@@ -3219,6 +3217,21 @@ var $elm$json$Json$Encode$object = function (pairs) {
 			_Json_emptyObject(_Utils_Tuple0),
 			pairs));
 };
+var $elm$json$Json$Encode$string = _Json_wrap;
+var $author$project$Ports$mmClose = _Platform_outgoingPort(
+	'mmClose',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session))
+				]));
+	});
 var $author$project$Ports$mmCreateWebhook = _Platform_outgoingPort(
 	'mmCreateWebhook',
 	function ($) {
@@ -3228,6 +3241,9 @@ var $author$project$Ports$mmCreateWebhook = _Platform_outgoingPort(
 					_Utils_Tuple2(
 					'id',
 					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session)),
 					_Utils_Tuple2(
 					'topic',
 					$elm$json$Json$Encode$string($.topic)),
@@ -3257,17 +3273,35 @@ var $author$project$Ports$mmOnMessage = _Platform_incomingPort(
 	'mmOnMessage',
 	A2(
 		$elm$json$Json$Decode$andThen,
-		function (payload) {
+		function (session) {
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (payload) {
+					return A2(
+						$elm$json$Json$Decode$andThen,
+						function (id) {
+							return $elm$json$Json$Decode$succeed(
+								{id: id, payload: payload, session: session});
+						},
+						A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
+				},
+				A2($elm$json$Json$Decode$field, 'payload', $elm$json$Json$Decode$string));
+		},
+		A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value)));
+var $author$project$Ports$mmOnOpen = _Platform_incomingPort(
+	'mmOnOpen',
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (session) {
 			return A2(
 				$elm$json$Json$Decode$andThen,
 				function (id) {
 					return $elm$json$Json$Decode$succeed(
-						{id: id, payload: payload});
+						{id: id, session: session});
 				},
 				A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
 		},
-		A2($elm$json$Json$Decode$field, 'payload', $elm$json$Json$Decode$string)));
-var $author$project$Ports$mmOnOpen = _Platform_incomingPort('mmOnOpen', $elm$json$Json$Decode$string);
+		A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value)));
 var $author$project$Ports$mmOnSubscribe = _Platform_incomingPort(
 	'mmOnSubscribe',
 	A2(
@@ -3275,11 +3309,16 @@ var $author$project$Ports$mmOnSubscribe = _Platform_incomingPort(
 		function (topic) {
 			return A2(
 				$elm$json$Json$Decode$andThen,
-				function (id) {
-					return $elm$json$Json$Decode$succeed(
-						{id: id, topic: topic});
+				function (session) {
+					return A2(
+						$elm$json$Json$Decode$andThen,
+						function (id) {
+							return $elm$json$Json$Decode$succeed(
+								{id: id, session: session, topic: topic});
+						},
+						A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
 				},
-				A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
+				A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value));
 		},
 		A2($elm$json$Json$Decode$field, 'topic', $elm$json$Json$Decode$string)));
 var $author$project$Ports$mmOpen = _Platform_outgoingPort(
@@ -3313,7 +3352,10 @@ var $author$project$Ports$mmPushList = _Platform_outgoingPort(
 					$elm$json$Json$Encode$string($.list)),
 					_Utils_Tuple2(
 					'payload',
-					$elm$json$Json$Encode$string($.payload))
+					$elm$json$Json$Encode$string($.payload)),
+					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session))
 				]));
 	});
 var $author$project$Ports$mmSend = _Platform_outgoingPort(
@@ -3329,6 +3371,9 @@ var $author$project$Ports$mmSend = _Platform_outgoingPort(
 					'payload',
 					$elm$json$Json$Encode$string($.payload)),
 					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session)),
+					_Utils_Tuple2(
 					'topic',
 					$elm$json$Json$Encode$string($.topic))
 				]));
@@ -3343,11 +3388,14 @@ var $author$project$Ports$mmSubscribe = _Platform_outgoingPort(
 					'id',
 					$elm$json$Json$Encode$string($.id)),
 					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session)),
+					_Utils_Tuple2(
 					'topic',
 					$elm$json$Json$Encode$string($.topic))
 				]));
 	});
-var $author$project$API$momentoPorts = {close: $author$project$Ports$mmClose, createWebhook: $author$project$Ports$mmCreateWebhook, onError: $author$project$Ports$mmOnError, onMessage: $author$project$Ports$mmOnMessage, onOpen: $author$project$Ports$mmOnOpen, onSunscribe: $author$project$Ports$mmOnSubscribe, open: $author$project$Ports$mmOpen, publish: $author$project$Ports$mmSend, pushList: $author$project$Ports$mmPushList, subscribe: $author$project$Ports$mmSubscribe};
+var $author$project$API$momentoPorts = {close: $author$project$Ports$mmClose, createWebhook: $author$project$Ports$mmCreateWebhook, onError: $author$project$Ports$mmOnError, onMessage: $author$project$Ports$mmOnMessage, onOpen: $author$project$Ports$mmOnOpen, onSubscribe: $author$project$Ports$mmOnSubscribe, open: $author$project$Ports$mmOpen, publish: $author$project$Ports$mmSend, pushList: $author$project$Ports$mmPushList, subscribe: $author$project$Ports$mmSubscribe};
 var $author$project$API$init = function (flags) {
 	var _v0 = A2($author$project$Momento$init, $author$project$API$MomentoMsg, $author$project$API$momentoPorts);
 	var momentoMdl = _v0.a;
@@ -3451,6 +3499,9 @@ var $author$project$EventLog$Component$DynamoResponse = function (a) {
 };
 var $author$project$EventLog$Component$ModelReady = function (a) {
 	return {$: 'ModelReady', a: a};
+};
+var $author$project$Momento$Webhook = function (a) {
+	return {$: 'Webhook', a: a};
 };
 var $author$project$EventLog$Component$ProcedureMsg = function (a) {
 	return {$: 'ProcedureMsg', a: a};
@@ -4855,6 +4906,9 @@ var $author$project$Ports$dynamoResponse = _Platform_incomingPort(
 		A2($elm$json$Json$Decode$index, 0, $elm$json$Json$Decode$string)));
 var $author$project$EventLog$Component$dynamoPorts = {batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse};
 var $author$project$EventLog$Component$dynamoApi = A2($author$project$AWS$Dynamo$dynamoApi, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$dynamoPorts);
+var $author$project$EventLog$Component$notifyTopicName = function (channel) {
+	return channel + '-savetopic';
+};
 var $author$project$EventLog$Component$setModel = F2(
 	function (m, x) {
 		return _Utils_update(
@@ -4865,9 +4919,32 @@ var $author$project$EventLog$Component$mmOpened = F3(
 	function (protocol, channelId, component) {
 		var model = component.eventLog;
 		var _v0 = A2($elm$core$Debug$log, 'mmOpened', 'channel ' + channelId);
+		var _v1 = A2(
+			$author$project$EventLog$Component$dynamoApi.put,
+			{
+				item: $elm$json$Json$Encode$object(
+					_List_fromArray(
+						[
+							_Utils_Tuple2(
+							'test',
+							$elm$json$Json$Encode$string('val'))
+						])),
+				tableName: 'someTable'
+			},
+			$author$project$EventLog$Component$DynamoResponse);
 		if (model.$ === 'ModelReady') {
 			var state = model.a;
-			return protocol.onUpdate(
+			return A3(
+				protocol.mmOps,
+				channelId,
+				_List_fromArray(
+					[
+						$author$project$Momento$Webhook(
+						{
+							topic: $author$project$EventLog$Component$notifyTopicName(channelId),
+							url: component.channelApiUrl + ('/v1/channel/' + channelId)
+						})
+					]),
 				A2(
 					$elm$core$Tuple$mapSecond,
 					$elm$core$Platform$Cmd$map(protocol.toMsg),
@@ -4877,21 +4954,7 @@ var $author$project$EventLog$Component$mmOpened = F3(
 						A2(
 							$the_sett$elm_update_helper$Update2$andMap,
 							$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelReady),
-							_Utils_Tuple2(
-								state,
-								A2(
-									$author$project$EventLog$Component$dynamoApi.put,
-									{
-										item: $elm$json$Json$Encode$object(
-											_List_fromArray(
-												[
-													_Utils_Tuple2(
-													'test',
-													$elm$json$Json$Encode$string('val'))
-												])),
-										tableName: 'someTable'
-									},
-									$author$project$EventLog$Component$DynamoResponse))))));
+							_Utils_Tuple2(state, $elm$core$Platform$Cmd$none)))));
 		} else {
 			return protocol.onUpdate(
 				$the_sett$elm_update_helper$Update2$pure(component));
@@ -4952,8 +5015,8 @@ var $elm$core$Dict$get = F2(
 			}
 		}
 	});
-var $author$project$Momento$processOp = F3(
-	function (protocol, id, op) {
+var $author$project$Momento$processOp = F4(
+	function (protocol, id, key, op) {
 		switch (op.$) {
 			case 'Publish':
 				var topic = op.a.topic;
@@ -4962,7 +5025,7 @@ var $author$project$Momento$processOp = F3(
 					$elm$core$Platform$Cmd$map,
 					protocol.toMsg,
 					protocol.ports.publish(
-						{id: id, payload: payload, topic: topic}));
+						{id: id, payload: payload, session: key, topic: topic}));
 			case 'PushList':
 				var list = op.a.list;
 				var payload = op.a.payload;
@@ -4970,7 +5033,7 @@ var $author$project$Momento$processOp = F3(
 					$elm$core$Platform$Cmd$map,
 					protocol.toMsg,
 					protocol.ports.pushList(
-						{id: id, list: list, payload: payload}));
+						{id: id, list: list, payload: payload, session: key}));
 			default:
 				var topic = op.a.topic;
 				var url = op.a.url;
@@ -4978,21 +5041,21 @@ var $author$project$Momento$processOp = F3(
 					$elm$core$Platform$Cmd$map,
 					protocol.toMsg,
 					protocol.ports.createWebhook(
-						{id: id, topic: topic, url: url}));
+						{id: id, session: key, topic: topic, url: url}));
 		}
 	});
 var $author$project$Momento$processOps = F4(
 	function (protocol, id, ops, model) {
-		var socket = A2($elm$core$Dict$get, id, model.sessions);
+		var session = A2($elm$core$Dict$get, id, model.sessions);
 		var _v0 = A2(
 			$elm$core$Debug$log,
 			'Momento.processOps',
-			_Utils_Tuple3(id, ops, socket));
-		if ((socket.$ === 'Just') && (socket.a.$ === 'Open')) {
-			var _v2 = socket.a;
+			_Utils_Tuple3(id, ops, session));
+		if ((session.$ === 'Just') && (session.a.$ === 'Open')) {
+			var key = session.a.a.a;
 			var portCmds = A2(
 				$elm$core$List$map,
-				A2($author$project$Momento$processOp, protocol, id),
+				A3($author$project$Momento$processOp, protocol, id, key),
 				ops);
 			return protocol.onUpdate(
 				_Utils_Tuple2(
@@ -6219,7 +6282,7 @@ var $author$project$Momento$subscriptions = F2(
 				_List_fromArray(
 					[
 						protocol.ports.onOpen($author$project$Momento$SessionOpened),
-						protocol.ports.onSunscribe($author$project$Momento$OnSubscribe),
+						protocol.ports.onSubscribe($author$project$Momento$OnSubscribe),
 						protocol.ports.onMessage($author$project$Momento$OnMessage),
 						protocol.ports.onError($author$project$Momento$OnError)
 					])));
@@ -6380,14 +6443,25 @@ var $author$project$EventLog$Component$update = F3(
 			$the_sett$elm_update_helper$Update2$pure(component));
 	});
 var $author$project$Momento$Failed = {$: 'Failed'};
-var $author$project$Momento$Open = {$: 'Open'};
+var $author$project$Momento$Open = function (a) {
+	return {$: 'Open', a: a};
+};
+var $author$project$Momento$SessionKey = function (a) {
+	return {$: 'SessionKey', a: a};
+};
 var $author$project$Momento$update = F3(
 	function (protocol, msg, model) {
 		var _v0 = A2($elm$core$Debug$log, 'Momento.update', msg);
 		switch (_v0.$) {
 			case 'SessionOpened':
-				var id = _v0.a;
-				var sockets = A3($elm$core$Dict$insert, id, $author$project$Momento$Open, model.sessions);
+				var id = _v0.a.id;
+				var session = _v0.a.session;
+				var sockets = A3(
+					$elm$core$Dict$insert,
+					id,
+					$author$project$Momento$Open(
+						$author$project$Momento$SessionKey(session)),
+					model.sessions);
 				return A2(
 					protocol.onOpen,
 					id,

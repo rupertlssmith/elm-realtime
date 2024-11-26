@@ -160,27 +160,35 @@ mmOpened protocol channelId component =
 
         _ =
             Debug.log "mmOpened" ("channel " ++ channelId)
+
+        _ =
+            dynamoApi.put
+                { tableName = "someTable"
+                , item = Encode.object [ ( "test", Encode.string "val" ) ]
+                }
+                DynamoResponse
     in
     case model of
         ModelReady state ->
             --U2.pure state
             ( state
-            , dynamoApi.put
-                { tableName = "someTable"
-                , item = Encode.object [ ( "test", Encode.string "val" ) ]
-                }
-                DynamoResponse
+              --, dynamoApi.put
+              --    { tableName = "someTable"
+              --    , item = Encode.object [ ( "test", Encode.string "val" ) ]
+              --    }
+              --    DynamoResponse
+            , Cmd.none
             )
                 |> U2.andMap (ModelReady |> switchState)
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                --|> protocol.mmOps channelId
-                --    [ Webhook
-                --        { topic = notifyTopicName channelId
-                --        , url = component.channelApiUrl ++ "/v1/channel/" ++ channelId
-                --        }
-                --    ]
-                |> protocol.onUpdate
+                --|> protocol.onUpdate
+                |> protocol.mmOps channelId
+                    [ Webhook
+                        { topic = notifyTopicName channelId
+                        , url = component.channelApiUrl ++ "/v1/channel/" ++ channelId
+                        }
+                    ]
 
         _ ->
             U2.pure component

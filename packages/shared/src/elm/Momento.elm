@@ -19,14 +19,14 @@ module Momento exposing
     )
 
 import Dict exposing (Dict)
-import Json.Decode exposing (Value)
+import Json.Encode exposing (Value)
 import Update2 as U2
 
 
 type Msg
-    = SessionOpened String
-    | OnSubscribe { id : String, topic : String }
-    | OnMessage { id : String, payload : String }
+    = SessionOpened { id : String, session : Value }
+    | OnSubscribe { id : String, session : Value, topic : String }
+    | OnMessage { id : String, session : Value, payload : String }
     | OnError { id : String, error : Value }
 
 
@@ -35,9 +35,13 @@ type alias Model =
     }
 
 
+type SessionKey
+    = SessionKey Value
+
+
 type Session
     = Closed
-    | Open
+    | Open SessionKey
 
 
 type alias OpenParams =
@@ -60,14 +64,14 @@ type Op
 
 type alias Ports =
     { open : { id : String, cache : String, apiKey : String } -> Cmd Msg
-    , onOpen : (String -> Msg) -> Sub Msg
-    , close : String -> Cmd Msg
-    , subscribe : { id : String, topic : String } -> Cmd Msg
-    , onSunscribe : ({ id : String, topic : String } -> Msg) -> Sub Msg
-    , publish : { id : String, topic : String, payload : String } -> Cmd Msg
-    , onMessage : ({ id : String, payload : String } -> Msg) -> Sub Msg
-    , pushList : { id : String, list : String, payload : String } -> Cmd Msg
-    , createWebhook : { id : String, topic : String, url : String } -> Cmd Msg
+    , onOpen : ({ id : String, session : Value } -> Msg) -> Sub Msg
+    , close : { id : String, session : Value } -> Cmd Msg
+    , subscribe : { id : String, session : Value, topic : String } -> Cmd Msg
+    , onSubscribe : ({ id : String, session : Value, topic : String } -> Msg) -> Sub Msg
+    , publish : { id : String, session : Value, topic : String, payload : String } -> Cmd Msg
+    , onMessage : ({ id : String, session : Value, payload : String } -> Msg) -> Sub Msg
+    , pushList : { id : String, session : Value, list : String, payload : String } -> Cmd Msg
+    , createWebhook : { id : String, session : Value, topic : String, url : String } -> Cmd Msg
     , onError : ({ id : String, error : Value } -> Msg) -> Sub Msg
     }
 
@@ -94,7 +98,7 @@ init _ _ =
 subscriptions : Protocol Model msg model -> Model -> Sub msg
 subscriptions protocol _ =
     [ protocol.ports.onOpen SessionOpened
-    , protocol.ports.onSunscribe OnSubscribe
+    , protocol.ports.onSubscribe OnSubscribe
     , protocol.ports.onMessage OnMessage
     , protocol.ports.onError OnError
     ]
@@ -105,10 +109,10 @@ subscriptions protocol _ =
 update : Protocol Model msg model -> Msg -> Model -> ( model, Cmd msg )
 update protocol msg model =
     case Debug.log "Momento.update" msg of
-        SessionOpened id ->
+        SessionOpened { id, session } ->
             let
                 sockets =
-                    Dict.insert id Open model.sessions
+                    Dict.insert id (SessionKey session |> Open) model.sessions
             in
             U2.pure { model | sessions = sockets }
                 |> protocol.onOpen id
@@ -141,31 +145,42 @@ open protocol id props model =
 
 subscribe : Protocol Model msg model -> String -> SubscribeParams -> Model -> ( model, Cmd msg )
 subscribe protocol id props model =
-    ( model
-    , protocol.ports.subscribe
-        { id = id
-        , topic = props.topic
-        }
-        |> Cmd.map protocol.toMsg
-    )
-        |> protocol.onUpdate
+    let
+        session =
+            Dict.get id model.sessions
+    in
+    case session of
+        Just (Open (SessionKey key)) ->
+            ( model
+            , protocol.ports.subscribe
+                { id = id
+                , session = key
+                , topic = props.topic
+                }
+                |> Cmd.map protocol.toMsg
+            )
+                |> protocol.onUpdate
+
+        _ ->
+            U2.pure model
+                |> protocol.onUpdate
 
 
 processOps : Protocol Model msg model -> String -> List Op -> Model -> ( model, Cmd msg )
 processOps protocol id ops model =
     let
-        socket =
+        session =
             Dict.get id model.sessions
 
         _ =
-            Debug.log "Momento.processOps" ( id, ops, socket )
+            Debug.log "Momento.processOps" ( id, ops, session )
     in
-    case socket of
-        Just Open ->
+    case session of
+        Just (Open (SessionKey key)) ->
             let
                 portCmds =
                     List.map
-                        (processOp protocol id)
+                        (processOp protocol id key)
                         ops
             in
             ( model
@@ -178,26 +193,29 @@ processOps protocol id ops model =
                 |> protocol.onUpdate
 
 
-processOp protocol id op =
+processOp : Protocol Model msg model -> String -> Value -> Op -> Cmd msg
+processOp protocol id key op =
     case op of
         Publish { topic, payload } ->
-            protocol.ports.publish { id = id, topic = topic, payload = payload }
+            protocol.ports.publish { id = id, session = key, topic = topic, payload = payload }
                 |> Cmd.map protocol.toMsg
 
         PushList { list, payload } ->
-            protocol.ports.pushList { id = id, list = list, payload = payload }
+            protocol.ports.pushList { id = id, session = key, list = list, payload = payload }
                 |> Cmd.map protocol.toMsg
 
         Webhook { topic, url } ->
-            protocol.ports.createWebhook { id = id, topic = topic, url = url }
+            protocol.ports.createWebhook { id = id, session = key, topic = topic, url = url }
                 |> Cmd.map protocol.toMsg
 
 
+publish : { topic : String, payload : String } -> Op
 publish args =
     { topic = args.topic, payload = args.payload }
         |> Publish
 
 
+pushList : { list : String, payload : String } -> Op
 pushList args =
     { list = args.list, payload = args.payload }
         |> PushList

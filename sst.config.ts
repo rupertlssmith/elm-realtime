@@ -30,7 +30,8 @@ export default $config({
         api.route("ANY /v1/{proxy+}",
             {
                 handler: "packages/functions/src/api.main",
-                link: [momentoApiKey, api]
+                link: [momentoApiKey, api],
+                timeout: "2 seconds"
             }
         );
 
