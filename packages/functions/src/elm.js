@@ -4975,7 +4975,7 @@ var $author$project$API$mmSubscribed = F3(
 				cmds);
 		};
 	});
-var $author$project$Momento$open = F4(
+var $author$project$Momento$oldOpen = F4(
 	function (protocol, id, props, model) {
 		return protocol.onUpdate(
 			_Utils_Tuple2(
@@ -5018,7 +5018,7 @@ var $elm$core$Dict$get = F2(
 			}
 		}
 	});
-var $author$project$Momento$processOp = F4(
+var $author$project$Momento$oldProcessOp = F4(
 	function (protocol, id, key, op) {
 		switch (op.$) {
 			case 'Publish':
@@ -5047,7 +5047,7 @@ var $author$project$Momento$processOp = F4(
 						{id: id, session: key, topic: topic, url: url}));
 		}
 	});
-var $author$project$Momento$processOps = F4(
+var $author$project$Momento$oldProcessOps = F4(
 	function (protocol, id, ops, model) {
 		var session = A2($elm$core$Dict$get, id, model.sessions);
 		var _v0 = A2(
@@ -5058,7 +5058,7 @@ var $author$project$Momento$processOps = F4(
 			var key = session.a.a.a;
 			var portCmds = A2(
 				$elm$core$List$map,
-				A3($author$project$Momento$processOp, protocol, id, key),
+				A3($author$project$Momento$oldProcessOp, protocol, id, key),
 				ops);
 			return protocol.onUpdate(
 				_Utils_Tuple2(
@@ -5091,7 +5091,7 @@ var $author$project$API$mmError = F3(
 var $author$project$API$mmOpen = F3(
 	function (id, params, model) {
 		return A4(
-			$author$project$Momento$open,
+			$author$project$Momento$oldOpen,
 			$author$project$API$momentoProtocol(model),
 			id,
 			params,
@@ -5118,7 +5118,7 @@ var $author$project$API$mmOpened = F2(
 var $author$project$API$mmOps = F3(
 	function (id, ops, model) {
 		return A4(
-			$author$project$Momento$processOps,
+			$author$project$Momento$oldProcessOps,
 			$author$project$API$momentoProtocol(model),
 			id,
 			ops,

@@ -154,7 +154,7 @@ apiRoute route model =
 -- Momento Protocol
 
 
-momentoPorts : Momento.Ports
+momentoPorts : Momento.Ports msg
 momentoPorts =
     { open = Ports.mmOpen
     , onOpen = Ports.mmOnOpen
@@ -222,14 +222,14 @@ eventLogProtocol =
 
 mmOpen : String -> OpenParams -> Model -> ( Model, Cmd Msg )
 mmOpen id params model =
-    Momento.open (momentoProtocol model) id params model.momento
+    Momento.oldOpen (momentoProtocol model) id params model.momento
 
 
 mmSubscribe : String -> SubscribeParams -> Model -> ( Model, Cmd Msg )
 mmSubscribe id params model =
-    Momento.subscribe (momentoProtocol model) id params model.momento
+    Momento.oldSubscribe (momentoProtocol model) id params model.momento
 
 
 mmOps : String -> List Op -> Model -> ( Model, Cmd Msg )
 mmOps id ops model =
-    Momento.processOps (momentoProtocol model) id ops model.momento
+    Momento.oldProcessOps (momentoProtocol model) id ops model.momento

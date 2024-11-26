@@ -1,6 +1,7 @@
 module Momento exposing
     ( Error(..)
     , Model
+    , MomentoApi
     , Msg(..)
     , Op
     , OpenParams
@@ -9,6 +10,10 @@ module Momento exposing
     , Session(..)
     , SubscribeParams
     , init
+    , momentoApi
+    , oldOpen
+    , oldProcessOps
+    , oldSubscribe
     , open
     , processOps
     , publish
@@ -21,28 +26,54 @@ module Momento exposing
 
 import Dict exposing (Dict)
 import Json.Encode exposing (Value)
+import Procedure
+import Procedure.Channel as Channel
+import Procedure.Program
 import Update2 as U2
 
 
-type Msg
-    = SessionOpened { id : String, session : Value }
-    | OnSubscribe { id : String, session : Value, topic : String }
-    | OnMessage { id : String, session : Value, payload : String }
-    | OnError { id : String, error : Value }
+type alias Ports msg =
+    { open : { id : String, cache : String, apiKey : String } -> Cmd msg
+    , onOpen : ({ id : String, session : Value } -> msg) -> Sub msg
+    , close : { id : String, session : Value } -> Cmd msg
+    , subscribe : { id : String, session : Value, topic : String } -> Cmd msg
+    , onSubscribe : ({ id : String, session : Value, topic : String } -> msg) -> Sub msg
+    , publish : { id : String, session : Value, topic : String, payload : String } -> Cmd msg
+    , onMessage : ({ id : String, session : Value, payload : String } -> msg) -> Sub msg
+    , pushList : { id : String, session : Value, list : String, payload : String } -> Cmd msg
+    , createWebhook : { id : String, session : Value, topic : String, url : String } -> Cmd msg
+    , onError : ({ id : String, error : Value } -> msg) -> Sub msg
+    }
 
 
-type alias Model =
-    { sessions : Dict String Session
+type alias MomentoApi msg =
+    { open :
+        OpenParams
+        -> (Result Error SessionKey -> msg)
+        -> Cmd msg
+    , subscribe :
+        SessionKey
+        -> SubscribeParams
+        -> (Result Error { session : SessionKey, topic : String } -> msg)
+        -> Cmd msg
+    , processOps :
+        SessionKey
+        -> List Op
+        -> (Result Error () -> msg)
+        -> Cmd msg
+    }
+
+
+momentoApi : (Procedure.Program.Msg msg -> msg) -> Ports msg -> MomentoApi msg
+momentoApi pt ports =
+    { open = open pt ports
+    , subscribe = subscribe pt ports
+    , processOps = processOps pt ports
     }
 
 
 type SessionKey
     = SessionKey Value
-
-
-type Session
-    = Closed
-    | Open SessionKey
 
 
 type alias OpenParams =
@@ -63,23 +94,30 @@ type Op
     | Webhook { topic : String, url : String }
 
 
-type alias Ports =
-    { open : { id : String, cache : String, apiKey : String } -> Cmd Msg
-    , onOpen : ({ id : String, session : Value } -> Msg) -> Sub Msg
-    , close : { id : String, session : Value } -> Cmd Msg
-    , subscribe : { id : String, session : Value, topic : String } -> Cmd Msg
-    , onSubscribe : ({ id : String, session : Value, topic : String } -> Msg) -> Sub Msg
-    , publish : { id : String, session : Value, topic : String, payload : String } -> Cmd Msg
-    , onMessage : ({ id : String, session : Value, payload : String } -> Msg) -> Sub Msg
-    , pushList : { id : String, session : Value, list : String, payload : String } -> Cmd Msg
-    , createWebhook : { id : String, session : Value, topic : String, url : String } -> Cmd Msg
-    , onError : ({ id : String, error : Value } -> Msg) -> Sub Msg
+
+--===
+
+
+type Msg
+    = SessionOpened { id : String, session : Value }
+    | OnSubscribe { id : String, session : Value, topic : String }
+    | OnMessage { id : String, session : Value, payload : String }
+    | OnError { id : String, error : Value }
+
+
+type alias Model =
+    { sessions : Dict String Session
     }
+
+
+type Session
+    = Closed
+    | Open SessionKey
 
 
 type alias Protocol submodel msg model =
     { toMsg : Msg -> msg
-    , ports : Ports
+    , ports : Ports Msg
     , onUpdate : ( submodel, Cmd msg ) -> ( model, Cmd msg )
     , onOpen : String -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
     , onSubscribe : String -> SubscribeParams -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
@@ -88,7 +126,7 @@ type alias Protocol submodel msg model =
     }
 
 
-init : (Msg -> msg) -> Ports -> ( Model, Cmd msg )
+init : (Msg -> msg) -> Ports msg -> ( Model, Cmd msg )
 init _ _ =
     ( { sessions = Dict.empty
       }
@@ -132,11 +170,100 @@ update protocol msg model =
 
 
 
---
+--===
 
 
-open : Protocol Model msg model -> String -> OpenParams -> Model -> ( model, Cmd msg )
-open protocol id props model =
+open :
+    (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
+    -> OpenParams
+    -> (Result Error SessionKey -> msg)
+    -> Cmd msg
+open pt ports openParams dt =
+    Channel.open (\key -> ports.open { id = key, cache = openParams.cache, apiKey = openParams.apiKey })
+        |> Channel.connect ports.onOpen
+        |> Channel.filter (\key { id, session } -> id == key)
+        |> Channel.acceptOne
+        |> Procedure.run pt (\{ session } -> SessionKey session |> Ok |> dt)
+
+
+subscribe :
+    (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
+    -> SessionKey
+    -> SubscribeParams
+    -> (Result Error { session : SessionKey, topic : String } -> msg)
+    -> Cmd msg
+subscribe pt ports (SessionKey sessionKey) subscribeParams dt =
+    Channel.open (\key -> ports.subscribe { id = key, session = sessionKey, topic = subscribeParams.topic })
+        |> Channel.connect ports.onSubscribe
+        |> Channel.filter (\key { id, session } -> id == key)
+        |> Channel.acceptOne
+        |> Procedure.run pt (\{ session, topic } -> { session = SessionKey session, topic = topic } |> Ok |> dt)
+
+
+processOps :
+    (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
+    -> SessionKey
+    -> List Op
+    -> (Result Error () -> msg)
+    -> Cmd msg
+processOps pt ports (SessionKey sessionKey) ops dt =
+    innerProcessOps ports (SessionKey sessionKey) ops
+        |> Procedure.run pt dt
+
+
+publish : { topic : String, payload : String } -> Op
+publish args =
+    Publish args
+
+
+pushList : { list : String, payload : String } -> Op
+pushList args =
+    PushList args
+
+
+webhook : { topic : String, url : String } -> Op
+webhook args =
+    Webhook args
+
+
+innerProcessOps :
+    Ports msg
+    -> SessionKey
+    -> List Op
+    -> Procedure.Procedure Never (Result error ()) msg
+innerProcessOps ports (SessionKey sessionKey) ops =
+    case ops of
+        [] ->
+            Procedure.provide (Ok ())
+
+        op :: remOps ->
+            --Channel.open (\key -> processOp ports key (SessionKey sessionKey) op)
+            Procedure.do (processOp ports "" (SessionKey sessionKey) op)
+                |> Procedure.map Ok
+
+
+processOp : Ports msg -> String -> SessionKey -> Op -> Cmd msg
+processOp ports id (SessionKey sessionKey) op =
+    case op of
+        Publish { topic, payload } ->
+            ports.publish { id = id, session = sessionKey, topic = topic, payload = payload }
+
+        PushList { list, payload } ->
+            ports.pushList { id = id, session = sessionKey, list = list, payload = payload }
+
+        Webhook { topic, url } ->
+            ports.createWebhook { id = id, session = sessionKey, topic = topic, url = url }
+
+
+
+--===
+
+
+oldOpen : Protocol Model msg model -> String -> OpenParams -> Model -> ( model, Cmd msg )
+oldOpen protocol id props model =
     ( model
     , protocol.ports.open
         { id = id
@@ -148,8 +275,8 @@ open protocol id props model =
         |> protocol.onUpdate
 
 
-subscribe : Protocol Model msg model -> String -> SubscribeParams -> Model -> ( model, Cmd msg )
-subscribe protocol id props model =
+oldSubscribe : Protocol Model msg model -> String -> SubscribeParams -> Model -> ( model, Cmd msg )
+oldSubscribe protocol id props model =
     let
         session =
             Dict.get id model.sessions
@@ -171,8 +298,8 @@ subscribe protocol id props model =
                 |> protocol.onUpdate
 
 
-processOps : Protocol Model msg model -> String -> List Op -> Model -> ( model, Cmd msg )
-processOps protocol id ops model =
+oldProcessOps : Protocol Model msg model -> String -> List Op -> Model -> ( model, Cmd msg )
+oldProcessOps protocol id ops model =
     let
         session =
             Dict.get id model.sessions
@@ -185,7 +312,7 @@ processOps protocol id ops model =
             let
                 portCmds =
                     List.map
-                        (processOp protocol id key)
+                        (oldProcessOp protocol id key)
                         ops
             in
             ( model
@@ -198,8 +325,8 @@ processOps protocol id ops model =
                 |> protocol.onUpdate
 
 
-processOp : Protocol Model msg model -> String -> Value -> Op -> Cmd msg
-processOp protocol id key op =
+oldProcessOp : Protocol Model msg model -> String -> Value -> Op -> Cmd msg
+oldProcessOp protocol id key op =
     case op of
         Publish { topic, payload } ->
             protocol.ports.publish { id = id, session = key, topic = topic, payload = payload }
@@ -212,18 +339,3 @@ processOp protocol id key op =
         Webhook { topic, url } ->
             protocol.ports.createWebhook { id = id, session = key, topic = topic, url = url }
                 |> Cmd.map protocol.toMsg
-
-
-publish : { topic : String, payload : String } -> Op
-publish args =
-    Publish args
-
-
-pushList : { list : String, payload : String } -> Op
-pushList args =
-    PushList args
-
-
-webhook : { topic : String, url : String } -> Op
-webhook args =
-    Webhook args
