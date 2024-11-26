@@ -39,6 +39,7 @@ type alias MomentoApi msg =
     , subscribe : SessionKey -> SubscribeParams -> (Result Error SessionKey -> msg) -> Cmd msg
     , pushList : SessionKey -> PushListParams -> (Result Error SessionKey -> msg) -> Cmd msg
     , webhook : SessionKey -> WebhookParams -> (Result Error SessionKey -> msg) -> Cmd msg
+    , publish : SessionKey -> PublishParams -> Cmd msg
     }
 
 
@@ -48,6 +49,7 @@ momentoApi pt ports =
     , subscribe = subscribe pt ports
     , pushList = pushList pt ports
     , webhook = webhook pt ports
+    , publish = publish ports
     }
 
 
@@ -83,6 +85,19 @@ type Error
 -- Implementation
 
 
+decodeResponse : { a | type_ : String, response : Value } -> Result Error SessionKey
+decodeResponse res =
+    case res.type_ of
+        "Ok" ->
+            SessionKey res.response |> Ok
+
+        "Error" ->
+            Err Failed
+
+        _ ->
+            Err Failed
+
+
 open :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
@@ -95,19 +110,6 @@ open pt ports openParams dt =
         |> Channel.filter (\key { id } -> id == key)
         |> Channel.acceptOne
         |> Procedure.run pt (\res -> decodeResponse res |> dt)
-
-
-decodeResponse : { a | type_ : String, response : Value } -> Result Error SessionKey
-decodeResponse res =
-    case res.type_ of
-        "Ok" ->
-            SessionKey res.response |> Ok
-
-        "Error" ->
-            Err Failed
-
-        _ ->
-            Err Failed
 
 
 subscribe :

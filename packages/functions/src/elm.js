@@ -3885,6 +3885,14 @@ var $author$project$Momento$open = F4(
 									{apiKey: openParams.apiKey, cache: openParams.cache, id: key});
 							})))));
 	});
+var $author$project$Momento$publish = F3(
+	function (ports, _v0, _v1) {
+		var sessionKey = _v0.a;
+		var topic = _v1.topic;
+		var payload = _v1.payload;
+		return ports.publish(
+			{id: '', payload: payload, session: sessionKey, topic: topic});
+	});
 var $author$project$Momento$pushList = F5(
 	function (pt, ports, _v0, _v1, dt) {
 		var sessionKey = _v0.a;
@@ -3974,6 +3982,7 @@ var $author$project$Momento$momentoApi = F2(
 	function (pt, ports) {
 		return {
 			open: A2($author$project$Momento$open, pt, ports),
+			publish: $author$project$Momento$publish(ports),
 			pushList: A2($author$project$Momento$pushList, pt, ports),
 			subscribe: A2($author$project$Momento$subscribe, pt, ports),
 			webhook: A2($author$project$Momento$webhook, pt, ports)
