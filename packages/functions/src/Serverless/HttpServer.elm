@@ -1,10 +1,11 @@
-module Server.API exposing
+module Serverless.HttpServer exposing
     ( ApiRequest
     , Error(..)
     , HttpServerApi
     , HttpSessionKey
     , Ports
     , Protocol
+    , errorToString
     , httpServerApi
     )
 
@@ -37,10 +38,6 @@ type alias Protocol msg route =
     }
 
 
-type Error
-    = Error String
-
-
 type alias HttpServerApi msg route =
     { request : (HttpSessionKey -> Result Error (ApiRequest route) -> msg) -> Sub msg
     , response : HttpSessionKey -> Response -> Cmd msg
@@ -52,6 +49,15 @@ httpServerApi protocol =
     { request = requestSub protocol
     , response = responseCmd protocol
     }
+
+
+type Error
+    = Error String
+
+
+errorToString : Error -> String
+errorToString (Error message) =
+    message
 
 
 requestSub :

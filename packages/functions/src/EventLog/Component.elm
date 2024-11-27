@@ -21,10 +21,10 @@ import Random
 import Random.Char
 import Random.String
 import Result.Extra
-import Server.API as Api exposing (ApiRequest, Error(..), HttpSessionKey)
 import Serverless.Conn.Body as Body exposing (Body)
 import Serverless.Conn.Request as Request exposing (Method(..))
 import Serverless.Conn.Response as Response exposing (Response)
+import Serverless.HttpServer as HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Update2 as U2
 import Url exposing (Url)
 import Url.Parser as UP exposing ((</>), (<?>))
@@ -47,7 +47,7 @@ type alias Protocol submodel msg model =
 type Msg
     = ProcedureMsg (Procedure.Program.Msg Msg)
     | RandomSeed Random.Seed
-    | HttpRequest HttpSessionKey (Result Api.Error (ApiRequest Route))
+    | HttpRequest HttpSessionKey (Result HttpServer.Error (ApiRequest Route))
     | HttpResponse HttpSessionKey (Result Response Response)
 
 
@@ -99,6 +99,16 @@ update protocol msg component =
             component.eventLog
     in
     case ( model, msg ) of
+        ( ModelStart _, RandomSeed seed ) ->
+            { seed = seed
+            , procedure = Procedure.Program.init
+            }
+                |> U2.pure
+                |> U2.andMap (switchState ModelReady)
+                |> Tuple.mapFirst (setModel component)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
         ( ModelReady state, ProcedureMsg innerMsg ) ->
             let
                 ( procMdl, procMsg ) =
@@ -110,24 +120,16 @@ update protocol msg component =
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 
-        ( ModelStart _, RandomSeed seed ) ->
-            { seed = seed
-            , procedure = Procedure.Program.init
-            }
-                |> U2.pure
-                |> U2.andMap (switchState ModelReady)
-                |> Tuple.mapFirst (setModel component)
-                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.onUpdate
-
         ( ModelReady state, HttpRequest session result ) ->
             case result of
                 Ok apiRequest ->
                     processRoute protocol session apiRequest component
 
-                Err (Error errMsg) ->
+                Err httpError ->
                     ( ModelReady state
-                    , Response.err500 errMsg
+                    , httpError
+                        |> HttpServer.errorToString
+                        |> Response.err500
                         |> httpServerApi.response session
                     )
                         |> Tuple.mapFirst (setModel component)
@@ -197,7 +199,7 @@ momentoApi =
         |> Momento.momentoApi ProcedureMsg
 
 
-httpServerApi : Api.HttpServerApi Msg Route
+httpServerApi : HttpServer.HttpServerApi Msg Route
 httpServerApi =
     { ports =
         { request = Ports.requestPort
@@ -205,7 +207,7 @@ httpServerApi =
         }
     , parseRoute = routeParser
     }
-        |> Api.httpServerApi
+        |> HttpServer.httpServerApi
 
 
 
@@ -303,7 +305,7 @@ openMomentoCache component channelName =
         , cache = cacheName channelName
         }
         |> Procedure.fetchResult
-        |> Procedure.mapError (always "Momento error")
+        |> Procedure.mapError Momento.errorToString
 
 
 recordChannelToDB : MomentoSessionKey -> Procedure.Procedure String MomentoSessionKey Msg
@@ -314,7 +316,7 @@ recordChannelToDB sessionKey =
         }
         |> Procedure.fetchResult
         |> Procedure.map (always sessionKey)
-        |> Procedure.mapError (always "Dynamo error")
+        |> Procedure.mapError Dynamo.errorToString
 
 
 setupChannelWebhook :
@@ -330,7 +332,7 @@ setupChannelWebhook component channelName sessionKey =
         }
         |> Procedure.fetchResult
         |> Procedure.map (always ())
-        |> Procedure.mapError (always "Momento error")
+        |> Procedure.mapError Momento.errorToString
 
 
 

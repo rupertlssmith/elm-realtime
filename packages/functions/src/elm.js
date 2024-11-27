@@ -3200,10 +3200,10 @@ var $author$project$EventLog$Component$HttpRequest = F2(
 	function (a, b) {
 		return {$: 'HttpRequest', a: a, b: b};
 	});
-var $author$project$Server$API$Error = function (a) {
+var $author$project$Serverless$HttpServer$Error = function (a) {
 	return {$: 'Error', a: a};
 };
-var $author$project$Server$API$HttpSessionKey = function (a) {
+var $author$project$Serverless$HttpServer$HttpSessionKey = function (a) {
 	return {$: 'HttpSessionKey', a: a};
 };
 var $elm$core$Maybe$andThen = F2(
@@ -3897,7 +3897,7 @@ var $author$project$Serverless$Conn$Request$url = function (_v0) {
 	var request = _v0.a;
 	return request.url;
 };
-var $author$project$Server$API$decodeRequestAndRoute = F2(
+var $author$project$Serverless$HttpServer$decodeRequestAndRoute = F2(
 	function (rawRequest, parseRoute) {
 		return A2(
 			$elm$core$Result$andThen,
@@ -3934,17 +3934,17 @@ var $elm$core$Result$map = F2(
 			return $elm$core$Result$Err(e);
 		}
 	});
-var $author$project$Server$API$requestSub = F2(
+var $author$project$Serverless$HttpServer$requestSub = F2(
 	function (protocol, requestFn) {
 		var fn = function (_v1) {
 			var session = _v1.session;
 			var req = _v1.req;
 			return A2(
 				requestFn,
-				$author$project$Server$API$HttpSessionKey(session),
+				$author$project$Serverless$HttpServer$HttpSessionKey(session),
 				A2(
 					$elm$core$Result$mapError,
-					$author$project$Server$API$Error,
+					$author$project$Serverless$HttpServer$Error,
 					A2(
 						$elm$core$Result$map,
 						function (_v0) {
@@ -3952,7 +3952,7 @@ var $author$project$Server$API$requestSub = F2(
 							var route = _v0.b;
 							return {request: request, route: route};
 						},
-						A2($author$project$Server$API$decodeRequestAndRoute, req, protocol.parseRoute))));
+						A2($author$project$Serverless$HttpServer$decodeRequestAndRoute, req, protocol.parseRoute))));
 		};
 		return A2(
 			$elm$core$Platform$Sub$map,
@@ -4061,7 +4061,7 @@ var $author$project$Serverless$Conn$Response$encode = function (_v0) {
 					$author$project$Serverless$Conn$Body$isBase64Encoded(res.body)))
 			]));
 };
-var $author$project$Server$API$responseCmd = F3(
+var $author$project$Serverless$HttpServer$responseCmd = F3(
 	function (protocol, _v0, response) {
 		var session = _v0.a;
 		return protocol.ports.response(
@@ -4070,10 +4070,10 @@ var $author$project$Server$API$responseCmd = F3(
 				session: session
 			});
 	});
-var $author$project$Server$API$httpServerApi = function (protocol) {
+var $author$project$Serverless$HttpServer$httpServerApi = function (protocol) {
 	return {
-		request: $author$project$Server$API$requestSub(protocol),
-		response: $author$project$Server$API$responseCmd(protocol)
+		request: $author$project$Serverless$HttpServer$requestSub(protocol),
+		response: $author$project$Serverless$HttpServer$responseCmd(protocol)
 	};
 };
 var $author$project$Ports$requestPort = _Platform_incomingPort(
@@ -4751,7 +4751,7 @@ var $author$project$EventLog$Component$routeParser = $elm$url$Url$Parser$parse(
 					$elm$url$Url$Parser$s('channel'),
 					$elm$url$Url$Parser$string))
 			])));
-var $author$project$EventLog$Component$httpServerApi = $author$project$Server$API$httpServerApi(
+var $author$project$EventLog$Component$httpServerApi = $author$project$Serverless$HttpServer$httpServerApi(
 	{
 		parseRoute: $author$project$EventLog$Component$routeParser,
 		ports: {request: $author$project$Ports$requestPort, response: $author$project$Ports$responsePort}
@@ -4845,6 +4845,10 @@ var $author$project$Serverless$Conn$Response$err500 = function (err) {
 			$author$project$Serverless$Conn$Response$setBody,
 			$author$project$Serverless$Conn$Body$text(err),
 			$author$project$Serverless$Conn$Response$init));
+};
+var $author$project$Serverless$HttpServer$errorToString = function (_v0) {
+	var message = _v0.a;
+	return message;
 };
 var $brian_watkins$elm_procedure$Procedure$Program$Model = function (a) {
 	return {$: 'Model', a: a};
@@ -5220,6 +5224,9 @@ var $author$project$Serverless$Conn$Response$ok200 = function (msg) {
 };
 var $author$project$EventLog$Component$cacheName = function (channel) {
 	return 'elm-realtime' + '-cache';
+};
+var $author$project$Momento$errorToString = function (_v0) {
+	return 'Momento Error';
 };
 var $brian_watkins$elm_procedure$Procedure$fetchResult = function (generator) {
 	return $brian_watkins$elm_procedure$Procedure$Internal$Procedure(
@@ -5666,7 +5673,7 @@ var $author$project$EventLog$Component$openMomentoCache = F2(
 	function (component, channelName) {
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$mapError,
-			$elm$core$Basics$always('Momento error'),
+			$author$project$Momento$errorToString,
 			$brian_watkins$elm_procedure$Procedure$fetchResult(
 				$author$project$EventLog$Component$momentoApi.open(
 					{
@@ -6687,10 +6694,19 @@ var $author$project$EventLog$Component$dynamoApi = A2(
 	$author$project$AWS$Dynamo$dynamoApi,
 	$author$project$EventLog$Component$ProcedureMsg,
 	{batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse});
+var $author$project$AWS$Dynamo$errorToString = function (err) {
+	if (err.$ === 'Error') {
+		var val = err.a;
+		return val;
+	} else {
+		var val = err.a;
+		return val;
+	}
+};
 var $author$project$EventLog$Component$recordChannelToDB = function (sessionKey) {
 	return A2(
 		$brian_watkins$elm_procedure$Procedure$mapError,
-		$elm$core$Basics$always('Dynamo error'),
+		$author$project$AWS$Dynamo$errorToString,
 		A2(
 			$brian_watkins$elm_procedure$Procedure$map,
 			$elm$core$Basics$always(sessionKey),
@@ -6720,7 +6736,7 @@ var $author$project$EventLog$Component$setupChannelWebhook = F3(
 	function (component, channelName, sessionKey) {
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$mapError,
-			$elm$core$Basics$always('Momento error'),
+			$author$project$Momento$errorToString,
 			A2(
 				$brian_watkins$elm_procedure$Procedure$map,
 				$elm$core$Basics$always(_Utils_Tuple0),
@@ -6905,6 +6921,24 @@ var $author$project$EventLog$Component$update = F3(
 		_v0$4:
 		while (true) {
 			switch (_v0.b.$) {
+				case 'RandomSeed':
+					if (_v0.a.$ === 'ModelStart') {
+						var seed = _v0.b.a;
+						return protocol.onUpdate(
+							A2(
+								$elm$core$Tuple$mapSecond,
+								$elm$core$Platform$Cmd$map(protocol.toMsg),
+								A2(
+									$elm$core$Tuple$mapFirst,
+									$author$project$EventLog$Component$setModel(component),
+									A2(
+										$the_sett$elm_update_helper$Update2$andMap,
+										$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelReady),
+										$the_sett$elm_update_helper$Update2$pure(
+											{procedure: $brian_watkins$elm_procedure$Procedure$Program$init, seed: seed})))));
+					} else {
+						break _v0$4;
+					}
 				case 'ProcedureMsg':
 					if (_v0.a.$ === 'ModelReady') {
 						var state = _v0.a.a;
@@ -6930,24 +6964,6 @@ var $author$project$EventLog$Component$update = F3(
 					} else {
 						break _v0$4;
 					}
-				case 'RandomSeed':
-					if (_v0.a.$ === 'ModelStart') {
-						var seed = _v0.b.a;
-						return protocol.onUpdate(
-							A2(
-								$elm$core$Tuple$mapSecond,
-								$elm$core$Platform$Cmd$map(protocol.toMsg),
-								A2(
-									$elm$core$Tuple$mapFirst,
-									$author$project$EventLog$Component$setModel(component),
-									A2(
-										$the_sett$elm_update_helper$Update2$andMap,
-										$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelReady),
-										$the_sett$elm_update_helper$Update2$pure(
-											{procedure: $brian_watkins$elm_procedure$Procedure$Program$init, seed: seed})))));
-					} else {
-						break _v0$4;
-					}
 				case 'HttpRequest':
 					if (_v0.a.$ === 'ModelReady') {
 						var state = _v0.a.a;
@@ -6958,7 +6974,7 @@ var $author$project$EventLog$Component$update = F3(
 							var apiRequest = result.a;
 							return A4($author$project$EventLog$Component$processRoute, protocol, session, apiRequest, component);
 						} else {
-							var errMsg = result.a.a;
+							var httpError = result.a;
 							return protocol.onUpdate(
 								A2(
 									$elm$core$Tuple$mapSecond,
@@ -6971,7 +6987,8 @@ var $author$project$EventLog$Component$update = F3(
 											A2(
 												$author$project$EventLog$Component$httpServerApi.response,
 												session,
-												$author$project$Serverless$Conn$Response$err500(errMsg))))));
+												$author$project$Serverless$Conn$Response$err500(
+													$author$project$Serverless$HttpServer$errorToString(httpError)))))));
 						}
 					} else {
 						break _v0$4;

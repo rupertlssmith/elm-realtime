@@ -8,6 +8,7 @@ module Momento exposing
     , PushListParams
     , SubscribeParams
     , WebhookParams
+    , errorToString
     , momentoApi
     )
 
@@ -79,6 +80,11 @@ type alias WebhookParams =
 
 type Error
     = Failed
+
+
+errorToString : Error -> String
+errorToString _ =
+    "Momento Error"
 
 
 

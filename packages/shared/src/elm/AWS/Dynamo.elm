@@ -4,7 +4,7 @@ module AWS.Dynamo exposing
     , Put, put
     , Get, get
     , Delete, delete
-    , Error
+    , Error, errorToString
     , Query, Order(..), query, queryIndex, partitionKeyEquals, limitResults, orderResults
     , rangeKeyEquals, rangeKeyLessThan, rangeKeyLessThanOrEqual, rangeKeyGreaterThan
     , rangeKeyGreaterThanOrEqual, rangeKeyBetween
@@ -31,7 +31,11 @@ module AWS.Dynamo exposing
 @docs Delete, delete
 @docs BatchPut, batchPut
 @docs BatchGet, batchGet
-@docs Error
+
+
+# Error reporting
+
+@docs Error, errorToString
 
 
 # Database Queries
@@ -93,6 +97,16 @@ dynamoApi pt ports =
 type Error
     = Error String
     | DecodeError String
+
+
+errorToString : Error -> String
+errorToString err =
+    case err of
+        Error val ->
+            val
+
+        DecodeError val ->
+            val
 
 
 
