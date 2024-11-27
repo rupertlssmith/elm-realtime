@@ -4751,11 +4751,11 @@ var $author$project$EventLog$Component$routeParser = $elm$url$Url$Parser$parse(
 					$elm$url$Url$Parser$s('channel'),
 					$elm$url$Url$Parser$string))
 			])));
-var $author$project$EventLog$Component$httpServerProtocol = {
-	parseRoute: $author$project$EventLog$Component$routeParser,
-	ports: {request: $author$project$Ports$requestPort, response: $author$project$Ports$responsePort}
-};
-var $author$project$EventLog$Component$httpServerApi = $author$project$Server$API$httpServerApi($author$project$EventLog$Component$httpServerProtocol);
+var $author$project$EventLog$Component$httpServerApi = $author$project$Server$API$httpServerApi(
+	{
+		parseRoute: $author$project$EventLog$Component$routeParser,
+		ports: {request: $author$project$Ports$requestPort, response: $author$project$Ports$responsePort}
+	});
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
 var $elm$core$Dict$values = function (dict) {
 	return A3(
@@ -5228,6 +5228,166 @@ var $brian_watkins$elm_procedure$Procedure$fetchResult = function (generator) {
 				return generator(tagger);
 			}));
 };
+var $author$project$Ports$mmAsyncError = _Platform_incomingPort(
+	'mmAsyncError',
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (id) {
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (error) {
+					return $elm$json$Json$Decode$succeed(
+						{error: error, id: id});
+				},
+				A2($elm$json$Json$Decode$field, 'error', $elm$json$Json$Decode$value));
+		},
+		A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string)));
+var $author$project$Ports$mmClose = _Platform_outgoingPort(
+	'mmClose',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session))
+				]));
+	});
+var $author$project$Ports$mmCreateWebhook = _Platform_outgoingPort(
+	'mmCreateWebhook',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session)),
+					_Utils_Tuple2(
+					'topic',
+					$elm$json$Json$Encode$string($.topic)),
+					_Utils_Tuple2(
+					'url',
+					$elm$json$Json$Encode$string($.url))
+				]));
+	});
+var $author$project$Ports$mmOnMessage = _Platform_incomingPort(
+	'mmOnMessage',
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (session) {
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (payload) {
+					return A2(
+						$elm$json$Json$Decode$andThen,
+						function (id) {
+							return $elm$json$Json$Decode$succeed(
+								{id: id, payload: payload, session: session});
+						},
+						A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
+				},
+				A2($elm$json$Json$Decode$field, 'payload', $elm$json$Json$Decode$string));
+		},
+		A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value)));
+var $author$project$Ports$mmOpen = _Platform_outgoingPort(
+	'mmOpen',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'apiKey',
+					$elm$json$Json$Encode$string($.apiKey)),
+					_Utils_Tuple2(
+					'cache',
+					$elm$json$Json$Encode$string($.cache)),
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id))
+				]));
+	});
+var $author$project$Ports$mmPublish = _Platform_outgoingPort(
+	'mmPublish',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'payload',
+					$elm$json$Json$Encode$string($.payload)),
+					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session)),
+					_Utils_Tuple2(
+					'topic',
+					$elm$json$Json$Encode$string($.topic))
+				]));
+	});
+var $author$project$Ports$mmPushList = _Platform_outgoingPort(
+	'mmPushList',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'list',
+					$elm$json$Json$Encode$string($.list)),
+					_Utils_Tuple2(
+					'payload',
+					$elm$json$Json$Encode$string($.payload)),
+					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session))
+				]));
+	});
+var $author$project$Ports$mmResponse = _Platform_incomingPort(
+	'mmResponse',
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (type_) {
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (response) {
+					return A2(
+						$elm$json$Json$Decode$andThen,
+						function (id) {
+							return $elm$json$Json$Decode$succeed(
+								{id: id, response: response, type_: type_});
+						},
+						A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
+				},
+				A2($elm$json$Json$Decode$field, 'response', $elm$json$Json$Decode$value));
+		},
+		A2($elm$json$Json$Decode$field, 'type_', $elm$json$Json$Decode$string)));
+var $author$project$Ports$mmSubscribe = _Platform_outgoingPort(
+	'mmSubscribe',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session)),
+					_Utils_Tuple2(
+					'topic',
+					$elm$json$Json$Encode$string($.topic))
+				]));
+	});
 var $brian_watkins$elm_procedure$Procedure$Internal$Continue = {$: 'Continue'};
 var $brian_watkins$elm_procedure$Procedure$Internal$Subscribe = F3(
 	function (a, b, c) {
@@ -5498,168 +5658,10 @@ var $author$project$Momento$momentoApi = F2(
 			webhook: A2($author$project$Momento$webhook, pt, ports)
 		};
 	});
-var $author$project$Ports$mmAsyncError = _Platform_incomingPort(
-	'mmAsyncError',
-	A2(
-		$elm$json$Json$Decode$andThen,
-		function (id) {
-			return A2(
-				$elm$json$Json$Decode$andThen,
-				function (error) {
-					return $elm$json$Json$Decode$succeed(
-						{error: error, id: id});
-				},
-				A2($elm$json$Json$Decode$field, 'error', $elm$json$Json$Decode$value));
-		},
-		A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string)));
-var $author$project$Ports$mmClose = _Platform_outgoingPort(
-	'mmClose',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id)),
-					_Utils_Tuple2(
-					'session',
-					$elm$core$Basics$identity($.session))
-				]));
-	});
-var $author$project$Ports$mmCreateWebhook = _Platform_outgoingPort(
-	'mmCreateWebhook',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id)),
-					_Utils_Tuple2(
-					'session',
-					$elm$core$Basics$identity($.session)),
-					_Utils_Tuple2(
-					'topic',
-					$elm$json$Json$Encode$string($.topic)),
-					_Utils_Tuple2(
-					'url',
-					$elm$json$Json$Encode$string($.url))
-				]));
-	});
-var $author$project$Ports$mmOnMessage = _Platform_incomingPort(
-	'mmOnMessage',
-	A2(
-		$elm$json$Json$Decode$andThen,
-		function (session) {
-			return A2(
-				$elm$json$Json$Decode$andThen,
-				function (payload) {
-					return A2(
-						$elm$json$Json$Decode$andThen,
-						function (id) {
-							return $elm$json$Json$Decode$succeed(
-								{id: id, payload: payload, session: session});
-						},
-						A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
-				},
-				A2($elm$json$Json$Decode$field, 'payload', $elm$json$Json$Decode$string));
-		},
-		A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value)));
-var $author$project$Ports$mmOpen = _Platform_outgoingPort(
-	'mmOpen',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'apiKey',
-					$elm$json$Json$Encode$string($.apiKey)),
-					_Utils_Tuple2(
-					'cache',
-					$elm$json$Json$Encode$string($.cache)),
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id))
-				]));
-	});
-var $author$project$Ports$mmPublish = _Platform_outgoingPort(
-	'mmPublish',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id)),
-					_Utils_Tuple2(
-					'payload',
-					$elm$json$Json$Encode$string($.payload)),
-					_Utils_Tuple2(
-					'session',
-					$elm$core$Basics$identity($.session)),
-					_Utils_Tuple2(
-					'topic',
-					$elm$json$Json$Encode$string($.topic))
-				]));
-	});
-var $author$project$Ports$mmPushList = _Platform_outgoingPort(
-	'mmPushList',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id)),
-					_Utils_Tuple2(
-					'list',
-					$elm$json$Json$Encode$string($.list)),
-					_Utils_Tuple2(
-					'payload',
-					$elm$json$Json$Encode$string($.payload)),
-					_Utils_Tuple2(
-					'session',
-					$elm$core$Basics$identity($.session))
-				]));
-	});
-var $author$project$Ports$mmResponse = _Platform_incomingPort(
-	'mmResponse',
-	A2(
-		$elm$json$Json$Decode$andThen,
-		function (type_) {
-			return A2(
-				$elm$json$Json$Decode$andThen,
-				function (response) {
-					return A2(
-						$elm$json$Json$Decode$andThen,
-						function (id) {
-							return $elm$json$Json$Decode$succeed(
-								{id: id, response: response, type_: type_});
-						},
-						A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
-				},
-				A2($elm$json$Json$Decode$field, 'response', $elm$json$Json$Decode$value));
-		},
-		A2($elm$json$Json$Decode$field, 'type_', $elm$json$Json$Decode$string)));
-var $author$project$Ports$mmSubscribe = _Platform_outgoingPort(
-	'mmSubscribe',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id)),
-					_Utils_Tuple2(
-					'session',
-					$elm$core$Basics$identity($.session)),
-					_Utils_Tuple2(
-					'topic',
-					$elm$json$Json$Encode$string($.topic))
-				]));
-	});
-var $author$project$EventLog$Component$momentoPorts = {asyncError: $author$project$Ports$mmAsyncError, close: $author$project$Ports$mmClose, createWebhook: $author$project$Ports$mmCreateWebhook, onMessage: $author$project$Ports$mmOnMessage, open: $author$project$Ports$mmOpen, publish: $author$project$Ports$mmPublish, pushList: $author$project$Ports$mmPushList, response: $author$project$Ports$mmResponse, subscribe: $author$project$Ports$mmSubscribe};
-var $author$project$EventLog$Component$momentoApi = A2($author$project$Momento$momentoApi, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$momentoPorts);
+var $author$project$EventLog$Component$momentoApi = A2(
+	$author$project$Momento$momentoApi,
+	$author$project$EventLog$Component$ProcedureMsg,
+	{asyncError: $author$project$Ports$mmAsyncError, close: $author$project$Ports$mmClose, createWebhook: $author$project$Ports$mmCreateWebhook, onMessage: $author$project$Ports$mmOnMessage, open: $author$project$Ports$mmOpen, publish: $author$project$Ports$mmPublish, pushList: $author$project$Ports$mmPushList, response: $author$project$Ports$mmResponse, subscribe: $author$project$Ports$mmSubscribe});
 var $author$project$EventLog$Component$openMomentoCache = F2(
 	function (component, channelName) {
 		return A2(
@@ -6681,8 +6683,10 @@ var $author$project$Ports$dynamoResponse = _Platform_incomingPort(
 				A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
 		},
 		A2($elm$json$Json$Decode$field, 'res', $elm$json$Json$Decode$value)));
-var $author$project$EventLog$Component$dynamoPorts = {batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse};
-var $author$project$EventLog$Component$dynamoApi = A2($author$project$AWS$Dynamo$dynamoApi, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$dynamoPorts);
+var $author$project$EventLog$Component$dynamoApi = A2(
+	$author$project$AWS$Dynamo$dynamoApi,
+	$author$project$EventLog$Component$ProcedureMsg,
+	{batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse});
 var $author$project$EventLog$Component$recordChannelToDB = function (sessionKey) {
 	return A2(
 		$brian_watkins$elm_procedure$Procedure$mapError,

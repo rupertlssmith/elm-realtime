@@ -38,13 +38,31 @@ type alias Component a =
     }
 
 
-setModel m x =
-    { m | eventLog = x }
-
-
 type alias Protocol submodel msg model =
     { toMsg : Msg -> msg
     , onUpdate : ( submodel, Cmd msg ) -> ( model, Cmd msg )
+    }
+
+
+type Msg
+    = ProcedureMsg (Procedure.Program.Msg Msg)
+    | RandomSeed Random.Seed
+    | HttpRequest HttpSessionKey (Result Api.Error (ApiRequest Route))
+    | HttpResponse HttpSessionKey (Result Response Response)
+
+
+type Model
+    = ModelStart StartState
+    | ModelReady ReadyState
+
+
+type alias StartState =
+    {}
+
+
+type alias ReadyState =
+    { seed : Random.Seed
+    , procedure : Procedure.Program.Model Msg
     }
 
 
@@ -54,6 +72,140 @@ init toMsg =
         |> U2.andMap randomize
         |> U2.andMap (switchState ModelStart)
         |> Tuple.mapSecond (Cmd.map toMsg)
+
+
+subscriptions : Protocol (Component a) msg model -> Component a -> Sub msg
+subscriptions protocol component =
+    let
+        model =
+            component.eventLog
+    in
+    case model of
+        ModelReady state ->
+            [ Procedure.Program.subscriptions state.procedure
+            , httpServerApi.request HttpRequest
+            ]
+                |> Sub.batch
+                |> Sub.map protocol.toMsg
+
+        _ ->
+            Sub.none
+
+
+update : Protocol (Component a) msg model -> Msg -> Component a -> ( model, Cmd msg )
+update protocol msg component =
+    let
+        model =
+            component.eventLog
+    in
+    case ( model, msg ) of
+        ( ModelReady state, ProcedureMsg innerMsg ) ->
+            let
+                ( procMdl, procMsg ) =
+                    Procedure.Program.update innerMsg state.procedure
+            in
+            ( { state | procedure = procMdl }, procMsg )
+                |> U2.andMap (switchState ModelReady)
+                |> Tuple.mapFirst (setModel component)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
+        ( ModelStart _, RandomSeed seed ) ->
+            { seed = seed
+            , procedure = Procedure.Program.init
+            }
+                |> U2.pure
+                |> U2.andMap (switchState ModelReady)
+                |> Tuple.mapFirst (setModel component)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
+        ( ModelReady state, HttpRequest session result ) ->
+            case result of
+                Ok apiRequest ->
+                    processRoute protocol session apiRequest component
+
+                Err (Error errMsg) ->
+                    ( ModelReady state
+                    , Response.err500 errMsg
+                        |> httpServerApi.response session
+                    )
+                        |> Tuple.mapFirst (setModel component)
+                        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                        |> protocol.onUpdate
+
+        ( _, HttpResponse session result ) ->
+            ( component
+            , result |> Result.Extra.merge |> httpServerApi.response session
+            )
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
+        _ ->
+            U2.pure component
+                |> protocol.onUpdate
+
+
+setModel : Component a -> Model -> Component a
+setModel m x =
+    { m | eventLog = x }
+
+
+switchState : (a -> Model) -> a -> ( Model, Cmd Msg )
+switchState cons state =
+    ( cons state
+    , Cmd.none
+    )
+
+
+randomize : StartState -> ( StartState, Cmd Msg )
+randomize model =
+    ( model
+    , Random.generate RandomSeed Random.independentSeed
+    )
+
+
+
+-- Connect Stateless APIs to their Ports
+
+
+dynamoApi : Dynamo.DynamoApi Msg
+dynamoApi =
+    { get = Ports.dynamoGet
+    , put = Ports.dynamoPut
+    , delete = Ports.dynamoDelete
+    , batchGet = Ports.dynamoBatchGet
+    , batchWrite = Ports.dynamoBatchWrite
+    , query = Ports.dynamoQuery
+    , response = Ports.dynamoResponse
+    }
+        |> Dynamo.dynamoApi ProcedureMsg
+
+
+momentoApi : Momento.MomentoApi Msg
+momentoApi =
+    { open = Ports.mmOpen
+    , close = Ports.mmClose
+    , subscribe = Ports.mmSubscribe
+    , publish = Ports.mmPublish
+    , onMessage = Ports.mmOnMessage
+    , pushList = Ports.mmPushList
+    , createWebhook = Ports.mmCreateWebhook
+    , response = Ports.mmResponse
+    , asyncError = Ports.mmAsyncError
+    }
+        |> Momento.momentoApi ProcedureMsg
+
+
+httpServerApi : Api.HttpServerApi Msg Route
+httpServerApi =
+    { ports =
+        { request = Ports.requestPort
+        , response = Ports.responsePort
+        }
+    , parseRoute = routeParser
+    }
+        |> Api.httpServerApi
 
 
 
@@ -101,6 +253,10 @@ processRoute protocol session route component =
         _ ->
             U2.pure component
                 |> protocol.onUpdate
+
+
+
+-- Create a new realtime channel
 
 
 {-| Channel creation:
@@ -177,13 +333,8 @@ setupChannelWebhook component channelName sessionKey =
         |> Procedure.mapError (always "Momento error")
 
 
-nameGenerator : Random.Generator String
-nameGenerator =
-    Random.String.string 10 Random.Char.english
 
-
-
--- Save Channel Events
+-- Proces a save channel notification.
 
 
 {-| Channel save:
@@ -195,177 +346,17 @@ nameGenerator =
     * Publish the saved event to the model topic.
 
 -}
-saveChannelEvent =
+processSaveChannel =
     ()
 
 
 
--- Internal Side Effects
-
-
-dynamoPorts : Dynamo.Ports msg
-dynamoPorts =
-    { get = Ports.dynamoGet
-    , put = Ports.dynamoPut
-    , delete = Ports.dynamoDelete
-    , batchGet = Ports.dynamoBatchGet
-    , batchWrite = Ports.dynamoBatchWrite
-    , query = Ports.dynamoQuery
-    , response = Ports.dynamoResponse
-    }
-
-
-dynamoApi : Dynamo.DynamoApi Msg
-dynamoApi =
-    Dynamo.dynamoApi ProcedureMsg dynamoPorts
-
-
-momentoPorts : Momento.Ports msg
-momentoPorts =
-    { open = Ports.mmOpen
-    , close = Ports.mmClose
-    , subscribe = Ports.mmSubscribe
-    , publish = Ports.mmPublish
-    , onMessage = Ports.mmOnMessage
-    , pushList = Ports.mmPushList
-    , createWebhook = Ports.mmCreateWebhook
-    , response = Ports.mmResponse
-    , asyncError = Ports.mmAsyncError
-    }
-
-
-momentoApi : Momento.MomentoApi Msg
-momentoApi =
-    Momento.momentoApi ProcedureMsg momentoPorts
-
-
-httpServerProtocol : Api.Protocol Msg Route
-httpServerProtocol =
-    { ports =
-        { request = Ports.requestPort
-        , response = Ports.responsePort
-        }
-    , parseRoute = routeParser
-    }
-
-
-httpServerApi : Api.HttpServerApi Msg Route
-httpServerApi =
-    Api.httpServerApi httpServerProtocol
-
-
-type Msg
-    = ProcedureMsg (Procedure.Program.Msg Msg)
-    | RandomSeed Random.Seed
-    | HttpRequest HttpSessionKey (Result Api.Error (ApiRequest Route))
-    | HttpResponse HttpSessionKey (Result Response Response)
-
-
-type Model
-    = ModelStart StartState
-    | ModelReady ReadyState
-
-
-switchState : (a -> Model) -> a -> ( Model, Cmd Msg )
-switchState cons state =
-    ( cons state
-    , Cmd.none
-    )
-
-
-type alias StartState =
-    {}
-
-
-type alias ReadyState =
-    { seed : Random.Seed
-    , procedure : Procedure.Program.Model Msg
-    }
-
-
-subscriptions : Protocol (Component a) msg model -> Component a -> Sub msg
-subscriptions protocol component =
-    let
-        model =
-            component.eventLog
-    in
-    case model of
-        ModelReady state ->
-            [ Procedure.Program.subscriptions state.procedure
-            , httpServerApi.request HttpRequest
-            ]
-                |> Sub.batch
-                |> Sub.map protocol.toMsg
-
-        _ ->
-            Sub.none
-
-
-update : Protocol (Component a) msg model -> Msg -> Component a -> ( model, Cmd msg )
-update protocol msg component =
-    let
-        model =
-            component.eventLog
-    in
-    case ( model, msg ) of
-        ( ModelReady state, ProcedureMsg innerMsg ) ->
-            let
-                ( procMdl, procMsg ) =
-                    Procedure.Program.update
-                        innerMsg
-                        state.procedure
-            in
-            ( { state | procedure = procMdl }, procMsg )
-                |> U2.andMap (switchState ModelReady)
-                |> Tuple.mapFirst (setModel component)
-                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.onUpdate
-
-        ( ModelStart _, RandomSeed seed ) ->
-            { seed = seed
-            , procedure = Procedure.Program.init
-            }
-                |> U2.pure
-                |> U2.andMap (switchState ModelReady)
-                |> Tuple.mapFirst (setModel component)
-                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.onUpdate
-
-        ( ModelReady state, HttpRequest session result ) ->
-            case result of
-                Ok apiRequest ->
-                    processRoute protocol session apiRequest component
-
-                Err (Error errMsg) ->
-                    ( ModelReady state
-                    , Response.err500 errMsg
-                        |> httpServerApi.response session
-                    )
-                        |> Tuple.mapFirst (setModel component)
-                        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                        |> protocol.onUpdate
-
-        ( _, HttpResponse session result ) ->
-            ( component
-            , result |> Result.Extra.merge |> httpServerApi.response session
-            )
-                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.onUpdate
-
-        _ ->
-            U2.pure component
-                |> protocol.onUpdate
-
-
-randomize : StartState -> ( StartState, Cmd Msg )
-randomize model =
-    ( model
-    , Random.generate RandomSeed Random.independentSeed
-    )
-
-
-
 --
+
+
+nameGenerator : Random.Generator String
+nameGenerator =
+    Random.String.string 10 Random.Char.english
 
 
 modelTopicName : String -> String
