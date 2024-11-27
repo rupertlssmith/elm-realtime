@@ -1,13 +1,58 @@
 import {DynamoDB} from "@aws-sdk/client-dynamodb";
 import {DynamoDBDocument} from "@aws-sdk/lib-dynamodb";
 import * as ports from "./ports" ;
+import {GetCommandInput} from "@aws-sdk/lib-dynamodb/dist-types/commands/GetCommand";
+import {PutCommandInput} from "@aws-sdk/lib-dynamodb/dist-types/commands/PutCommand";
+import {DeleteCommandInput} from "@aws-sdk/lib-dynamodb/dist-types/commands/DeleteCommand";
+import {BatchGetCommandInput} from "@aws-sdk/lib-dynamodb/dist-types/commands/BatchGetCommand";
+import {BatchWriteCommandInput} from "@aws-sdk/lib-dynamodb/dist-types/commands/BatchWriteCommand";
+import {QueryCommandInput} from "@aws-sdk/lib-dynamodb/dist-types/commands/QueryCommand";
 
-const client = new DynamoDB({});
+const client = new DynamoDB();
 const documentClient = DynamoDBDocument.from(client);
 
+type GetArgs = {
+    id: String;
+    req: GetCommandInput;
+}
+
+type PutArgs = {
+    id: String;
+    req: PutCommandInput;
+}
+
+type DeleteArgs = {
+    id: String;
+    req: DeleteCommandInput;
+}
+
+type BatchGetArgs = {
+    id: String;
+    req: BatchGetCommandInput;
+}
+
+type BatchWriteArgs = {
+    id: String;
+    req: BatchWriteCommandInput;
+}
+
+type QueryArgs = {
+    id: String;
+    req: QueryCommandInput;
+}
+
+type Ports = {
+    dynamoGet: { subscribe: any };
+    dynamoPut: { subscribe: any };
+    dynamoDelete: { subscribe: any };
+    dynamoBatchGet: { subscribe: any };
+    dynamoBatchWrite: { subscribe: any };
+    dynamoQuery: { subscribe: any };
+    dynamoResponse: { send: any };
+}
+
 export class DynamoPorts {
-    //app: { ports: Ports };
-    app: { ports: any };
+    app: { ports: Ports };
 
     constructor(app: any) {
         console.info("DynamoPorts.constructor");
@@ -31,14 +76,14 @@ export class DynamoPorts {
         app.ports.dynamoQuery.subscribe(this.dynamoQuery);
     }
 
-    dynamoGet = async ([correlationId, params]) => {
-        documentClient.get(params, (error, result) => {
+    dynamoGet = async (args: GetArgs) => {
+        documentClient.get(args.req, (error, result) => {
             var getResponse;
 
             if (error) {
                 getResponse = {
                     type_: "Error",
-                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(params, null, 2)
+                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(args.req, null, 2)
                 };
             } else if (Object.entries(result).length === 0) {
                 getResponse = {
@@ -51,20 +96,20 @@ export class DynamoPorts {
                 }
             }
 
-            this.app.ports.dynamoResponse.send([correlationId, getResponse]);
+            this.app.ports.dynamoResponse.send({id: args.id, res: getResponse});
         });
     }
 
-    dynamoPut = async ([correlationId, params]) => {
+    dynamoPut = async (args: PutArgs) => {
         console.log("dynamoPut: called");
 
-        documentClient.put(params, (error, result) => {
+        documentClient.put(args.req, (error, result) => {
             var putResponse;
 
             if (error) {
                 putResponse = {
                     type_: "Error",
-                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(params, null, 2)
+                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(args.req, null, 2)
                 };
             } else {
                 putResponse = {
@@ -72,18 +117,18 @@ export class DynamoPorts {
                 }
             }
 
-            this.app.ports.dynamoResponse.send([correlationId, putResponse]);
+            this.app.ports.dynamoResponse.send({id: args.id, res: putResponse});
         });
     }
 
-    dynamoDelete = async ([correlationId, params]) => {
-        documentClient.delete(params, (error, result) => {
+    dynamoDelete = async (args: DeleteArgs) => {
+        documentClient.delete(args.req, (error, result) => {
             var deleteResponse;
 
             if (error) {
                 deleteResponse = {
                     type_: "Error",
-                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(params, null, 2)
+                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(args.req, null, 2)
                 };
             } else {
                 deleteResponse = {
@@ -91,18 +136,18 @@ export class DynamoPorts {
                 }
             }
 
-            this.app.ports.dynamoResponse.send([correlationId, deleteResponse]);
+            this.app.ports.dynamoResponse.send({id: args.id, res: deleteResponse});
         });
     }
 
-    dynamoBatchGet = async ([correlationId, params]) => {
-        documentClient.batchGet(params, (error, result) => {
+    dynamoBatchGet = async (args: BatchGetArgs) => {
+        documentClient.batchGet(args.req, (error, result) => {
             var getResponse;
 
             if (error) {
                 getResponse = {
                     type_: "Error",
-                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(params, null, 2)
+                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(args.req, null, 2)
                 };
             } else if (Object.entries(result).length === 0) {
                 getResponse = {
@@ -116,18 +161,18 @@ export class DynamoPorts {
                 }
             }
 
-            this.app.ports.dynamoResponse.send([correlationId, getResponse]);
+            this.app.ports.dynamoResponse.send({id: args.id, res: getResponse});
         });
     }
 
-    dynamoBatchWrite = async ([correlationId, params]) => {
-        documentClient.batchWrite(params, (error, result) => {
+    dynamoBatchWrite = async (args: BatchWriteArgs) => {
+        documentClient.batchWrite(args.req, (error, result) => {
             var putResponse;
 
             if (error) {
                 putResponse = {
                     type_: "Error",
-                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(params, null, 2)
+                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(args.req, null, 2)
                 };
             } else {
                 putResponse = {
@@ -135,18 +180,18 @@ export class DynamoPorts {
                 }
             }
 
-            this.app.ports.dynamoResponse.send([correlationId, putResponse]);
+            this.app.ports.dynamoResponse.send({id: args.id, res: putResponse});
         });
     }
 
-    dynamoQuery = async ([correlationId, params]) => {
-        documentClient.query(params, (error, result) => {
+    dynamoQuery = async (args: QueryArgs) => {
+        documentClient.query(args.req, (error, result) => {
             var getResponse;
 
             if (error) {
                 getResponse = {
                     type_: "Error",
-                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(params, null, 2)
+                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(args.req, null, 2)
                 };
             } else if (Object.entries(result).length === 0) {
                 getResponse = {
@@ -164,7 +209,7 @@ export class DynamoPorts {
                 getResponse.lastEvaluatedKey = result.LastEvaluatedKey;
             }
 
-            this.app.ports.dynamoResponse.send([correlationId, getResponse]);
+            this.app.ports.dynamoResponse.send({id: args.id, res: getResponse});
         });
     }
 }

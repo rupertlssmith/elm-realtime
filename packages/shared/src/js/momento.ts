@@ -36,6 +36,20 @@ type SendArgs = {
     payload: string
 }
 
+type PushListArgs = {
+    id: string;
+    session: Session;
+    list: string;
+    payload: string;
+}
+
+type CreateWebhookArgs = {
+    id: string;
+    session: Session;
+    topic: string;
+    url: string;
+}
+
 type Ports = {
     mmOpen: { subscribe: any };
     mmClose: { subscribe: any };
@@ -213,7 +227,7 @@ export class MomentoPorts {
     }
 
     // === Lists
-    pushList = async (args: any) => {
+    pushList = async (args: PushListArgs) => {
         console.log("Momento.pushList");
 
         const pushResponse =
@@ -241,7 +255,7 @@ export class MomentoPorts {
     }
 
     // == Webhooks
-    createWebhook = async (args: any) => {
+    createWebhook = async (args: CreateWebhookArgs) => {
         console.log("Momento.createWebhook");
         console.log(args);
 

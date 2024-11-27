@@ -4261,7 +4261,7 @@ var $author$project$AWS$Dynamo$batchGet = F4(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
 			function (_v1) {
-				var res = _v1.b;
+				var res = _v1.res;
 				return dt(
 					A2($author$project$AWS$Dynamo$batchGetResponseDecoder, batchGetProps.tableName, res));
 			},
@@ -4270,8 +4270,8 @@ var $author$project$AWS$Dynamo$batchGet = F4(
 					$brian_watkins$elm_procedure$Procedure$Channel$filter,
 					F2(
 						function (key, _v0) {
-							var respKey = _v0.a;
-							return _Utils_eq(respKey, key);
+							var id = _v0.id;
+							return _Utils_eq(id, key);
 						}),
 					A2(
 						$brian_watkins$elm_procedure$Procedure$Channel$connect,
@@ -4279,10 +4279,11 @@ var $author$project$AWS$Dynamo$batchGet = F4(
 						$brian_watkins$elm_procedure$Procedure$Channel$open(
 							function (key) {
 								return ports.batchWrite(
-									_Utils_Tuple2(
-										key,
-										$author$project$AWS$Dynamo$batchGetEncoder(
-											{keys: batchGetProps.keys, tableName: batchGetProps.tableName})));
+									{
+										id: key,
+										req: $author$project$AWS$Dynamo$batchGetEncoder(
+											{keys: batchGetProps.keys, tableName: batchGetProps.tableName})
+									});
 							})))));
 	});
 var $author$project$AWS$Dynamo$batchPutEncoder = function (putOp) {
@@ -4491,16 +4492,15 @@ var $author$project$AWS$Dynamo$batchPutInner = F3(
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$andThen,
 			function (_v1) {
-				var key = _v1.a;
-				var val = _v1.b;
-				var _v2 = $author$project$AWS$Dynamo$batchPutResponseDecoder(val);
+				var id = _v1.id;
+				var res = _v1.res;
+				var _v2 = $author$project$AWS$Dynamo$batchPutResponseDecoder(res);
 				if (_v2.$ === 'Ok') {
-					var res = _v2.a;
 					if (!remainder.b) {
 						return $brian_watkins$elm_procedure$Procedure$provide(
 							_Utils_Tuple2(
-								key,
-								$elm$core$Result$Ok(res)));
+								id,
+								$elm$core$Result$Ok(_Utils_Tuple0)));
 					} else {
 						var moreItems = remainder;
 						return A3($author$project$AWS$Dynamo$batchPutInner, ports, table, moreItems);
@@ -4509,7 +4509,7 @@ var $author$project$AWS$Dynamo$batchPutInner = F3(
 					var err = _v2.a;
 					return $brian_watkins$elm_procedure$Procedure$provide(
 						_Utils_Tuple2(
-							key,
+							id,
 							$elm$core$Result$Err(err)));
 				}
 			},
@@ -4518,8 +4518,8 @@ var $author$project$AWS$Dynamo$batchPutInner = F3(
 					$brian_watkins$elm_procedure$Procedure$Channel$filter,
 					F2(
 						function (key, _v0) {
-							var respKey = _v0.a;
-							return _Utils_eq(respKey, key);
+							var id = _v0.id;
+							return _Utils_eq(id, key);
 						}),
 					A2(
 						$brian_watkins$elm_procedure$Procedure$Channel$connect,
@@ -4527,10 +4527,11 @@ var $author$project$AWS$Dynamo$batchPutInner = F3(
 						$brian_watkins$elm_procedure$Procedure$Channel$open(
 							function (key) {
 								return ports.batchWrite(
-									_Utils_Tuple2(
-										key,
-										$author$project$AWS$Dynamo$batchPutEncoder(
-											{items: firstBatch, tableName: table})));
+									{
+										id: key,
+										req: $author$project$AWS$Dynamo$batchPutEncoder(
+											{items: firstBatch, tableName: table})
+									});
 							})))));
 	});
 var $author$project$AWS$Dynamo$batchPut = F4(
@@ -4584,7 +4585,7 @@ var $author$project$AWS$Dynamo$delete = F4(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
 			function (_v1) {
-				var res = _v1.b;
+				var res = _v1.res;
 				return dt(
 					$author$project$AWS$Dynamo$deleteResponseDecoder(res));
 			},
@@ -4593,8 +4594,8 @@ var $author$project$AWS$Dynamo$delete = F4(
 					$brian_watkins$elm_procedure$Procedure$Channel$filter,
 					F2(
 						function (key, _v0) {
-							var respKey = _v0.a;
-							return _Utils_eq(respKey, key);
+							var id = _v0.id;
+							return _Utils_eq(id, key);
 						}),
 					A2(
 						$brian_watkins$elm_procedure$Procedure$Channel$connect,
@@ -4602,9 +4603,10 @@ var $author$project$AWS$Dynamo$delete = F4(
 						$brian_watkins$elm_procedure$Procedure$Channel$open(
 							function (key) {
 								return ports._delete(
-									_Utils_Tuple2(
-										key,
-										$author$project$AWS$Dynamo$deleteEncoder(deleteProps)));
+									{
+										id: key,
+										req: $author$project$AWS$Dynamo$deleteEncoder(deleteProps)
+									});
 							})))));
 	});
 var $author$project$AWS$Dynamo$getEncoder = function (getOp) {
@@ -4657,7 +4659,7 @@ var $author$project$AWS$Dynamo$get = F4(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
 			function (_v1) {
-				var res = _v1.b;
+				var res = _v1.res;
 				return dt(
 					$author$project$AWS$Dynamo$getResponseDecoder(res));
 			},
@@ -4666,8 +4668,8 @@ var $author$project$AWS$Dynamo$get = F4(
 					$brian_watkins$elm_procedure$Procedure$Channel$filter,
 					F2(
 						function (key, _v0) {
-							var respKey = _v0.a;
-							return _Utils_eq(respKey, key);
+							var id = _v0.id;
+							return _Utils_eq(id, key);
 						}),
 					A2(
 						$brian_watkins$elm_procedure$Procedure$Channel$connect,
@@ -4675,9 +4677,10 @@ var $author$project$AWS$Dynamo$get = F4(
 						$brian_watkins$elm_procedure$Procedure$Channel$open(
 							function (key) {
 								return ports.get(
-									_Utils_Tuple2(
-										key,
-										$author$project$AWS$Dynamo$getEncoder(getProps)));
+									{
+										id: key,
+										req: $author$project$AWS$Dynamo$getEncoder(getProps)
+									});
 							})))));
 	});
 var $author$project$AWS$Dynamo$putEncoder = function (putOp) {
@@ -4720,7 +4723,7 @@ var $author$project$AWS$Dynamo$put = F4(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
 			function (_v1) {
-				var res = _v1.b;
+				var res = _v1.res;
 				return dt(
 					$author$project$AWS$Dynamo$putResponseDecoder(res));
 			},
@@ -4729,8 +4732,8 @@ var $author$project$AWS$Dynamo$put = F4(
 					$brian_watkins$elm_procedure$Procedure$Channel$filter,
 					F2(
 						function (key, _v0) {
-							var respKey = _v0.a;
-							return _Utils_eq(respKey, key);
+							var id = _v0.id;
+							return _Utils_eq(id, key);
 						}),
 					A2(
 						$brian_watkins$elm_procedure$Procedure$Channel$connect,
@@ -4738,9 +4741,10 @@ var $author$project$AWS$Dynamo$put = F4(
 						$brian_watkins$elm_procedure$Procedure$Channel$open(
 							function (key) {
 								return ports.put(
-									_Utils_Tuple2(
-										key,
-										$author$project$AWS$Dynamo$putEncoder(putProps)));
+									{
+										id: key,
+										req: $author$project$AWS$Dynamo$putEncoder(putProps)
+									});
 							})))));
 	});
 var $author$project$AWS$Dynamo$nextPage = F2(
@@ -5021,9 +5025,9 @@ var $author$project$AWS$Dynamo$queryInner = F5(
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$andThen,
 			function (_v1) {
-				var key = _v1.a;
-				var val = _v1.b;
-				var _v2 = $author$project$AWS$Dynamo$queryResponseDecoder(val);
+				var id = _v1.id;
+				var res = _v1.res;
+				var _v2 = $author$project$AWS$Dynamo$queryResponseDecoder(res);
 				if (_v2.$ === 'Ok') {
 					if (_v2.a.a.$ === 'Nothing') {
 						var _v3 = _v2.a;
@@ -5031,7 +5035,7 @@ var $author$project$AWS$Dynamo$queryInner = F5(
 						var items = _v3.b;
 						return $brian_watkins$elm_procedure$Procedure$provide(
 							_Utils_Tuple2(
-								key,
+								id,
 								$elm$core$Result$Ok(items)));
 					} else {
 						var _v5 = _v2.a;
@@ -5049,7 +5053,7 @@ var $author$project$AWS$Dynamo$queryInner = F5(
 					var err = _v2.a;
 					return $brian_watkins$elm_procedure$Procedure$provide(
 						_Utils_Tuple2(
-							key,
+							id,
 							$elm$core$Result$Err(err)));
 				}
 			},
@@ -5058,8 +5062,8 @@ var $author$project$AWS$Dynamo$queryInner = F5(
 					$brian_watkins$elm_procedure$Procedure$Channel$filter,
 					F2(
 						function (key, _v0) {
-							var respKey = _v0.a;
-							return _Utils_eq(respKey, key);
+							var id = _v0.id;
+							return _Utils_eq(id, key);
 						}),
 					A2(
 						$brian_watkins$elm_procedure$Procedure$Channel$connect,
@@ -5067,9 +5071,10 @@ var $author$project$AWS$Dynamo$queryInner = F5(
 						$brian_watkins$elm_procedure$Procedure$Channel$open(
 							function (key) {
 								return ports.query(
-									_Utils_Tuple2(
-										key,
-										A3($author$project$AWS$Dynamo$queryEncoder, table, maybeIndex, q)));
+									{
+										id: key,
+										req: A3($author$project$AWS$Dynamo$queryEncoder, table, maybeIndex, q)
+									});
 							})))));
 	});
 var $author$project$AWS$Dynamo$query = F6(
@@ -5115,101 +5120,101 @@ var $author$project$AWS$Dynamo$dynamoApi = F2(
 var $author$project$Ports$dynamoBatchGet = _Platform_outgoingPort(
 	'dynamoBatchGet',
 	function ($) {
-		var a = $.a;
-		var b = $.b;
-		return A2(
-			$elm$json$Json$Encode$list,
-			$elm$core$Basics$identity,
+		return $elm$json$Json$Encode$object(
 			_List_fromArray(
 				[
-					$elm$json$Json$Encode$string(a),
-					$elm$core$Basics$identity(b)
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'req',
+					$elm$core$Basics$identity($.req))
 				]));
 	});
 var $author$project$Ports$dynamoBatchWrite = _Platform_outgoingPort(
 	'dynamoBatchWrite',
 	function ($) {
-		var a = $.a;
-		var b = $.b;
-		return A2(
-			$elm$json$Json$Encode$list,
-			$elm$core$Basics$identity,
+		return $elm$json$Json$Encode$object(
 			_List_fromArray(
 				[
-					$elm$json$Json$Encode$string(a),
-					$elm$core$Basics$identity(b)
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'req',
+					$elm$core$Basics$identity($.req))
 				]));
 	});
 var $author$project$Ports$dynamoDelete = _Platform_outgoingPort(
 	'dynamoDelete',
 	function ($) {
-		var a = $.a;
-		var b = $.b;
-		return A2(
-			$elm$json$Json$Encode$list,
-			$elm$core$Basics$identity,
+		return $elm$json$Json$Encode$object(
 			_List_fromArray(
 				[
-					$elm$json$Json$Encode$string(a),
-					$elm$core$Basics$identity(b)
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'req',
+					$elm$core$Basics$identity($.req))
 				]));
 	});
 var $author$project$Ports$dynamoGet = _Platform_outgoingPort(
 	'dynamoGet',
 	function ($) {
-		var a = $.a;
-		var b = $.b;
-		return A2(
-			$elm$json$Json$Encode$list,
-			$elm$core$Basics$identity,
+		return $elm$json$Json$Encode$object(
 			_List_fromArray(
 				[
-					$elm$json$Json$Encode$string(a),
-					$elm$core$Basics$identity(b)
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'req',
+					$elm$core$Basics$identity($.req))
 				]));
 	});
 var $author$project$Ports$dynamoPut = _Platform_outgoingPort(
 	'dynamoPut',
 	function ($) {
-		var a = $.a;
-		var b = $.b;
-		return A2(
-			$elm$json$Json$Encode$list,
-			$elm$core$Basics$identity,
+		return $elm$json$Json$Encode$object(
 			_List_fromArray(
 				[
-					$elm$json$Json$Encode$string(a),
-					$elm$core$Basics$identity(b)
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'req',
+					$elm$core$Basics$identity($.req))
 				]));
 	});
 var $author$project$Ports$dynamoQuery = _Platform_outgoingPort(
 	'dynamoQuery',
 	function ($) {
-		var a = $.a;
-		var b = $.b;
-		return A2(
-			$elm$json$Json$Encode$list,
-			$elm$core$Basics$identity,
+		return $elm$json$Json$Encode$object(
 			_List_fromArray(
 				[
-					$elm$json$Json$Encode$string(a),
-					$elm$core$Basics$identity(b)
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'req',
+					$elm$core$Basics$identity($.req))
 				]));
 	});
 var $author$project$Ports$dynamoResponse = _Platform_incomingPort(
 	'dynamoResponse',
 	A2(
 		$elm$json$Json$Decode$andThen,
-		function (_v0) {
+		function (res) {
 			return A2(
 				$elm$json$Json$Decode$andThen,
-				function (_v1) {
+				function (id) {
 					return $elm$json$Json$Decode$succeed(
-						_Utils_Tuple2(_v0, _v1));
+						{id: id, res: res});
 				},
-				A2($elm$json$Json$Decode$index, 1, $elm$json$Json$Decode$value));
+				A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
 		},
-		A2($elm$json$Json$Decode$index, 0, $elm$json$Json$Decode$string)));
+		A2($elm$json$Json$Decode$field, 'res', $elm$json$Json$Decode$value)));
 var $author$project$EventLog$Component$dynamoPorts = {batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse};
 var $author$project$EventLog$Component$dynamoApi = A2($author$project$AWS$Dynamo$dynamoApi, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$dynamoPorts);
 var $brian_watkins$elm_procedure$Procedure$map = function (mapper) {
@@ -5264,8 +5269,8 @@ var $author$project$EventLog$Component$setupChannelWebhook = F3(
 							url: component.channelApiUrl + ('/v1/channel/' + channelName)
 						}))));
 	});
-var $author$project$EventLog$Component$createChannel = F4(
-	function (protocol, route, state, component) {
+var $author$project$EventLog$Component$createChannel = F3(
+	function (protocol, state, component) {
 		var _v0 = A2($elm$random$Random$step, $author$project$EventLog$Component$nameGenerator, state.seed);
 		var channelName = _v0.a;
 		var nextSeed = _v0.b;
@@ -5330,7 +5335,7 @@ var $author$project$EventLog$Component$processRoute = F3(
 							var state = _v0.c.a;
 							return A2(
 								$the_sett$elm_update_helper$Update2$andMap,
-								A3($author$project$EventLog$Component$createChannel, protocol, route.route, state),
+								A2($author$project$EventLog$Component$createChannel, protocol, state),
 								$the_sett$elm_update_helper$Update2$pure(component));
 						case 'POST':
 							var _v3 = _v0.a;
@@ -5338,7 +5343,7 @@ var $author$project$EventLog$Component$processRoute = F3(
 							var state = _v0.c.a;
 							return A2(
 								$the_sett$elm_update_helper$Update2$andMap,
-								A3($author$project$EventLog$Component$createChannel, protocol, route.route, state),
+								A2($author$project$EventLog$Component$createChannel, protocol, state),
 								$the_sett$elm_update_helper$Update2$pure(component));
 						default:
 							break _v0$3;

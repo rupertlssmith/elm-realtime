@@ -53,13 +53,13 @@ import Result.Extra
 
 
 type alias Ports msg =
-    { get : ( String, Value ) -> Cmd msg
-    , put : ( String, Value ) -> Cmd msg
-    , delete : ( String, Value ) -> Cmd msg
-    , batchGet : ( String, Value ) -> Cmd msg
-    , batchWrite : ( String, Value ) -> Cmd msg
-    , query : ( String, Value ) -> Cmd msg
-    , response : (( String, Value ) -> msg) -> Sub msg
+    { get : { id : String, req : Value } -> Cmd msg
+    , put : { id : String, req : Value } -> Cmd msg
+    , delete : { id : String, req : Value } -> Cmd msg
+    , batchGet : { id : String, req : Value } -> Cmd msg
+    , batchWrite : { id : String, req : Value } -> Cmd msg
+    , query : { id : String, req : Value } -> Cmd msg
+    , response : ({ id : String, res : Value } -> msg) -> Sub msg
     }
 
 
@@ -112,11 +112,11 @@ put :
     -> (Result Error () -> msg)
     -> Cmd msg
 put pt ports putProps dt =
-    Channel.open (\key -> ports.put ( key, putEncoder putProps ))
+    Channel.open (\key -> ports.put { id = key, req = putEncoder putProps })
         |> Channel.connect ports.response
-        |> Channel.filter (\key ( respKey, _ ) -> respKey == key)
+        |> Channel.filter (\key { id } -> id == key)
         |> Channel.acceptOne
-        |> Procedure.run pt (\( _, res ) -> putResponseDecoder res |> dt)
+        |> Procedure.run pt (\{ res } -> putResponseDecoder res |> dt)
 
 
 putEncoder : Put -> Value
@@ -165,11 +165,11 @@ get :
     -> (Result Error (Maybe Value) -> msg)
     -> Cmd msg
 get pt ports getProps dt =
-    Channel.open (\key -> ports.get ( key, getEncoder getProps ))
+    Channel.open (\key -> ports.get { id = key, req = getEncoder getProps })
         |> Channel.connect ports.response
-        |> Channel.filter (\key ( respKey, _ ) -> respKey == key)
+        |> Channel.filter (\key { id } -> id == key)
         |> Channel.acceptOne
-        |> Procedure.run pt (\( _, res ) -> getResponseDecoder res |> dt)
+        |> Procedure.run pt (\{ res } -> getResponseDecoder res |> dt)
 
 
 getEncoder : Get -> Value
@@ -222,11 +222,11 @@ delete :
     -> (Result Error () -> msg)
     -> Cmd msg
 delete pt ports deleteProps dt =
-    Channel.open (\key -> ports.delete ( key, deleteEncoder deleteProps ))
+    Channel.open (\key -> ports.delete { id = key, req = deleteEncoder deleteProps })
         |> Channel.connect ports.response
-        |> Channel.filter (\key ( respKey, _ ) -> respKey == key)
+        |> Channel.filter (\key { id } -> id == key)
         |> Channel.acceptOne
-        |> Procedure.run pt (\( _, res ) -> deleteResponseDecoder res |> dt)
+        |> Procedure.run pt (\{ res } -> deleteResponseDecoder res |> dt)
 
 
 deleteEncoder : Delete -> Value
@@ -292,23 +292,29 @@ batchPutInner ports table vals =
         remainder =
             List.drop 25 vals
     in
-    Channel.open (\key -> ports.batchWrite ( key, batchPutEncoder { tableName = table, items = firstBatch } ))
+    Channel.open
+        (\key ->
+            ports.batchWrite
+                { id = key
+                , req = batchPutEncoder { tableName = table, items = firstBatch }
+                }
+        )
         |> Channel.connect ports.response
-        |> Channel.filter (\key ( respKey, _ ) -> respKey == key)
+        |> Channel.filter (\key { id } -> id == key)
         |> Channel.acceptOne
         |> Procedure.andThen
-            (\( key, val ) ->
-                case batchPutResponseDecoder val of
-                    Ok res ->
+            (\{ id, res } ->
+                case batchPutResponseDecoder res of
+                    Ok () ->
                         case remainder of
                             [] ->
-                                Procedure.provide ( key, Ok res )
+                                Procedure.provide ( id, Ok () )
 
                             moreItems ->
                                 batchPutInner ports table moreItems
 
                     Err err ->
-                        Procedure.provide ( key, Err err )
+                        Procedure.provide ( id, Err err )
             )
 
 
@@ -375,17 +381,18 @@ batchGet pt ports batchGetProps dt =
     Channel.open
         (\key ->
             ports.batchWrite
-                ( key
-                , batchGetEncoder
-                    { tableName = batchGetProps.tableName
-                    , keys = batchGetProps.keys
-                    }
-                )
+                { id = key
+                , req =
+                    batchGetEncoder
+                        { tableName = batchGetProps.tableName
+                        , keys = batchGetProps.keys
+                        }
+                }
         )
         |> Channel.connect ports.response
-        |> Channel.filter (\key ( respKey, _ ) -> respKey == key)
+        |> Channel.filter (\key { id } -> id == key)
         |> Channel.acceptOne
-        |> Procedure.run pt (\( _, res ) -> batchGetResponseDecoder batchGetProps.tableName res |> dt)
+        |> Procedure.run pt (\{ res } -> batchGetResponseDecoder batchGetProps.tableName res |> dt)
 
 
 batchGetEncoder getOp =
@@ -629,15 +636,15 @@ queryInner :
     -> List Value
     -> Procedure.Procedure e ( String, Result Error (List Value) ) msg
 queryInner ports table maybeIndex q accum =
-    Channel.open (\key -> ports.query ( key, queryEncoder table maybeIndex q ))
+    Channel.open (\key -> ports.query { id = key, req = queryEncoder table maybeIndex q })
         |> Channel.connect ports.response
-        |> Channel.filter (\key ( respKey, _ ) -> respKey == key)
+        |> Channel.filter (\key { id } -> id == key)
         |> Channel.acceptOne
         |> Procedure.andThen
-            (\( key, val ) ->
-                case queryResponseDecoder val of
+            (\{ id, res } ->
+                case queryResponseDecoder res of
                     Ok ( Nothing, items ) ->
-                        Procedure.provide ( key, Ok items )
+                        Procedure.provide ( id, Ok items )
 
                     Ok ( Just lastEvaluatedKey, items ) ->
                         queryInner ports
@@ -647,7 +654,7 @@ queryInner ports table maybeIndex q accum =
                             (accum ++ items)
 
                     Err err ->
-                        Procedure.provide ( key, Err err )
+                        Procedure.provide ( id, Err err )
             )
 
 

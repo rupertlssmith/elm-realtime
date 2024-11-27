@@ -79,22 +79,22 @@ port mmAsyncError : ({ id : String, error : Value } -> msg) -> Sub msg
 -- DynamoDB API
 
 
-port dynamoGet : ( String, Value ) -> Cmd msg
+port dynamoGet : { id : String, req : Value } -> Cmd msg
 
 
-port dynamoPut : ( String, Value ) -> Cmd msg
+port dynamoPut : { id : String, req : Value } -> Cmd msg
 
 
-port dynamoDelete : ( String, Value ) -> Cmd msg
+port dynamoDelete : { id : String, req : Value } -> Cmd msg
 
 
-port dynamoBatchGet : ( String, Value ) -> Cmd msg
+port dynamoBatchGet : { id : String, req : Value } -> Cmd msg
 
 
-port dynamoBatchWrite : ( String, Value ) -> Cmd msg
+port dynamoBatchWrite : { id : String, req : Value } -> Cmd msg
 
 
-port dynamoQuery : ( String, Value ) -> Cmd msg
+port dynamoQuery : { id : String, req : Value } -> Cmd msg
 
 
-port dynamoResponse : (( String, Value ) -> msg) -> Sub msg
+port dynamoResponse : ({ id : String, res : Value } -> msg) -> Sub msg

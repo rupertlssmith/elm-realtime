@@ -97,11 +97,11 @@ processRoute protocol route component =
     case ( Request.method route.request, route.route, model ) |> Debug.log "processRoute" of
         ( GET, ChannelRoot, ModelReady state ) ->
             U2.pure component
-                |> U2.andMap (createChannel protocol route.route state)
+                |> U2.andMap (createChannel protocol state)
 
         ( POST, ChannelRoot, ModelReady state ) ->
             U2.pure component
-                |> U2.andMap (createChannel protocol route.route state)
+                |> U2.andMap (createChannel protocol state)
 
         ( POST, Channel _, ModelReady _ ) ->
             let
@@ -125,8 +125,8 @@ processRoute protocol route component =
     * Return a confirmation that everything has been set up.
 
 -}
-createChannel : Protocol (Component a) msg model -> Route -> ReadyState -> Component a -> ( model, Cmd msg )
-createChannel protocol route state component =
+createChannel : Protocol (Component a) msg model -> ReadyState -> Component a -> ( model, Cmd msg )
+createChannel protocol state component =
     let
         _ =
             Debug.log "createChannel" channelName
