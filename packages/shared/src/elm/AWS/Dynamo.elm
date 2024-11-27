@@ -4,7 +4,7 @@ module AWS.Dynamo exposing
     , Put, put
     , Get, get
     , Delete, delete
-    , Error, errorToString, errorToJson
+    , Error, errorToString, errorToDetails
     , Query, Order(..), query, queryIndex, partitionKeyEquals, limitResults, orderResults
     , rangeKeyEquals, rangeKeyLessThan, rangeKeyLessThanOrEqual, rangeKeyGreaterThan
     , rangeKeyGreaterThanOrEqual, rangeKeyBetween
@@ -35,7 +35,7 @@ module AWS.Dynamo exposing
 
 # Error reporting
 
-@docs Error, errorToString, errorToJson
+@docs Error, errorToString, errorToDetails
 
 
 # Database Queries
@@ -110,19 +110,18 @@ errorToString err =
             val
 
 
-errorToJson : Error -> Value
-errorToJson err =
+errorToDetails : Error -> { message : String, details : Value }
+errorToDetails err =
     case err of
         Error { message, details } ->
-            [ ( "message", Encode.string message )
-            , ( "details", details )
-            ]
-                |> Encode.object
+            { message = message
+            , details = details
+            }
 
         DecodeError message ->
-            [ ( "message", Encode.string message )
-            ]
-                |> Encode.object
+            { message = message
+            , details = Encode.null
+            }
 
 
 errorDecoder : Decoder (Result Error a)

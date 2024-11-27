@@ -12,7 +12,7 @@ module Momento exposing
     , momentoApi
     )
 
-import Json.Encode exposing (Value)
+import Json.Encode as Encode exposing (Value)
 import Procedure
 import Procedure.Channel as Channel
 import Procedure.Program
@@ -85,6 +85,13 @@ type Error
 errorToString : Error -> String
 errorToString _ =
     "Momento Error"
+
+
+errorToDetails : Error -> { message : String, details : Value }
+errorToDetails _ =
+    { message = "Momento Error"
+    , details = Encode.null
+    }
 
 
 
