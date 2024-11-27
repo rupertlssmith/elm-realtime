@@ -2933,8 +2933,8 @@ var $elm$core$Result$isOk = function (result) {
 };
 var $elm$json$Json$Decode$andThen = _Json_andThen;
 var $elm$json$Json$Decode$field = _Json_decodeField;
-var $author$project$API$ApiMsg = function (a) {
-	return {$: 'ApiMsg', a: a};
+var $elm$core$Basics$identity = function (x) {
+	return x;
 };
 var $author$project$API$EventLogMsg = function (a) {
 	return {$: 'EventLogMsg', a: a};
@@ -2971,9 +2971,6 @@ var $the_sett$elm_update_helper$Update2$pure = function (model) {
 };
 var $author$project$EventLog$Component$RandomSeed = function (a) {
 	return {$: 'RandomSeed', a: a};
-};
-var $elm$core$Basics$identity = function (x) {
-	return x;
 };
 var $elm$random$Random$Generate = function (a) {
 	return {$: 'Generate', a: a};
@@ -3186,148 +3183,274 @@ var $author$project$EventLog$Component$init = function (toMsg) {
 				$the_sett$elm_update_helper$Update2$pure(
 					{}))));
 };
-var $author$project$Server$API$init = function (toMsg) {
-	return A2(
-		$elm$core$Tuple$mapSecond,
-		$elm$core$Platform$Cmd$map(toMsg),
-		$the_sett$elm_update_helper$Update2$pure(
-			{}));
-};
 var $author$project$API$init = function (flags) {
 	var _v0 = $author$project$EventLog$Component$init($author$project$API$EventLogMsg);
 	var eventLogMdl = _v0.a;
 	var eventLogCmds = _v0.b;
-	var _v1 = $author$project$Server$API$init($author$project$API$ApiMsg);
-	var apiMdl = _v1.a;
-	var apiCmds = _v1.b;
 	return _Utils_Tuple2(
-		{api: apiMdl, channelApiUrl: flags.channelApiUrl, eventLog: eventLogMdl, momentoApiKey: flags.momentoSecret.apiKey},
+		{channelApiUrl: flags.channelApiUrl, eventLog: eventLogMdl, momentoApiKey: flags.momentoSecret.apiKey},
 		$elm$core$Platform$Cmd$batch(
 			_List_fromArray(
-				[apiCmds, eventLogCmds])));
+				[eventLogCmds])));
 };
 var $elm$json$Json$Decode$string = _Json_decodeString;
-var $elm$json$Json$Decode$succeed = _Json_succeed;
-var $elm$json$Json$Decode$value = _Json_decodeValue;
-var $author$project$Ports$requestPort = _Platform_incomingPort(
-	'requestPort',
-	A2(
-		$elm$json$Json$Decode$andThen,
-		function (session) {
-			return A2(
-				$elm$json$Json$Decode$andThen,
-				function (req) {
-					return $elm$json$Json$Decode$succeed(
-						{req: req, session: session});
-				},
-				A2($elm$json$Json$Decode$field, 'req', $elm$json$Json$Decode$value));
-		},
-		A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value)));
-var $elm$json$Json$Encode$object = function (pairs) {
-	return _Json_wrap(
-		A3(
-			$elm$core$List$foldl,
-			F2(
-				function (_v0, obj) {
-					var k = _v0.a;
-					var v = _v0.b;
-					return A3(_Json_addField, k, v, obj);
-				}),
-			_Json_emptyObject(_Utils_Tuple0),
-			pairs));
-};
-var $author$project$Ports$responsePort = _Platform_outgoingPort(
-	'responsePort',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'res',
-					$elm$core$Basics$identity($.res)),
-					_Utils_Tuple2(
-					'session',
-					$elm$core$Basics$identity($.session))
-				]));
-	});
-var $author$project$API$apiPorts = {request: $author$project$Ports$requestPort, response: $author$project$Ports$responsePort};
-var $the_sett$elm_update_helper$Update2$andThen = F2(
-	function (fn, _v0) {
-		var model = _v0.a;
-		var cmd = _v0.b;
-		var _v1 = fn(model);
-		var nextModel = _v1.a;
-		var nextCmd = _v1.b;
-		return _Utils_Tuple2(
-			nextModel,
-			$elm$core$Platform$Cmd$batch(
-				_List_fromArray(
-					[cmd, nextCmd])));
-	});
+var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $author$project$API$eventLogProtocol = {onUpdate: $elm$core$Basics$identity, toMsg: $author$project$API$EventLogMsg};
-var $elm$json$Json$Decode$decodeString = _Json_runOnString;
-var $elm$core$Result$mapError = F2(
-	function (f, result) {
-		if (result.$ === 'Ok') {
-			var v = result.a;
-			return $elm$core$Result$Ok(v);
+var $author$project$EventLog$Component$HttpRequest = F2(
+	function (a, b) {
+		return {$: 'HttpRequest', a: a, b: b};
+	});
+var $author$project$Server$API$Error = function (a) {
+	return {$: 'Error', a: a};
+};
+var $author$project$Server$API$HttpSessionKey = function (a) {
+	return {$: 'HttpSessionKey', a: a};
+};
+var $elm$core$Maybe$andThen = F2(
+	function (callback, maybeValue) {
+		if (maybeValue.$ === 'Just') {
+			var value = maybeValue.a;
+			return callback(value);
 		} else {
-			var e = result.a;
-			return $elm$core$Result$Err(
-				f(e));
+			return $elm$core$Maybe$Nothing;
 		}
 	});
-var $elm$json$Json$Encode$null = _Json_encodeNull;
-var $author$project$Serverless$Conn$Body$asJson = function (body) {
-	switch (body.$) {
-		case 'Empty':
-			return $elm$core$Result$Ok($elm$json$Json$Encode$null);
-		case 'Error':
-			var err = body.a;
-			return $elm$core$Result$Err(err);
-		case 'Text':
-			var val = body.a;
-			return A2(
-				$elm$core$Result$mapError,
-				$elm$json$Json$Decode$errorToString,
-				A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, val));
-		case 'Json':
-			var val = body.a;
-			return $elm$core$Result$Ok(val);
-		default:
-			var val = body.b;
-			return A2(
-				$elm$core$Result$mapError,
-				$elm$json$Json$Decode$errorToString,
-				A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, val));
-	}
+var $elm$core$Result$andThen = F2(
+	function (callback, result) {
+		if (result.$ === 'Ok') {
+			var value = result.a;
+			return callback(value);
+		} else {
+			var msg = result.a;
+			return $elm$core$Result$Err(msg);
+		}
+	});
+var $elm$json$Json$Decode$decodeValue = _Json_run;
+var $author$project$Serverless$Conn$Request$HeadersOnly = function (headers) {
+	return {headers: headers};
 };
-var $author$project$Serverless$Conn$Request$body = function (_v0) {
-	var request = _v0.a;
-	return request.body;
-};
-var $author$project$EventLog$Component$CreateChannelResponse = function (a) {
-	return {$: 'CreateChannelResponse', a: a};
-};
-var $author$project$EventLog$Component$ModelReady = function (a) {
-	return {$: 'ModelReady', a: a};
-};
-var $author$project$EventLog$Component$ProcedureMsg = function (a) {
-	return {$: 'ProcedureMsg', a: a};
+var $author$project$Serverless$Conn$Request$Request = function (a) {
+	return {$: 'Request', a: a};
 };
 var $elm$core$Basics$composeL = F3(
 	function (g, f, x) {
 		return g(
 			f(x));
 	});
-var $elm$core$Task$fail = _Scheduler_fail;
-var $brian_watkins$elm_procedure$Procedure$Internal$Procedure = function (a) {
-	return {$: 'Procedure', a: a};
+var $elm$json$Json$Decode$keyValuePairs = _Json_decodeKeyValuePairs;
+var $elm$json$Json$Decode$map = _Json_map1;
+var $elm$json$Json$Decode$null = _Json_decodeNull;
+var $elm$json$Json$Decode$oneOf = _Json_oneOf;
+var $elm$json$Json$Decode$nullable = function (decoder) {
+	return $elm$json$Json$Decode$oneOf(
+		_List_fromArray(
+			[
+				$elm$json$Json$Decode$null($elm$core$Maybe$Nothing),
+				A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, decoder)
+			]));
 };
-var $elm$core$Task$Perform = function (a) {
-	return {$: 'Perform', a: a};
+var $elm$json$Json$Decode$succeed = _Json_succeed;
+var $author$project$Serverless$Conn$KeyValueList$decoder = A2(
+	$elm$json$Json$Decode$andThen,
+	function (maybeParams) {
+		if (maybeParams.$ === 'Just') {
+			var params = maybeParams.a;
+			return $elm$json$Json$Decode$succeed(params);
+		} else {
+			return $elm$json$Json$Decode$succeed(_List_Nil);
+		}
+	},
+	$elm$json$Json$Decode$nullable(
+		$elm$json$Json$Decode$keyValuePairs($elm$json$Json$Decode$string)));
+var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
+var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
+var $elm$core$Dict$Black = {$: 'Black'};
+var $elm$core$Dict$RBNode_elm_builtin = F5(
+	function (a, b, c, d, e) {
+		return {$: 'RBNode_elm_builtin', a: a, b: b, c: c, d: d, e: e};
+	});
+var $elm$core$Dict$Red = {$: 'Red'};
+var $elm$core$Dict$balance = F5(
+	function (color, key, value, left, right) {
+		if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Red')) {
+			var _v1 = right.a;
+			var rK = right.b;
+			var rV = right.c;
+			var rLeft = right.d;
+			var rRight = right.e;
+			if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
+				var _v3 = left.a;
+				var lK = left.b;
+				var lV = left.c;
+				var lLeft = left.d;
+				var lRight = left.e;
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Red,
+					key,
+					value,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, rK, rV, rLeft, rRight));
+			} else {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					color,
+					rK,
+					rV,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, left, rLeft),
+					rRight);
+			}
+		} else {
+			if ((((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) && (left.d.$ === 'RBNode_elm_builtin')) && (left.d.a.$ === 'Red')) {
+				var _v5 = left.a;
+				var lK = left.b;
+				var lV = left.c;
+				var _v6 = left.d;
+				var _v7 = _v6.a;
+				var llK = _v6.b;
+				var llV = _v6.c;
+				var llLeft = _v6.d;
+				var llRight = _v6.e;
+				var lRight = left.e;
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Red,
+					lK,
+					lV,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, llK, llV, llLeft, llRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, key, value, lRight, right));
+			} else {
+				return A5($elm$core$Dict$RBNode_elm_builtin, color, key, value, left, right);
+			}
+		}
+	});
+var $elm$core$Basics$compare = _Utils_compare;
+var $elm$core$Dict$insertHelp = F3(
+	function (key, value, dict) {
+		if (dict.$ === 'RBEmpty_elm_builtin') {
+			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, $elm$core$Dict$RBEmpty_elm_builtin, $elm$core$Dict$RBEmpty_elm_builtin);
+		} else {
+			var nColor = dict.a;
+			var nKey = dict.b;
+			var nValue = dict.c;
+			var nLeft = dict.d;
+			var nRight = dict.e;
+			var _v1 = A2($elm$core$Basics$compare, key, nKey);
+			switch (_v1.$) {
+				case 'LT':
+					return A5(
+						$elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						A3($elm$core$Dict$insertHelp, key, value, nLeft),
+						nRight);
+				case 'EQ':
+					return A5($elm$core$Dict$RBNode_elm_builtin, nColor, nKey, value, nLeft, nRight);
+				default:
+					return A5(
+						$elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						nLeft,
+						A3($elm$core$Dict$insertHelp, key, value, nRight));
+			}
+		}
+	});
+var $elm$core$Dict$insert = F3(
+	function (key, value, dict) {
+		var _v0 = A3($elm$core$Dict$insertHelp, key, value, dict);
+		if ((_v0.$ === 'RBNode_elm_builtin') && (_v0.a.$ === 'Red')) {
+			var _v1 = _v0.a;
+			var k = _v0.b;
+			var v = _v0.c;
+			var l = _v0.d;
+			var r = _v0.e;
+			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, k, v, l, r);
+		} else {
+			var x = _v0;
+			return x;
+		}
+	});
+var $elm$core$Dict$fromList = function (assocs) {
+	return A3(
+		$elm$core$List$foldl,
+		F2(
+			function (_v0, dict) {
+				var key = _v0.a;
+				var value = _v0.b;
+				return A3($elm$core$Dict$insert, key, value, dict);
+			}),
+		$elm$core$Dict$empty,
+		assocs);
 };
-var $elm$core$Task$init = $elm$core$Task$succeed(_Utils_Tuple0);
+var $author$project$Serverless$Conn$Body$Empty = {$: 'Empty'};
+var $author$project$Serverless$Conn$Body$Error = function (a) {
+	return {$: 'Error', a: a};
+};
+var $author$project$Serverless$Conn$Body$Json = function (a) {
+	return {$: 'Json', a: a};
+};
+var $author$project$Serverless$Conn$Body$Text = function (a) {
+	return {$: 'Text', a: a};
+};
+var $elm$json$Json$Decode$decodeString = _Json_runOnString;
+var $elm$json$Json$Decode$maybe = function (decoder) {
+	return $elm$json$Json$Decode$oneOf(
+		_List_fromArray(
+			[
+				A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, decoder),
+				$elm$json$Json$Decode$succeed($elm$core$Maybe$Nothing)
+			]));
+};
+var $elm$core$String$startsWith = _String_startsWith;
+var $elm$json$Json$Decode$value = _Json_decodeValue;
+var $elm$core$Maybe$withDefault = F2(
+	function (_default, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return value;
+		} else {
+			return _default;
+		}
+	});
+var $author$project$Serverless$Conn$Body$decoder = function (maybeType) {
+	return A2(
+		$elm$json$Json$Decode$andThen,
+		function (maybeString) {
+			if (maybeString.$ === 'Just') {
+				var w = maybeString.a;
+				if (A2(
+					$elm$core$String$startsWith,
+					'application/json',
+					A2($elm$core$Maybe$withDefault, '', maybeType))) {
+					var _v1 = A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, w);
+					if (_v1.$ === 'Ok') {
+						var val = _v1.a;
+						return $elm$json$Json$Decode$succeed(
+							$author$project$Serverless$Conn$Body$Json(val));
+					} else {
+						var err = _v1.a;
+						return $elm$json$Json$Decode$succeed(
+							$author$project$Serverless$Conn$Body$Error(
+								$elm$json$Json$Decode$errorToString(err)));
+					}
+				} else {
+					return $elm$json$Json$Decode$succeed(
+						$author$project$Serverless$Conn$Body$Text(w));
+				}
+			} else {
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Body$Empty);
+			}
+		},
+		$elm$json$Json$Decode$maybe($elm$json$Json$Decode$string));
+};
+var $author$project$Serverless$Conn$IpAddress$Ip4 = F4(
+	function (a, b, c, d) {
+		return {$: 'Ip4', a: a, b: b, c: c, d: d};
+	});
+var $elm$json$Json$Decode$fail = _Json_fail;
 var $elm$core$List$foldrHelper = F4(
 	function (fn, acc, ctr, ls) {
 		if (!ls.b) {
@@ -3397,6 +3520,1392 @@ var $elm$core$List$map = F2(
 			_List_Nil,
 			xs);
 	});
+var $elm$core$Basics$ge = _Utils_ge;
+var $elm$core$String$toInt = _String_toInt;
+var $author$project$Serverless$Conn$IpAddress$toNonNegativeInt = function (val) {
+	return A2(
+		$elm$core$Maybe$andThen,
+		function (i) {
+			return (i >= 0) ? $elm$core$Maybe$Just(i) : $elm$core$Maybe$Nothing;
+		},
+		$elm$core$String$toInt(val));
+};
+var $author$project$Serverless$Conn$IpAddress$decoder = A2(
+	$elm$json$Json$Decode$andThen,
+	function (w) {
+		var list = A2(
+			$elm$core$List$map,
+			$author$project$Serverless$Conn$IpAddress$toNonNegativeInt,
+			A2($elm$core$String$split, '.', w));
+		if ((((((((list.b && (list.a.$ === 'Just')) && list.b.b) && (list.b.a.$ === 'Just')) && list.b.b.b) && (list.b.b.a.$ === 'Just')) && list.b.b.b.b) && (list.b.b.b.a.$ === 'Just')) && (!list.b.b.b.b.b)) {
+			var a = list.a.a;
+			var _v1 = list.b;
+			var b = _v1.a.a;
+			var _v2 = _v1.b;
+			var c = _v2.a.a;
+			var _v3 = _v2.b;
+			var d = _v3.a.a;
+			return $elm$json$Json$Decode$succeed(
+				A4($author$project$Serverless$Conn$IpAddress$Ip4, a, b, c, d));
+		} else {
+			return $elm$json$Json$Decode$fail('Unsupported IP address: ' + w);
+		}
+	},
+	$elm$json$Json$Decode$string);
+var $elm$core$Dict$get = F2(
+	function (targetKey, dict) {
+		get:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var _v1 = A2($elm$core$Basics$compare, targetKey, key);
+				switch (_v1.$) {
+					case 'LT':
+						var $temp$targetKey = targetKey,
+							$temp$dict = left;
+						targetKey = $temp$targetKey;
+						dict = $temp$dict;
+						continue get;
+					case 'EQ':
+						return $elm$core$Maybe$Just(value);
+					default:
+						var $temp$targetKey = targetKey,
+							$temp$dict = right;
+						targetKey = $temp$targetKey;
+						dict = $temp$dict;
+						continue get;
+				}
+			}
+		}
+	});
+var $elm$core$Basics$composeR = F3(
+	function (f, g, x) {
+		return g(
+			f(x));
+	});
+var $elm$json$Json$Decode$map2 = _Json_map2;
+var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
+var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$hardcoded = A2($elm$core$Basics$composeR, $elm$json$Json$Decode$succeed, $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom);
+var $elm$json$Json$Decode$int = _Json_decodeInt;
+var $author$project$Serverless$Conn$Request$CONNECT = {$: 'CONNECT'};
+var $author$project$Serverless$Conn$Request$DELETE = {$: 'DELETE'};
+var $author$project$Serverless$Conn$Request$GET = {$: 'GET'};
+var $author$project$Serverless$Conn$Request$HEAD = {$: 'HEAD'};
+var $author$project$Serverless$Conn$Request$OPTIONS = {$: 'OPTIONS'};
+var $author$project$Serverless$Conn$Request$PATCH = {$: 'PATCH'};
+var $author$project$Serverless$Conn$Request$POST = {$: 'POST'};
+var $author$project$Serverless$Conn$Request$PUT = {$: 'PUT'};
+var $author$project$Serverless$Conn$Request$TRACE = {$: 'TRACE'};
+var $elm$core$String$toLower = _String_toLower;
+var $author$project$Serverless$Conn$Request$methodDecoder = A2(
+	$elm$json$Json$Decode$andThen,
+	function (w) {
+		var _v0 = $elm$core$String$toLower(w);
+		switch (_v0) {
+			case 'connect':
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$CONNECT);
+			case 'delete':
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$DELETE);
+			case 'get':
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$GET);
+			case 'head':
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$HEAD);
+			case 'options':
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$OPTIONS);
+			case 'patch':
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$PATCH);
+			case 'post':
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$POST);
+			case 'put':
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$PUT);
+			case 'trace':
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$TRACE);
+			default:
+				return $elm$json$Json$Decode$fail('Unsupported method: ' + w);
+		}
+	},
+	$elm$json$Json$Decode$string);
+var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required = F3(
+	function (key, valDecoder, decoder) {
+		return A2(
+			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom,
+			A2($elm$json$Json$Decode$field, key, valDecoder),
+			decoder);
+	});
+var $author$project$Serverless$Conn$Request$Http = {$: 'Http'};
+var $author$project$Serverless$Conn$Request$Https = {$: 'Https'};
+var $author$project$Serverless$Conn$Request$schemeDecoder = A2(
+	$elm$json$Json$Decode$andThen,
+	function (w) {
+		var _v0 = $elm$core$String$toLower(w);
+		switch (_v0) {
+			case 'http':
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$Http);
+			case 'https':
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$Https);
+			default:
+				return $elm$json$Json$Decode$fail('Unsupported scheme: ' + w);
+		}
+	},
+	$elm$json$Json$Decode$string);
+var $author$project$Serverless$Conn$Request$schemeToString = function (scheme) {
+	if (scheme.$ === 'Http') {
+		return 'http:';
+	} else {
+		return 'https:';
+	}
+};
+var $author$project$Serverless$Conn$Request$modelDecoder = function (_v0) {
+	var headers = _v0.headers;
+	return A3(
+		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+		'queryString',
+		$elm$json$Json$Decode$string,
+		A3(
+			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+			'queryParams',
+			A2($elm$json$Json$Decode$map, $elm$core$Dict$fromList, $author$project$Serverless$Conn$KeyValueList$decoder),
+			A3(
+				$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+				'stage',
+				$elm$json$Json$Decode$string,
+				A3(
+					$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+					'scheme',
+					$author$project$Serverless$Conn$Request$schemeDecoder,
+					A3(
+						$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+						'remoteIp',
+						$author$project$Serverless$Conn$IpAddress$decoder,
+						A3(
+							$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+							'port',
+							$elm$json$Json$Decode$int,
+							A3(
+								$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+								'path',
+								$elm$json$Json$Decode$string,
+								A3(
+									$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+									'method',
+									$author$project$Serverless$Conn$Request$methodDecoder,
+									A3(
+										$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+										'host',
+										$elm$json$Json$Decode$string,
+										A2(
+											$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$hardcoded,
+											headers,
+											A3(
+												$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+												'body',
+												$author$project$Serverless$Conn$Body$decoder(
+													A2($elm$core$Dict$get, 'content-type', headers)),
+												$elm$json$Json$Decode$succeed(
+													function (bodyVal) {
+														return function (headersVal) {
+															return function (hostVal) {
+																return function (methodVal) {
+																	return function (pathVal) {
+																		return function (portVal) {
+																			return function (remoteIpVal) {
+																				return function (schemeVal) {
+																					return function (stageVal) {
+																						return function (queryParamsVal) {
+																							return function (queryStringVal) {
+																								return {
+																									body: bodyVal,
+																									headers: headersVal,
+																									host: hostVal,
+																									method: methodVal,
+																									path: pathVal,
+																									port_: portVal,
+																									queryParams: queryParamsVal,
+																									queryString: queryStringVal,
+																									remoteIp: remoteIpVal,
+																									scheme: schemeVal,
+																									stage: stageVal,
+																									url: $author$project$Serverless$Conn$Request$schemeToString(schemeVal) + ('//' + (hostVal + (':' + ($elm$core$String$fromInt(portVal) + (pathVal + queryStringVal)))))
+																								};
+																							};
+																						};
+																					};
+																				};
+																			};
+																		};
+																	};
+																};
+															};
+														};
+													}))))))))))));
+};
+var $author$project$Serverless$Conn$Request$decoder = A2(
+	$elm$json$Json$Decode$andThen,
+	A2(
+		$elm$core$Basics$composeL,
+		$elm$json$Json$Decode$map($author$project$Serverless$Conn$Request$Request),
+		$author$project$Serverless$Conn$Request$modelDecoder),
+	A3(
+		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+		'headers',
+		A2($elm$json$Json$Decode$map, $elm$core$Dict$fromList, $author$project$Serverless$Conn$KeyValueList$decoder),
+		$elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$HeadersOnly)));
+var $elm$url$Url$Http = {$: 'Http'};
+var $elm$url$Url$Https = {$: 'Https'};
+var $elm$url$Url$Url = F6(
+	function (protocol, host, port_, path, query, fragment) {
+		return {fragment: fragment, host: host, path: path, port_: port_, protocol: protocol, query: query};
+	});
+var $elm$core$String$contains = _String_contains;
+var $elm$core$String$length = _String_length;
+var $elm$core$String$slice = _String_slice;
+var $elm$core$String$dropLeft = F2(
+	function (n, string) {
+		return (n < 1) ? string : A3(
+			$elm$core$String$slice,
+			n,
+			$elm$core$String$length(string),
+			string);
+	});
+var $elm$core$String$indexes = _String_indexes;
+var $elm$core$String$isEmpty = function (string) {
+	return string === '';
+};
+var $elm$core$String$left = F2(
+	function (n, string) {
+		return (n < 1) ? '' : A3($elm$core$String$slice, 0, n, string);
+	});
+var $elm$url$Url$chompBeforePath = F5(
+	function (protocol, path, params, frag, str) {
+		if ($elm$core$String$isEmpty(str) || A2($elm$core$String$contains, '@', str)) {
+			return $elm$core$Maybe$Nothing;
+		} else {
+			var _v0 = A2($elm$core$String$indexes, ':', str);
+			if (!_v0.b) {
+				return $elm$core$Maybe$Just(
+					A6($elm$url$Url$Url, protocol, str, $elm$core$Maybe$Nothing, path, params, frag));
+			} else {
+				if (!_v0.b.b) {
+					var i = _v0.a;
+					var _v1 = $elm$core$String$toInt(
+						A2($elm$core$String$dropLeft, i + 1, str));
+					if (_v1.$ === 'Nothing') {
+						return $elm$core$Maybe$Nothing;
+					} else {
+						var port_ = _v1;
+						return $elm$core$Maybe$Just(
+							A6(
+								$elm$url$Url$Url,
+								protocol,
+								A2($elm$core$String$left, i, str),
+								port_,
+								path,
+								params,
+								frag));
+					}
+				} else {
+					return $elm$core$Maybe$Nothing;
+				}
+			}
+		}
+	});
+var $elm$url$Url$chompBeforeQuery = F4(
+	function (protocol, params, frag, str) {
+		if ($elm$core$String$isEmpty(str)) {
+			return $elm$core$Maybe$Nothing;
+		} else {
+			var _v0 = A2($elm$core$String$indexes, '/', str);
+			if (!_v0.b) {
+				return A5($elm$url$Url$chompBeforePath, protocol, '/', params, frag, str);
+			} else {
+				var i = _v0.a;
+				return A5(
+					$elm$url$Url$chompBeforePath,
+					protocol,
+					A2($elm$core$String$dropLeft, i, str),
+					params,
+					frag,
+					A2($elm$core$String$left, i, str));
+			}
+		}
+	});
+var $elm$url$Url$chompBeforeFragment = F3(
+	function (protocol, frag, str) {
+		if ($elm$core$String$isEmpty(str)) {
+			return $elm$core$Maybe$Nothing;
+		} else {
+			var _v0 = A2($elm$core$String$indexes, '?', str);
+			if (!_v0.b) {
+				return A4($elm$url$Url$chompBeforeQuery, protocol, $elm$core$Maybe$Nothing, frag, str);
+			} else {
+				var i = _v0.a;
+				return A4(
+					$elm$url$Url$chompBeforeQuery,
+					protocol,
+					$elm$core$Maybe$Just(
+						A2($elm$core$String$dropLeft, i + 1, str)),
+					frag,
+					A2($elm$core$String$left, i, str));
+			}
+		}
+	});
+var $elm$url$Url$chompAfterProtocol = F2(
+	function (protocol, str) {
+		if ($elm$core$String$isEmpty(str)) {
+			return $elm$core$Maybe$Nothing;
+		} else {
+			var _v0 = A2($elm$core$String$indexes, '#', str);
+			if (!_v0.b) {
+				return A3($elm$url$Url$chompBeforeFragment, protocol, $elm$core$Maybe$Nothing, str);
+			} else {
+				var i = _v0.a;
+				return A3(
+					$elm$url$Url$chompBeforeFragment,
+					protocol,
+					$elm$core$Maybe$Just(
+						A2($elm$core$String$dropLeft, i + 1, str)),
+					A2($elm$core$String$left, i, str));
+			}
+		}
+	});
+var $elm$url$Url$fromString = function (str) {
+	return A2($elm$core$String$startsWith, 'http://', str) ? A2(
+		$elm$url$Url$chompAfterProtocol,
+		$elm$url$Url$Http,
+		A2($elm$core$String$dropLeft, 7, str)) : (A2($elm$core$String$startsWith, 'https://', str) ? A2(
+		$elm$url$Url$chompAfterProtocol,
+		$elm$url$Url$Https,
+		A2($elm$core$String$dropLeft, 8, str)) : $elm$core$Maybe$Nothing);
+};
+var $elm$core$Result$mapError = F2(
+	function (f, result) {
+		if (result.$ === 'Ok') {
+			var v = result.a;
+			return $elm$core$Result$Ok(v);
+		} else {
+			var e = result.a;
+			return $elm$core$Result$Err(
+				f(e));
+		}
+	});
+var $author$project$Serverless$Conn$Request$url = function (_v0) {
+	var request = _v0.a;
+	return request.url;
+};
+var $author$project$Server$API$decodeRequestAndRoute = F2(
+	function (rawRequest, parseRoute) {
+		return A2(
+			$elm$core$Result$andThen,
+			function (req) {
+				return function (maybeRoute) {
+					if (maybeRoute.$ === 'Nothing') {
+						return $elm$core$Result$Err('No matching route.');
+					} else {
+						var route = maybeRoute.a;
+						return $elm$core$Result$Ok(
+							_Utils_Tuple2(req, route));
+					}
+				}(
+					A2(
+						$elm$core$Maybe$andThen,
+						parseRoute,
+						$elm$url$Url$fromString(
+							$author$project$Serverless$Conn$Request$url(req))));
+			},
+			A2(
+				$elm$core$Result$mapError,
+				$elm$json$Json$Decode$errorToString,
+				A2($elm$json$Json$Decode$decodeValue, $author$project$Serverless$Conn$Request$decoder, rawRequest)));
+	});
+var $elm$core$Platform$Sub$map = _Platform_map;
+var $elm$core$Result$map = F2(
+	function (func, ra) {
+		if (ra.$ === 'Ok') {
+			var a = ra.a;
+			return $elm$core$Result$Ok(
+				func(a));
+		} else {
+			var e = ra.a;
+			return $elm$core$Result$Err(e);
+		}
+	});
+var $author$project$Server$API$requestSub = F2(
+	function (protocol, requestFn) {
+		var fn = function (_v1) {
+			var session = _v1.session;
+			var req = _v1.req;
+			return A2(
+				requestFn,
+				$author$project$Server$API$HttpSessionKey(session),
+				A2(
+					$elm$core$Result$mapError,
+					$author$project$Server$API$Error,
+					A2(
+						$elm$core$Result$map,
+						function (_v0) {
+							var request = _v0.a;
+							var route = _v0.b;
+							return {request: request, route: route};
+						},
+						A2($author$project$Server$API$decodeRequestAndRoute, req, protocol.parseRoute))));
+		};
+		return A2(
+			$elm$core$Platform$Sub$map,
+			$elm$core$Basics$identity,
+			protocol.ports.request(fn));
+	});
+var $elm$json$Json$Encode$bool = _Json_wrap;
+var $author$project$Serverless$Conn$Body$contentType = function (body) {
+	switch (body.$) {
+		case 'Json':
+			return 'application/json';
+		case 'Binary':
+			var binType = body.a;
+			return binType;
+		default:
+			return 'text/text';
+	}
+};
+var $author$project$Serverless$Conn$Charset$toString = function (charset) {
+	return 'utf-8';
+};
+var $author$project$Serverless$Conn$Response$contentType = function (_v0) {
+	var body = _v0.body;
+	var charset = _v0.charset;
+	return $author$project$Serverless$Conn$Body$contentType(body) + ('; charset=' + $author$project$Serverless$Conn$Charset$toString(charset));
+};
+var $elm$json$Json$Encode$null = _Json_encodeNull;
+var $elm$json$Json$Encode$string = _Json_wrap;
+var $author$project$Serverless$Conn$Body$encode = function (body) {
+	switch (body.$) {
+		case 'Empty':
+			return $elm$json$Json$Encode$null;
+		case 'Error':
+			var err = body.a;
+			return $elm$json$Json$Encode$string(err);
+		case 'Text':
+			var w = body.a;
+			return $elm$json$Json$Encode$string(w);
+		case 'Json':
+			var j = body.a;
+			return j;
+		default:
+			var v = body.b;
+			return $elm$json$Json$Encode$string(v);
+	}
+};
+var $elm$json$Json$Encode$object = function (pairs) {
+	return _Json_wrap(
+		A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v0, obj) {
+					var k = _v0.a;
+					var v = _v0.b;
+					return A3(_Json_addField, k, v, obj);
+				}),
+			_Json_emptyObject(_Utils_Tuple0),
+			pairs));
+};
+var $author$project$Serverless$Conn$KeyValueList$encode = function (params) {
+	return $elm$json$Json$Encode$object(
+		A2(
+			$elm$core$List$map,
+			function (_v0) {
+				var a = _v0.a;
+				var b = _v0.b;
+				return _Utils_Tuple2(
+					a,
+					$elm$json$Json$Encode$string(b));
+			},
+			$elm$core$List$reverse(params)));
+};
+var $elm$json$Json$Encode$int = _Json_wrap;
+var $author$project$Serverless$Conn$Body$isBase64Encoded = function (body) {
+	if (body.$ === 'Binary') {
+		return true;
+	} else {
+		return false;
+	}
+};
+var $author$project$Serverless$Conn$Response$encode = function (_v0) {
+	var res = _v0.a;
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'body',
+				$author$project$Serverless$Conn$Body$encode(res.body)),
+				_Utils_Tuple2(
+				'headers',
+				$author$project$Serverless$Conn$KeyValueList$encode(
+					_Utils_ap(
+						res.headers,
+						_List_fromArray(
+							[
+								_Utils_Tuple2(
+								'content-type',
+								$author$project$Serverless$Conn$Response$contentType(res))
+							])))),
+				_Utils_Tuple2(
+				'statusCode',
+				$elm$json$Json$Encode$int(res.status)),
+				_Utils_Tuple2(
+				'isBase64Encoded',
+				$elm$json$Json$Encode$bool(
+					$author$project$Serverless$Conn$Body$isBase64Encoded(res.body)))
+			]));
+};
+var $author$project$Server$API$responseCmd = F3(
+	function (protocol, _v0, response) {
+		var session = _v0.a;
+		return protocol.ports.response(
+			{
+				res: $author$project$Serverless$Conn$Response$encode(response),
+				session: session
+			});
+	});
+var $author$project$Server$API$httpServerApi = function (protocol) {
+	return {
+		request: $author$project$Server$API$requestSub(protocol),
+		response: $author$project$Server$API$responseCmd(protocol)
+	};
+};
+var $author$project$Ports$requestPort = _Platform_incomingPort(
+	'requestPort',
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (session) {
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (req) {
+					return $elm$json$Json$Decode$succeed(
+						{req: req, session: session});
+				},
+				A2($elm$json$Json$Decode$field, 'req', $elm$json$Json$Decode$value));
+		},
+		A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value)));
+var $author$project$Ports$responsePort = _Platform_outgoingPort(
+	'responsePort',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'res',
+					$elm$core$Basics$identity($.res)),
+					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session))
+				]));
+	});
+var $author$project$EventLog$Component$Channel = function (a) {
+	return {$: 'Channel', a: a};
+};
+var $author$project$EventLog$Component$ChannelRoot = {$: 'ChannelRoot'};
+var $elm$core$Debug$log = _Debug_log;
+var $elm$url$Url$Parser$Parser = function (a) {
+	return {$: 'Parser', a: a};
+};
+var $elm$url$Url$Parser$State = F5(
+	function (visited, unvisited, params, frag, value) {
+		return {frag: frag, params: params, unvisited: unvisited, value: value, visited: visited};
+	});
+var $elm$url$Url$Parser$mapState = F2(
+	function (func, _v0) {
+		var visited = _v0.visited;
+		var unvisited = _v0.unvisited;
+		var params = _v0.params;
+		var frag = _v0.frag;
+		var value = _v0.value;
+		return A5(
+			$elm$url$Url$Parser$State,
+			visited,
+			unvisited,
+			params,
+			frag,
+			func(value));
+	});
+var $elm$url$Url$Parser$map = F2(
+	function (subValue, _v0) {
+		var parseArg = _v0.a;
+		return $elm$url$Url$Parser$Parser(
+			function (_v1) {
+				var visited = _v1.visited;
+				var unvisited = _v1.unvisited;
+				var params = _v1.params;
+				var frag = _v1.frag;
+				var value = _v1.value;
+				return A2(
+					$elm$core$List$map,
+					$elm$url$Url$Parser$mapState(value),
+					parseArg(
+						A5($elm$url$Url$Parser$State, visited, unvisited, params, frag, subValue)));
+			});
+	});
+var $elm$core$List$append = F2(
+	function (xs, ys) {
+		if (!ys.b) {
+			return xs;
+		} else {
+			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
+		}
+	});
+var $elm$core$List$concat = function (lists) {
+	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
+};
+var $elm$core$List$concatMap = F2(
+	function (f, list) {
+		return $elm$core$List$concat(
+			A2($elm$core$List$map, f, list));
+	});
+var $elm$url$Url$Parser$oneOf = function (parsers) {
+	return $elm$url$Url$Parser$Parser(
+		function (state) {
+			return A2(
+				$elm$core$List$concatMap,
+				function (_v0) {
+					var parser = _v0.a;
+					return parser(state);
+				},
+				parsers);
+		});
+};
+var $elm$url$Url$Parser$getFirstMatch = function (states) {
+	getFirstMatch:
+	while (true) {
+		if (!states.b) {
+			return $elm$core$Maybe$Nothing;
+		} else {
+			var state = states.a;
+			var rest = states.b;
+			var _v1 = state.unvisited;
+			if (!_v1.b) {
+				return $elm$core$Maybe$Just(state.value);
+			} else {
+				if ((_v1.a === '') && (!_v1.b.b)) {
+					return $elm$core$Maybe$Just(state.value);
+				} else {
+					var $temp$states = rest;
+					states = $temp$states;
+					continue getFirstMatch;
+				}
+			}
+		}
+	}
+};
+var $elm$url$Url$Parser$removeFinalEmpty = function (segments) {
+	if (!segments.b) {
+		return _List_Nil;
+	} else {
+		if ((segments.a === '') && (!segments.b.b)) {
+			return _List_Nil;
+		} else {
+			var segment = segments.a;
+			var rest = segments.b;
+			return A2(
+				$elm$core$List$cons,
+				segment,
+				$elm$url$Url$Parser$removeFinalEmpty(rest));
+		}
+	}
+};
+var $elm$url$Url$Parser$preparePath = function (path) {
+	var _v0 = A2($elm$core$String$split, '/', path);
+	if (_v0.b && (_v0.a === '')) {
+		var segments = _v0.b;
+		return $elm$url$Url$Parser$removeFinalEmpty(segments);
+	} else {
+		var segments = _v0;
+		return $elm$url$Url$Parser$removeFinalEmpty(segments);
+	}
+};
+var $elm$url$Url$Parser$addToParametersHelp = F2(
+	function (value, maybeList) {
+		if (maybeList.$ === 'Nothing') {
+			return $elm$core$Maybe$Just(
+				_List_fromArray(
+					[value]));
+		} else {
+			var list = maybeList.a;
+			return $elm$core$Maybe$Just(
+				A2($elm$core$List$cons, value, list));
+		}
+	});
+var $elm$url$Url$percentDecode = _Url_percentDecode;
+var $elm$core$Dict$getMin = function (dict) {
+	getMin:
+	while (true) {
+		if ((dict.$ === 'RBNode_elm_builtin') && (dict.d.$ === 'RBNode_elm_builtin')) {
+			var left = dict.d;
+			var $temp$dict = left;
+			dict = $temp$dict;
+			continue getMin;
+		} else {
+			return dict;
+		}
+	}
+};
+var $elm$core$Dict$moveRedLeft = function (dict) {
+	if (((dict.$ === 'RBNode_elm_builtin') && (dict.d.$ === 'RBNode_elm_builtin')) && (dict.e.$ === 'RBNode_elm_builtin')) {
+		if ((dict.e.d.$ === 'RBNode_elm_builtin') && (dict.e.d.a.$ === 'Red')) {
+			var clr = dict.a;
+			var k = dict.b;
+			var v = dict.c;
+			var _v1 = dict.d;
+			var lClr = _v1.a;
+			var lK = _v1.b;
+			var lV = _v1.c;
+			var lLeft = _v1.d;
+			var lRight = _v1.e;
+			var _v2 = dict.e;
+			var rClr = _v2.a;
+			var rK = _v2.b;
+			var rV = _v2.c;
+			var rLeft = _v2.d;
+			var _v3 = rLeft.a;
+			var rlK = rLeft.b;
+			var rlV = rLeft.c;
+			var rlL = rLeft.d;
+			var rlR = rLeft.e;
+			var rRight = _v2.e;
+			return A5(
+				$elm$core$Dict$RBNode_elm_builtin,
+				$elm$core$Dict$Red,
+				rlK,
+				rlV,
+				A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
+					rlL),
+				A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, rK, rV, rlR, rRight));
+		} else {
+			var clr = dict.a;
+			var k = dict.b;
+			var v = dict.c;
+			var _v4 = dict.d;
+			var lClr = _v4.a;
+			var lK = _v4.b;
+			var lV = _v4.c;
+			var lLeft = _v4.d;
+			var lRight = _v4.e;
+			var _v5 = dict.e;
+			var rClr = _v5.a;
+			var rK = _v5.b;
+			var rV = _v5.c;
+			var rLeft = _v5.d;
+			var rRight = _v5.e;
+			if (clr.$ === 'Black') {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight));
+			} else {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight));
+			}
+		}
+	} else {
+		return dict;
+	}
+};
+var $elm$core$Dict$moveRedRight = function (dict) {
+	if (((dict.$ === 'RBNode_elm_builtin') && (dict.d.$ === 'RBNode_elm_builtin')) && (dict.e.$ === 'RBNode_elm_builtin')) {
+		if ((dict.d.d.$ === 'RBNode_elm_builtin') && (dict.d.d.a.$ === 'Red')) {
+			var clr = dict.a;
+			var k = dict.b;
+			var v = dict.c;
+			var _v1 = dict.d;
+			var lClr = _v1.a;
+			var lK = _v1.b;
+			var lV = _v1.c;
+			var _v2 = _v1.d;
+			var _v3 = _v2.a;
+			var llK = _v2.b;
+			var llV = _v2.c;
+			var llLeft = _v2.d;
+			var llRight = _v2.e;
+			var lRight = _v1.e;
+			var _v4 = dict.e;
+			var rClr = _v4.a;
+			var rK = _v4.b;
+			var rV = _v4.c;
+			var rLeft = _v4.d;
+			var rRight = _v4.e;
+			return A5(
+				$elm$core$Dict$RBNode_elm_builtin,
+				$elm$core$Dict$Red,
+				lK,
+				lV,
+				A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, llK, llV, llLeft, llRight),
+				A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					lRight,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight)));
+		} else {
+			var clr = dict.a;
+			var k = dict.b;
+			var v = dict.c;
+			var _v5 = dict.d;
+			var lClr = _v5.a;
+			var lK = _v5.b;
+			var lV = _v5.c;
+			var lLeft = _v5.d;
+			var lRight = _v5.e;
+			var _v6 = dict.e;
+			var rClr = _v6.a;
+			var rK = _v6.b;
+			var rV = _v6.c;
+			var rLeft = _v6.d;
+			var rRight = _v6.e;
+			if (clr.$ === 'Black') {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight));
+			} else {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight));
+			}
+		}
+	} else {
+		return dict;
+	}
+};
+var $elm$core$Dict$removeHelpPrepEQGT = F7(
+	function (targetKey, dict, color, key, value, left, right) {
+		if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
+			var _v1 = left.a;
+			var lK = left.b;
+			var lV = left.c;
+			var lLeft = left.d;
+			var lRight = left.e;
+			return A5(
+				$elm$core$Dict$RBNode_elm_builtin,
+				color,
+				lK,
+				lV,
+				lLeft,
+				A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, lRight, right));
+		} else {
+			_v2$2:
+			while (true) {
+				if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Black')) {
+					if (right.d.$ === 'RBNode_elm_builtin') {
+						if (right.d.a.$ === 'Black') {
+							var _v3 = right.a;
+							var _v4 = right.d;
+							var _v5 = _v4.a;
+							return $elm$core$Dict$moveRedRight(dict);
+						} else {
+							break _v2$2;
+						}
+					} else {
+						var _v6 = right.a;
+						var _v7 = right.d;
+						return $elm$core$Dict$moveRedRight(dict);
+					}
+				} else {
+					break _v2$2;
+				}
+			}
+			return dict;
+		}
+	});
+var $elm$core$Dict$removeMin = function (dict) {
+	if ((dict.$ === 'RBNode_elm_builtin') && (dict.d.$ === 'RBNode_elm_builtin')) {
+		var color = dict.a;
+		var key = dict.b;
+		var value = dict.c;
+		var left = dict.d;
+		var lColor = left.a;
+		var lLeft = left.d;
+		var right = dict.e;
+		if (lColor.$ === 'Black') {
+			if ((lLeft.$ === 'RBNode_elm_builtin') && (lLeft.a.$ === 'Red')) {
+				var _v3 = lLeft.a;
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					color,
+					key,
+					value,
+					$elm$core$Dict$removeMin(left),
+					right);
+			} else {
+				var _v4 = $elm$core$Dict$moveRedLeft(dict);
+				if (_v4.$ === 'RBNode_elm_builtin') {
+					var nColor = _v4.a;
+					var nKey = _v4.b;
+					var nValue = _v4.c;
+					var nLeft = _v4.d;
+					var nRight = _v4.e;
+					return A5(
+						$elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						$elm$core$Dict$removeMin(nLeft),
+						nRight);
+				} else {
+					return $elm$core$Dict$RBEmpty_elm_builtin;
+				}
+			}
+		} else {
+			return A5(
+				$elm$core$Dict$RBNode_elm_builtin,
+				color,
+				key,
+				value,
+				$elm$core$Dict$removeMin(left),
+				right);
+		}
+	} else {
+		return $elm$core$Dict$RBEmpty_elm_builtin;
+	}
+};
+var $elm$core$Dict$removeHelp = F2(
+	function (targetKey, dict) {
+		if (dict.$ === 'RBEmpty_elm_builtin') {
+			return $elm$core$Dict$RBEmpty_elm_builtin;
+		} else {
+			var color = dict.a;
+			var key = dict.b;
+			var value = dict.c;
+			var left = dict.d;
+			var right = dict.e;
+			if (_Utils_cmp(targetKey, key) < 0) {
+				if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Black')) {
+					var _v4 = left.a;
+					var lLeft = left.d;
+					if ((lLeft.$ === 'RBNode_elm_builtin') && (lLeft.a.$ === 'Red')) {
+						var _v6 = lLeft.a;
+						return A5(
+							$elm$core$Dict$RBNode_elm_builtin,
+							color,
+							key,
+							value,
+							A2($elm$core$Dict$removeHelp, targetKey, left),
+							right);
+					} else {
+						var _v7 = $elm$core$Dict$moveRedLeft(dict);
+						if (_v7.$ === 'RBNode_elm_builtin') {
+							var nColor = _v7.a;
+							var nKey = _v7.b;
+							var nValue = _v7.c;
+							var nLeft = _v7.d;
+							var nRight = _v7.e;
+							return A5(
+								$elm$core$Dict$balance,
+								nColor,
+								nKey,
+								nValue,
+								A2($elm$core$Dict$removeHelp, targetKey, nLeft),
+								nRight);
+						} else {
+							return $elm$core$Dict$RBEmpty_elm_builtin;
+						}
+					}
+				} else {
+					return A5(
+						$elm$core$Dict$RBNode_elm_builtin,
+						color,
+						key,
+						value,
+						A2($elm$core$Dict$removeHelp, targetKey, left),
+						right);
+				}
+			} else {
+				return A2(
+					$elm$core$Dict$removeHelpEQGT,
+					targetKey,
+					A7($elm$core$Dict$removeHelpPrepEQGT, targetKey, dict, color, key, value, left, right));
+			}
+		}
+	});
+var $elm$core$Dict$removeHelpEQGT = F2(
+	function (targetKey, dict) {
+		if (dict.$ === 'RBNode_elm_builtin') {
+			var color = dict.a;
+			var key = dict.b;
+			var value = dict.c;
+			var left = dict.d;
+			var right = dict.e;
+			if (_Utils_eq(targetKey, key)) {
+				var _v1 = $elm$core$Dict$getMin(right);
+				if (_v1.$ === 'RBNode_elm_builtin') {
+					var minKey = _v1.b;
+					var minValue = _v1.c;
+					return A5(
+						$elm$core$Dict$balance,
+						color,
+						minKey,
+						minValue,
+						left,
+						$elm$core$Dict$removeMin(right));
+				} else {
+					return $elm$core$Dict$RBEmpty_elm_builtin;
+				}
+			} else {
+				return A5(
+					$elm$core$Dict$balance,
+					color,
+					key,
+					value,
+					left,
+					A2($elm$core$Dict$removeHelp, targetKey, right));
+			}
+		} else {
+			return $elm$core$Dict$RBEmpty_elm_builtin;
+		}
+	});
+var $elm$core$Dict$remove = F2(
+	function (key, dict) {
+		var _v0 = A2($elm$core$Dict$removeHelp, key, dict);
+		if ((_v0.$ === 'RBNode_elm_builtin') && (_v0.a.$ === 'Red')) {
+			var _v1 = _v0.a;
+			var k = _v0.b;
+			var v = _v0.c;
+			var l = _v0.d;
+			var r = _v0.e;
+			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, k, v, l, r);
+		} else {
+			var x = _v0;
+			return x;
+		}
+	});
+var $elm$core$Dict$update = F3(
+	function (targetKey, alter, dictionary) {
+		var _v0 = alter(
+			A2($elm$core$Dict$get, targetKey, dictionary));
+		if (_v0.$ === 'Just') {
+			var value = _v0.a;
+			return A3($elm$core$Dict$insert, targetKey, value, dictionary);
+		} else {
+			return A2($elm$core$Dict$remove, targetKey, dictionary);
+		}
+	});
+var $elm$url$Url$Parser$addParam = F2(
+	function (segment, dict) {
+		var _v0 = A2($elm$core$String$split, '=', segment);
+		if ((_v0.b && _v0.b.b) && (!_v0.b.b.b)) {
+			var rawKey = _v0.a;
+			var _v1 = _v0.b;
+			var rawValue = _v1.a;
+			var _v2 = $elm$url$Url$percentDecode(rawKey);
+			if (_v2.$ === 'Nothing') {
+				return dict;
+			} else {
+				var key = _v2.a;
+				var _v3 = $elm$url$Url$percentDecode(rawValue);
+				if (_v3.$ === 'Nothing') {
+					return dict;
+				} else {
+					var value = _v3.a;
+					return A3(
+						$elm$core$Dict$update,
+						key,
+						$elm$url$Url$Parser$addToParametersHelp(value),
+						dict);
+				}
+			}
+		} else {
+			return dict;
+		}
+	});
+var $elm$url$Url$Parser$prepareQuery = function (maybeQuery) {
+	if (maybeQuery.$ === 'Nothing') {
+		return $elm$core$Dict$empty;
+	} else {
+		var qry = maybeQuery.a;
+		return A3(
+			$elm$core$List$foldr,
+			$elm$url$Url$Parser$addParam,
+			$elm$core$Dict$empty,
+			A2($elm$core$String$split, '&', qry));
+	}
+};
+var $elm$url$Url$Parser$parse = F2(
+	function (_v0, url) {
+		var parser = _v0.a;
+		return $elm$url$Url$Parser$getFirstMatch(
+			parser(
+				A5(
+					$elm$url$Url$Parser$State,
+					_List_Nil,
+					$elm$url$Url$Parser$preparePath(url.path),
+					$elm$url$Url$Parser$prepareQuery(url.query),
+					url.fragment,
+					$elm$core$Basics$identity)));
+	});
+var $elm$url$Url$Parser$s = function (str) {
+	return $elm$url$Url$Parser$Parser(
+		function (_v0) {
+			var visited = _v0.visited;
+			var unvisited = _v0.unvisited;
+			var params = _v0.params;
+			var frag = _v0.frag;
+			var value = _v0.value;
+			if (!unvisited.b) {
+				return _List_Nil;
+			} else {
+				var next = unvisited.a;
+				var rest = unvisited.b;
+				return _Utils_eq(next, str) ? _List_fromArray(
+					[
+						A5(
+						$elm$url$Url$Parser$State,
+						A2($elm$core$List$cons, next, visited),
+						rest,
+						params,
+						frag,
+						value)
+					]) : _List_Nil;
+			}
+		});
+};
+var $elm$url$Url$Parser$slash = F2(
+	function (_v0, _v1) {
+		var parseBefore = _v0.a;
+		var parseAfter = _v1.a;
+		return $elm$url$Url$Parser$Parser(
+			function (state) {
+				return A2(
+					$elm$core$List$concatMap,
+					parseAfter,
+					parseBefore(state));
+			});
+	});
+var $elm$url$Url$Parser$custom = F2(
+	function (tipe, stringToSomething) {
+		return $elm$url$Url$Parser$Parser(
+			function (_v0) {
+				var visited = _v0.visited;
+				var unvisited = _v0.unvisited;
+				var params = _v0.params;
+				var frag = _v0.frag;
+				var value = _v0.value;
+				if (!unvisited.b) {
+					return _List_Nil;
+				} else {
+					var next = unvisited.a;
+					var rest = unvisited.b;
+					var _v2 = stringToSomething(next);
+					if (_v2.$ === 'Just') {
+						var nextValue = _v2.a;
+						return _List_fromArray(
+							[
+								A5(
+								$elm$url$Url$Parser$State,
+								A2($elm$core$List$cons, next, visited),
+								rest,
+								params,
+								frag,
+								value(nextValue))
+							]);
+					} else {
+						return _List_Nil;
+					}
+				}
+			});
+	});
+var $elm$url$Url$Parser$string = A2($elm$url$Url$Parser$custom, 'STRING', $elm$core$Maybe$Just);
+var $author$project$EventLog$Component$routeParser = $elm$url$Url$Parser$parse(
+	A2(
+		$elm$url$Url$Parser$map,
+		$elm$core$Debug$log('route'),
+		$elm$url$Url$Parser$oneOf(
+			_List_fromArray(
+				[
+					A2(
+					$elm$url$Url$Parser$map,
+					$author$project$EventLog$Component$ChannelRoot,
+					$elm$url$Url$Parser$s('channel')),
+					A2(
+					$elm$url$Url$Parser$map,
+					$author$project$EventLog$Component$Channel,
+					A2(
+						$elm$url$Url$Parser$slash,
+						$elm$url$Url$Parser$s('channel'),
+						$elm$url$Url$Parser$string))
+				]))));
+var $author$project$EventLog$Component$httpServerProtocol = {
+	parseRoute: $author$project$EventLog$Component$routeParser,
+	ports: {request: $author$project$Ports$requestPort, response: $author$project$Ports$responsePort}
+};
+var $author$project$EventLog$Component$httpServerApi = $author$project$Server$API$httpServerApi($author$project$EventLog$Component$httpServerProtocol);
+var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
+var $elm$core$Dict$values = function (dict) {
+	return A3(
+		$elm$core$Dict$foldr,
+		F3(
+			function (key, value, valueList) {
+				return A2($elm$core$List$cons, value, valueList);
+			}),
+		_List_Nil,
+		dict);
+};
+var $brian_watkins$elm_procedure$Procedure$Program$subscriptions = function (_v0) {
+	var registry = _v0.a;
+	return $elm$core$Platform$Sub$batch(
+		$elm$core$Dict$values(registry.channels));
+};
+var $author$project$EventLog$Component$subscriptions = F2(
+	function (protocol, component) {
+		var model = component.eventLog;
+		var _v0 = A2($elm$core$Debug$log, 'EventLog.subscriptions', model);
+		if (_v0.$ === 'ModelReady') {
+			var state = _v0.a;
+			return A2(
+				$elm$core$Platform$Sub$map,
+				protocol.toMsg,
+				$elm$core$Platform$Sub$batch(
+					_List_fromArray(
+						[
+							$brian_watkins$elm_procedure$Procedure$Program$subscriptions(state.procedure),
+							$author$project$EventLog$Component$httpServerApi.request($author$project$EventLog$Component$HttpRequest)
+						])));
+		} else {
+			return $elm$core$Platform$Sub$none;
+		}
+	});
+var $author$project$API$subscriptions = function (model) {
+	return $elm$core$Platform$Sub$batch(
+		_List_fromArray(
+			[
+				A2($author$project$EventLog$Component$subscriptions, $author$project$API$eventLogProtocol, model)
+			]));
+};
+var $author$project$EventLog$Component$ModelReady = function (a) {
+	return {$: 'ModelReady', a: a};
+};
+var $author$project$Serverless$Conn$Response$Model = F4(
+	function (body, charset, headers, status) {
+		return {body: body, charset: charset, headers: headers, status: status};
+	});
+var $author$project$Serverless$Conn$Response$Response = function (a) {
+	return {$: 'Response', a: a};
+};
+var $author$project$Serverless$Conn$Body$empty = $author$project$Serverless$Conn$Body$Empty;
+var $author$project$Serverless$Conn$Charset$Utf8 = {$: 'Utf8'};
+var $author$project$Serverless$Conn$Charset$utf8 = $author$project$Serverless$Conn$Charset$Utf8;
+var $author$project$Serverless$Conn$Response$init = $author$project$Serverless$Conn$Response$Response(
+	A4(
+		$author$project$Serverless$Conn$Response$Model,
+		$author$project$Serverless$Conn$Body$empty,
+		$author$project$Serverless$Conn$Charset$utf8,
+		_List_fromArray(
+			[
+				_Utils_Tuple2('cache-control', 'max-age=0, private, must-revalidate')
+			]),
+		200));
+var $author$project$Serverless$Conn$Response$setBody = F2(
+	function (body, _v0) {
+		var res = _v0.a;
+		return $author$project$Serverless$Conn$Response$Response(
+			_Utils_update(
+				res,
+				{body: body}));
+	});
+var $author$project$Serverless$Conn$Response$setStatus = F2(
+	function (value, _v0) {
+		var res = _v0.a;
+		return $author$project$Serverless$Conn$Response$Response(
+			_Utils_update(
+				res,
+				{status: value}));
+	});
+var $author$project$Serverless$Conn$Body$text = $author$project$Serverless$Conn$Body$Text;
+var $author$project$Serverless$Conn$Response$err500 = function (err) {
+	return A2(
+		$author$project$Serverless$Conn$Response$setStatus,
+		500,
+		A2(
+			$author$project$Serverless$Conn$Response$setBody,
+			$author$project$Serverless$Conn$Body$text(err),
+			$author$project$Serverless$Conn$Response$init));
+};
+var $brian_watkins$elm_procedure$Procedure$Program$Model = function (a) {
+	return {$: 'Model', a: a};
+};
+var $brian_watkins$elm_procedure$Procedure$Program$init = $brian_watkins$elm_procedure$Procedure$Program$Model(
+	{channels: $elm$core$Dict$empty, nextId: 0});
+var $elm$core$Tuple$mapFirst = F2(
+	function (func, _v0) {
+		var x = _v0.a;
+		var y = _v0.b;
+		return _Utils_Tuple2(
+			func(x),
+			y);
+	});
+var $author$project$Serverless$Conn$Body$asJson = function (body) {
+	switch (body.$) {
+		case 'Empty':
+			return $elm$core$Result$Ok($elm$json$Json$Encode$null);
+		case 'Error':
+			var err = body.a;
+			return $elm$core$Result$Err(err);
+		case 'Text':
+			var val = body.a;
+			return A2(
+				$elm$core$Result$mapError,
+				$elm$json$Json$Decode$errorToString,
+				A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, val));
+		case 'Json':
+			var val = body.a;
+			return $elm$core$Result$Ok(val);
+		default:
+			var val = body.b;
+			return A2(
+				$elm$core$Result$mapError,
+				$elm$json$Json$Decode$errorToString,
+				A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, val));
+	}
+};
+var $author$project$Serverless$Conn$Request$body = function (_v0) {
+	var request = _v0.a;
+	return request.body;
+};
+var $author$project$EventLog$Component$CreateChannelResponse = function (a) {
+	return {$: 'CreateChannelResponse', a: a};
+};
+var $author$project$EventLog$Component$ProcedureMsg = function (a) {
+	return {$: 'ProcedureMsg', a: a};
+};
+var $elm$core$Task$fail = _Scheduler_fail;
+var $brian_watkins$elm_procedure$Procedure$Internal$Procedure = function (a) {
+	return {$: 'Procedure', a: a};
+};
+var $elm$core$Task$Perform = function (a) {
+	return {$: 'Perform', a: a};
+};
+var $elm$core$Task$init = $elm$core$Task$succeed(_Utils_Tuple0);
 var $elm$core$Task$map = F2(
 	function (func, taskA) {
 		return A2(
@@ -3530,14 +5039,72 @@ var $brian_watkins$elm_procedure$Procedure$andThen = F2(
 				}
 			});
 	});
-var $elm$core$Debug$log = _Debug_log;
-var $elm$core$Tuple$mapFirst = F2(
-	function (func, _v0) {
-		var x = _v0.a;
-		var y = _v0.b;
-		return _Utils_Tuple2(
-			func(x),
-			y);
+var $elm$core$Basics$always = F2(
+	function (a, _v0) {
+		return a;
+	});
+var $elm$core$Task$perform = F2(
+	function (toMessage, task) {
+		return $elm$core$Task$command(
+			$elm$core$Task$Perform(
+				A2($elm$core$Task$map, toMessage, task)));
+	});
+var $brian_watkins$elm_procedure$Procedure$do = function (command) {
+	return $brian_watkins$elm_procedure$Procedure$Internal$Procedure(
+		F3(
+			function (procId, msgTagger, resultTagger) {
+				return A2(
+					$elm$core$Task$perform,
+					function (_v0) {
+						var nextCommand = A2(
+							$elm$core$Task$perform,
+							A2($elm$core$Basics$composeL, resultTagger, $elm$core$Result$Ok),
+							$elm$core$Task$succeed(_Utils_Tuple0));
+						return msgTagger(
+							A2(
+								$brian_watkins$elm_procedure$Procedure$Internal$Execute,
+								procId,
+								$elm$core$Platform$Cmd$batch(
+									_List_fromArray(
+										[command, nextCommand]))));
+					},
+					$elm$core$Task$succeed(_Utils_Tuple0));
+			}));
+};
+var $brian_watkins$elm_procedure$Procedure$provide = A2($elm$core$Basics$composeL, $brian_watkins$elm_procedure$Procedure$fromTask, $elm$core$Task$succeed);
+var $brian_watkins$elm_procedure$Procedure$mapError = F2(
+	function (mapper, procedure) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$next,
+			procedure,
+			function (aResult) {
+				if (aResult.$ === 'Ok') {
+					var aData = aResult.a;
+					return $brian_watkins$elm_procedure$Procedure$provide(aData);
+				} else {
+					var eData = aResult.a;
+					return $brian_watkins$elm_procedure$Procedure$break(
+						mapper(eData));
+				}
+			});
+	});
+var $author$project$Serverless$Conn$Response$ok200 = function (msg) {
+	return A2(
+		$author$project$Serverless$Conn$Response$setBody,
+		$author$project$Serverless$Conn$Body$text(msg),
+		$author$project$Serverless$Conn$Response$init);
+};
+var $author$project$EventLog$Component$createChannelResponse = F3(
+	function (session, message, _v0) {
+		var _v1 = A2($elm$core$Debug$log, 'procedure', 'createChannelResponse');
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$mapError,
+			$elm$core$Basics$always('HTTP error'),
+			$brian_watkins$elm_procedure$Procedure$do(
+				A2(
+					$author$project$EventLog$Component$httpServerApi.response,
+					session,
+					$author$project$Serverless$Conn$Response$ok200(message))));
 	});
 var $elm$core$Basics$abs = function (n) {
 	return (n < 0) ? (-n) : n;
@@ -3682,10 +5249,6 @@ var $elm_community$random_extra$Random$String$string = F2(
 			A2($elm$random$Random$list, stringLength, charGenerator));
 	});
 var $author$project$EventLog$Component$nameGenerator = A2($elm_community$random_extra$Random$String$string, 10, $elm_community$random_extra$Random$Char$english);
-var $elm$core$Basics$always = F2(
-	function (a, _v0) {
-		return a;
-	});
 var $author$project$EventLog$Component$cacheName = function (channel) {
 	return 'elm-realtime' + '-cache';
 };
@@ -3696,23 +5259,6 @@ var $brian_watkins$elm_procedure$Procedure$fetchResult = function (generator) {
 				return generator(tagger);
 			}));
 };
-var $brian_watkins$elm_procedure$Procedure$provide = A2($elm$core$Basics$composeL, $brian_watkins$elm_procedure$Procedure$fromTask, $elm$core$Task$succeed);
-var $brian_watkins$elm_procedure$Procedure$mapError = F2(
-	function (mapper, procedure) {
-		return A2(
-			$brian_watkins$elm_procedure$Procedure$next,
-			procedure,
-			function (aResult) {
-				if (aResult.$ === 'Ok') {
-					var aData = aResult.a;
-					return $brian_watkins$elm_procedure$Procedure$provide(aData);
-				} else {
-					var eData = aResult.a;
-					return $brian_watkins$elm_procedure$Procedure$break(
-						mapper(eData));
-				}
-			});
-	});
 var $brian_watkins$elm_procedure$Procedure$Internal$Continue = {$: 'Continue'};
 var $brian_watkins$elm_procedure$Procedure$Internal$Subscribe = F3(
 	function (a, b, c) {
@@ -3725,12 +5271,6 @@ var $brian_watkins$elm_procedure$Procedure$Internal$Unsubscribe = F3(
 var $brian_watkins$elm_procedure$Procedure$Channel$channelKey = function (channelId) {
 	return 'Channel-' + $elm$core$String$fromInt(channelId);
 };
-var $elm$core$Task$perform = F2(
-	function (toMessage, task) {
-		return $elm$core$Task$command(
-			$elm$core$Task$Perform(
-				A2($elm$core$Task$map, toMessage, task)));
-	});
 var $brian_watkins$elm_procedure$Procedure$Channel$acceptUntil = F2(
 	function (shouldUnsubscribe, _v0) {
 		var channel = _v0.a;
@@ -3789,15 +5329,15 @@ var $brian_watkins$elm_procedure$Procedure$Channel$connect = F2(
 			{request: requestGenerator, shouldAccept: $brian_watkins$elm_procedure$Procedure$Channel$defaultPredicate, subscription: generator});
 	});
 var $author$project$Momento$Failed = {$: 'Failed'};
-var $author$project$Momento$SessionKey = function (a) {
-	return {$: 'SessionKey', a: a};
+var $author$project$Momento$MomentoSessionKey = function (a) {
+	return {$: 'MomentoSessionKey', a: a};
 };
 var $author$project$Momento$decodeResponse = function (res) {
 	var _v0 = res.type_;
 	switch (_v0) {
 		case 'Ok':
 			return $elm$core$Result$Ok(
-				$author$project$Momento$SessionKey(res.response));
+				$author$project$Momento$MomentoSessionKey(res.response));
 		case 'Error':
 			return $elm$core$Result$Err($author$project$Momento$Failed);
 		default:
@@ -3997,7 +5537,6 @@ var $author$project$Ports$mmAsyncError = _Platform_incomingPort(
 				A2($elm$json$Json$Decode$field, 'error', $elm$json$Json$Decode$value));
 		},
 		A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string)));
-var $elm$json$Json$Encode$string = _Json_wrap;
 var $author$project$Ports$mmClose = _Platform_outgoingPort(
 	'mmClose',
 	function ($) {
@@ -4199,14 +5738,7 @@ var $elm$json$Json$Decode$at = F2(
 	function (fields, decoder) {
 		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
 	});
-var $elm$core$Basics$composeR = F3(
-	function (f, g, x) {
-		return g(
-			f(x));
-	});
-var $elm$json$Json$Decode$decodeValue = _Json_run;
 var $elm$json$Json$Decode$list = _Json_decodeList;
-var $elm$json$Json$Decode$map = _Json_map1;
 var $elm_community$result_extra$Result$Extra$merge = function (r) {
 	if (r.$ === 'Ok') {
 		var rr = r.a;
@@ -4751,19 +6283,6 @@ var $author$project$AWS$Dynamo$Equals = F2(
 	function (a, b) {
 		return {$: 'Equals', a: a, b: b};
 	});
-var $elm$json$Json$Encode$bool = _Json_wrap;
-var $elm$json$Json$Encode$int = _Json_wrap;
-var $elm$core$List$append = F2(
-	function (xs, ys) {
-		if (!ys.b) {
-			return xs;
-		} else {
-			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
-		}
-	});
-var $elm$core$List$concat = function (lists) {
-	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
-};
 var $author$project$AWS$Dynamo$encodeAttr = function (attr) {
 	if (attr.$ === 'StringAttr') {
 		var val = attr.a;
@@ -4963,16 +6482,6 @@ var $author$project$AWS$Dynamo$queryEncoder = F3(
 						q.exclusiveStartKey)
 					])));
 	});
-var $elm$json$Json$Decode$map2 = _Json_map2;
-var $elm$json$Json$Decode$oneOf = _Json_oneOf;
-var $elm$json$Json$Decode$maybe = function (decoder) {
-	return $elm$json$Json$Decode$oneOf(
-		_List_fromArray(
-			[
-				A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, decoder),
-				$elm$json$Json$Decode$succeed($elm$core$Maybe$Nothing)
-			]));
-};
 var $elm$core$Tuple$pair = F2(
 	function (a, b) {
 		return _Utils_Tuple2(a, b);
@@ -5261,21 +6770,24 @@ var $author$project$EventLog$Component$setupChannelWebhook = F3(
 							url: component.channelApiUrl + ('/v1/channel/' + channelName)
 						}))));
 	});
-var $author$project$EventLog$Component$createChannel = F3(
-	function (protocol, state, component) {
+var $author$project$EventLog$Component$createChannel = F4(
+	function (protocol, session, state, component) {
 		var _v0 = A2($elm$random$Random$step, $author$project$EventLog$Component$nameGenerator, state.seed);
 		var channelName = _v0.a;
 		var nextSeed = _v0.b;
 		var procedure = A2(
 			$brian_watkins$elm_procedure$Procedure$andThen,
-			A2($author$project$EventLog$Component$setupChannelWebhook, component, channelName),
+			A2($author$project$EventLog$Component$createChannelResponse, session, 'Created Channel Ok'),
 			A2(
 				$brian_watkins$elm_procedure$Procedure$andThen,
-				$author$project$EventLog$Component$recordChannelToDB,
+				A2($author$project$EventLog$Component$setupChannelWebhook, component, channelName),
 				A2(
 					$brian_watkins$elm_procedure$Procedure$andThen,
-					$author$project$EventLog$Component$openMomentoCache(component),
-					$brian_watkins$elm_procedure$Procedure$provide(channelName))));
+					$author$project$EventLog$Component$recordChannelToDB,
+					A2(
+						$brian_watkins$elm_procedure$Procedure$andThen,
+						$author$project$EventLog$Component$openMomentoCache(component),
+						$brian_watkins$elm_procedure$Procedure$provide(channelName)))));
 		var _v1 = A2($elm$core$Debug$log, 'createChannel', channelName);
 		return protocol.onUpdate(
 			A2(
@@ -5291,23 +6803,12 @@ var $author$project$EventLog$Component$createChannel = F3(
 							{procedure: state.procedure, seed: nextSeed},
 							A3($brian_watkins$elm_procedure$Procedure$try, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$CreateChannelResponse, procedure))))));
 	});
-var $elm$core$Result$map = F2(
-	function (func, ra) {
-		if (ra.$ === 'Ok') {
-			var a = ra.a;
-			return $elm$core$Result$Ok(
-				func(a));
-		} else {
-			var e = ra.a;
-			return $elm$core$Result$Err(e);
-		}
-	});
 var $author$project$Serverless$Conn$Request$method = function (_v0) {
 	var request = _v0.a;
 	return request.method;
 };
-var $author$project$EventLog$Component$processRoute = F3(
-	function (protocol, route, component) {
+var $author$project$EventLog$Component$processRoute = F4(
+	function (protocol, session, route, component) {
 		var model = component.eventLog;
 		var _v0 = A2(
 			$elm$core$Debug$log,
@@ -5327,7 +6828,7 @@ var $author$project$EventLog$Component$processRoute = F3(
 							var state = _v0.c.a;
 							return A2(
 								$the_sett$elm_update_helper$Update2$andMap,
-								A2($author$project$EventLog$Component$createChannel, protocol, state),
+								A3($author$project$EventLog$Component$createChannel, protocol, session, state),
 								$the_sett$elm_update_helper$Update2$pure(component));
 						case 'POST':
 							var _v3 = _v0.a;
@@ -5335,7 +6836,7 @@ var $author$project$EventLog$Component$processRoute = F3(
 							var state = _v0.c.a;
 							return A2(
 								$the_sett$elm_update_helper$Update2$andMap,
-								A2($author$project$EventLog$Component$createChannel, protocol, state),
+								A3($author$project$EventLog$Component$createChannel, protocol, session, state),
 								$the_sett$elm_update_helper$Update2$pure(component));
 						default:
 							break _v0$3;
@@ -5364,879 +6865,6 @@ var $author$project$EventLog$Component$processRoute = F3(
 		return protocol.onUpdate(
 			$the_sett$elm_update_helper$Update2$pure(component));
 	});
-var $author$project$API$apiRoute = F2(
-	function (route, model) {
-		return function (_v0) {
-			var apiMdl = _v0.a;
-			var cmds = _v0.b;
-			return A2(
-				$the_sett$elm_update_helper$Update2$andThen,
-				A2($author$project$EventLog$Component$processRoute, $author$project$API$eventLogProtocol, route),
-				_Utils_Tuple2(
-					_Utils_update(
-						model,
-						{api: apiMdl}),
-					cmds));
-		};
-	});
-var $author$project$EventLog$Component$Channel = function (a) {
-	return {$: 'Channel', a: a};
-};
-var $author$project$EventLog$Component$ChannelRoot = {$: 'ChannelRoot'};
-var $elm$url$Url$Parser$Parser = function (a) {
-	return {$: 'Parser', a: a};
-};
-var $elm$url$Url$Parser$State = F5(
-	function (visited, unvisited, params, frag, value) {
-		return {frag: frag, params: params, unvisited: unvisited, value: value, visited: visited};
-	});
-var $elm$url$Url$Parser$mapState = F2(
-	function (func, _v0) {
-		var visited = _v0.visited;
-		var unvisited = _v0.unvisited;
-		var params = _v0.params;
-		var frag = _v0.frag;
-		var value = _v0.value;
-		return A5(
-			$elm$url$Url$Parser$State,
-			visited,
-			unvisited,
-			params,
-			frag,
-			func(value));
-	});
-var $elm$url$Url$Parser$map = F2(
-	function (subValue, _v0) {
-		var parseArg = _v0.a;
-		return $elm$url$Url$Parser$Parser(
-			function (_v1) {
-				var visited = _v1.visited;
-				var unvisited = _v1.unvisited;
-				var params = _v1.params;
-				var frag = _v1.frag;
-				var value = _v1.value;
-				return A2(
-					$elm$core$List$map,
-					$elm$url$Url$Parser$mapState(value),
-					parseArg(
-						A5($elm$url$Url$Parser$State, visited, unvisited, params, frag, subValue)));
-			});
-	});
-var $elm$core$List$concatMap = F2(
-	function (f, list) {
-		return $elm$core$List$concat(
-			A2($elm$core$List$map, f, list));
-	});
-var $elm$url$Url$Parser$oneOf = function (parsers) {
-	return $elm$url$Url$Parser$Parser(
-		function (state) {
-			return A2(
-				$elm$core$List$concatMap,
-				function (_v0) {
-					var parser = _v0.a;
-					return parser(state);
-				},
-				parsers);
-		});
-};
-var $elm$url$Url$Parser$getFirstMatch = function (states) {
-	getFirstMatch:
-	while (true) {
-		if (!states.b) {
-			return $elm$core$Maybe$Nothing;
-		} else {
-			var state = states.a;
-			var rest = states.b;
-			var _v1 = state.unvisited;
-			if (!_v1.b) {
-				return $elm$core$Maybe$Just(state.value);
-			} else {
-				if ((_v1.a === '') && (!_v1.b.b)) {
-					return $elm$core$Maybe$Just(state.value);
-				} else {
-					var $temp$states = rest;
-					states = $temp$states;
-					continue getFirstMatch;
-				}
-			}
-		}
-	}
-};
-var $elm$url$Url$Parser$removeFinalEmpty = function (segments) {
-	if (!segments.b) {
-		return _List_Nil;
-	} else {
-		if ((segments.a === '') && (!segments.b.b)) {
-			return _List_Nil;
-		} else {
-			var segment = segments.a;
-			var rest = segments.b;
-			return A2(
-				$elm$core$List$cons,
-				segment,
-				$elm$url$Url$Parser$removeFinalEmpty(rest));
-		}
-	}
-};
-var $elm$url$Url$Parser$preparePath = function (path) {
-	var _v0 = A2($elm$core$String$split, '/', path);
-	if (_v0.b && (_v0.a === '')) {
-		var segments = _v0.b;
-		return $elm$url$Url$Parser$removeFinalEmpty(segments);
-	} else {
-		var segments = _v0;
-		return $elm$url$Url$Parser$removeFinalEmpty(segments);
-	}
-};
-var $elm$url$Url$Parser$addToParametersHelp = F2(
-	function (value, maybeList) {
-		if (maybeList.$ === 'Nothing') {
-			return $elm$core$Maybe$Just(
-				_List_fromArray(
-					[value]));
-		} else {
-			var list = maybeList.a;
-			return $elm$core$Maybe$Just(
-				A2($elm$core$List$cons, value, list));
-		}
-	});
-var $elm$url$Url$percentDecode = _Url_percentDecode;
-var $elm$core$Basics$compare = _Utils_compare;
-var $elm$core$Dict$get = F2(
-	function (targetKey, dict) {
-		get:
-		while (true) {
-			if (dict.$ === 'RBEmpty_elm_builtin') {
-				return $elm$core$Maybe$Nothing;
-			} else {
-				var key = dict.b;
-				var value = dict.c;
-				var left = dict.d;
-				var right = dict.e;
-				var _v1 = A2($elm$core$Basics$compare, targetKey, key);
-				switch (_v1.$) {
-					case 'LT':
-						var $temp$targetKey = targetKey,
-							$temp$dict = left;
-						targetKey = $temp$targetKey;
-						dict = $temp$dict;
-						continue get;
-					case 'EQ':
-						return $elm$core$Maybe$Just(value);
-					default:
-						var $temp$targetKey = targetKey,
-							$temp$dict = right;
-						targetKey = $temp$targetKey;
-						dict = $temp$dict;
-						continue get;
-				}
-			}
-		}
-	});
-var $elm$core$Dict$Black = {$: 'Black'};
-var $elm$core$Dict$RBNode_elm_builtin = F5(
-	function (a, b, c, d, e) {
-		return {$: 'RBNode_elm_builtin', a: a, b: b, c: c, d: d, e: e};
-	});
-var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
-var $elm$core$Dict$Red = {$: 'Red'};
-var $elm$core$Dict$balance = F5(
-	function (color, key, value, left, right) {
-		if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Red')) {
-			var _v1 = right.a;
-			var rK = right.b;
-			var rV = right.c;
-			var rLeft = right.d;
-			var rRight = right.e;
-			if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
-				var _v3 = left.a;
-				var lK = left.b;
-				var lV = left.c;
-				var lLeft = left.d;
-				var lRight = left.e;
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Red,
-					key,
-					value,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, lK, lV, lLeft, lRight),
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, rK, rV, rLeft, rRight));
-			} else {
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					color,
-					rK,
-					rV,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, left, rLeft),
-					rRight);
-			}
-		} else {
-			if ((((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) && (left.d.$ === 'RBNode_elm_builtin')) && (left.d.a.$ === 'Red')) {
-				var _v5 = left.a;
-				var lK = left.b;
-				var lV = left.c;
-				var _v6 = left.d;
-				var _v7 = _v6.a;
-				var llK = _v6.b;
-				var llV = _v6.c;
-				var llLeft = _v6.d;
-				var llRight = _v6.e;
-				var lRight = left.e;
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Red,
-					lK,
-					lV,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, llK, llV, llLeft, llRight),
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, key, value, lRight, right));
-			} else {
-				return A5($elm$core$Dict$RBNode_elm_builtin, color, key, value, left, right);
-			}
-		}
-	});
-var $elm$core$Dict$insertHelp = F3(
-	function (key, value, dict) {
-		if (dict.$ === 'RBEmpty_elm_builtin') {
-			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, $elm$core$Dict$RBEmpty_elm_builtin, $elm$core$Dict$RBEmpty_elm_builtin);
-		} else {
-			var nColor = dict.a;
-			var nKey = dict.b;
-			var nValue = dict.c;
-			var nLeft = dict.d;
-			var nRight = dict.e;
-			var _v1 = A2($elm$core$Basics$compare, key, nKey);
-			switch (_v1.$) {
-				case 'LT':
-					return A5(
-						$elm$core$Dict$balance,
-						nColor,
-						nKey,
-						nValue,
-						A3($elm$core$Dict$insertHelp, key, value, nLeft),
-						nRight);
-				case 'EQ':
-					return A5($elm$core$Dict$RBNode_elm_builtin, nColor, nKey, value, nLeft, nRight);
-				default:
-					return A5(
-						$elm$core$Dict$balance,
-						nColor,
-						nKey,
-						nValue,
-						nLeft,
-						A3($elm$core$Dict$insertHelp, key, value, nRight));
-			}
-		}
-	});
-var $elm$core$Dict$insert = F3(
-	function (key, value, dict) {
-		var _v0 = A3($elm$core$Dict$insertHelp, key, value, dict);
-		if ((_v0.$ === 'RBNode_elm_builtin') && (_v0.a.$ === 'Red')) {
-			var _v1 = _v0.a;
-			var k = _v0.b;
-			var v = _v0.c;
-			var l = _v0.d;
-			var r = _v0.e;
-			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, k, v, l, r);
-		} else {
-			var x = _v0;
-			return x;
-		}
-	});
-var $elm$core$Dict$getMin = function (dict) {
-	getMin:
-	while (true) {
-		if ((dict.$ === 'RBNode_elm_builtin') && (dict.d.$ === 'RBNode_elm_builtin')) {
-			var left = dict.d;
-			var $temp$dict = left;
-			dict = $temp$dict;
-			continue getMin;
-		} else {
-			return dict;
-		}
-	}
-};
-var $elm$core$Dict$moveRedLeft = function (dict) {
-	if (((dict.$ === 'RBNode_elm_builtin') && (dict.d.$ === 'RBNode_elm_builtin')) && (dict.e.$ === 'RBNode_elm_builtin')) {
-		if ((dict.e.d.$ === 'RBNode_elm_builtin') && (dict.e.d.a.$ === 'Red')) {
-			var clr = dict.a;
-			var k = dict.b;
-			var v = dict.c;
-			var _v1 = dict.d;
-			var lClr = _v1.a;
-			var lK = _v1.b;
-			var lV = _v1.c;
-			var lLeft = _v1.d;
-			var lRight = _v1.e;
-			var _v2 = dict.e;
-			var rClr = _v2.a;
-			var rK = _v2.b;
-			var rV = _v2.c;
-			var rLeft = _v2.d;
-			var _v3 = rLeft.a;
-			var rlK = rLeft.b;
-			var rlV = rLeft.c;
-			var rlL = rLeft.d;
-			var rlR = rLeft.e;
-			var rRight = _v2.e;
-			return A5(
-				$elm$core$Dict$RBNode_elm_builtin,
-				$elm$core$Dict$Red,
-				rlK,
-				rlV,
-				A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Black,
-					k,
-					v,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
-					rlL),
-				A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, rK, rV, rlR, rRight));
-		} else {
-			var clr = dict.a;
-			var k = dict.b;
-			var v = dict.c;
-			var _v4 = dict.d;
-			var lClr = _v4.a;
-			var lK = _v4.b;
-			var lV = _v4.c;
-			var lLeft = _v4.d;
-			var lRight = _v4.e;
-			var _v5 = dict.e;
-			var rClr = _v5.a;
-			var rK = _v5.b;
-			var rV = _v5.c;
-			var rLeft = _v5.d;
-			var rRight = _v5.e;
-			if (clr.$ === 'Black') {
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Black,
-					k,
-					v,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight));
-			} else {
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Black,
-					k,
-					v,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight));
-			}
-		}
-	} else {
-		return dict;
-	}
-};
-var $elm$core$Dict$moveRedRight = function (dict) {
-	if (((dict.$ === 'RBNode_elm_builtin') && (dict.d.$ === 'RBNode_elm_builtin')) && (dict.e.$ === 'RBNode_elm_builtin')) {
-		if ((dict.d.d.$ === 'RBNode_elm_builtin') && (dict.d.d.a.$ === 'Red')) {
-			var clr = dict.a;
-			var k = dict.b;
-			var v = dict.c;
-			var _v1 = dict.d;
-			var lClr = _v1.a;
-			var lK = _v1.b;
-			var lV = _v1.c;
-			var _v2 = _v1.d;
-			var _v3 = _v2.a;
-			var llK = _v2.b;
-			var llV = _v2.c;
-			var llLeft = _v2.d;
-			var llRight = _v2.e;
-			var lRight = _v1.e;
-			var _v4 = dict.e;
-			var rClr = _v4.a;
-			var rK = _v4.b;
-			var rV = _v4.c;
-			var rLeft = _v4.d;
-			var rRight = _v4.e;
-			return A5(
-				$elm$core$Dict$RBNode_elm_builtin,
-				$elm$core$Dict$Red,
-				lK,
-				lV,
-				A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, llK, llV, llLeft, llRight),
-				A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Black,
-					k,
-					v,
-					lRight,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight)));
-		} else {
-			var clr = dict.a;
-			var k = dict.b;
-			var v = dict.c;
-			var _v5 = dict.d;
-			var lClr = _v5.a;
-			var lK = _v5.b;
-			var lV = _v5.c;
-			var lLeft = _v5.d;
-			var lRight = _v5.e;
-			var _v6 = dict.e;
-			var rClr = _v6.a;
-			var rK = _v6.b;
-			var rV = _v6.c;
-			var rLeft = _v6.d;
-			var rRight = _v6.e;
-			if (clr.$ === 'Black') {
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Black,
-					k,
-					v,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight));
-			} else {
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Black,
-					k,
-					v,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight));
-			}
-		}
-	} else {
-		return dict;
-	}
-};
-var $elm$core$Dict$removeHelpPrepEQGT = F7(
-	function (targetKey, dict, color, key, value, left, right) {
-		if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
-			var _v1 = left.a;
-			var lK = left.b;
-			var lV = left.c;
-			var lLeft = left.d;
-			var lRight = left.e;
-			return A5(
-				$elm$core$Dict$RBNode_elm_builtin,
-				color,
-				lK,
-				lV,
-				lLeft,
-				A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, lRight, right));
-		} else {
-			_v2$2:
-			while (true) {
-				if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Black')) {
-					if (right.d.$ === 'RBNode_elm_builtin') {
-						if (right.d.a.$ === 'Black') {
-							var _v3 = right.a;
-							var _v4 = right.d;
-							var _v5 = _v4.a;
-							return $elm$core$Dict$moveRedRight(dict);
-						} else {
-							break _v2$2;
-						}
-					} else {
-						var _v6 = right.a;
-						var _v7 = right.d;
-						return $elm$core$Dict$moveRedRight(dict);
-					}
-				} else {
-					break _v2$2;
-				}
-			}
-			return dict;
-		}
-	});
-var $elm$core$Dict$removeMin = function (dict) {
-	if ((dict.$ === 'RBNode_elm_builtin') && (dict.d.$ === 'RBNode_elm_builtin')) {
-		var color = dict.a;
-		var key = dict.b;
-		var value = dict.c;
-		var left = dict.d;
-		var lColor = left.a;
-		var lLeft = left.d;
-		var right = dict.e;
-		if (lColor.$ === 'Black') {
-			if ((lLeft.$ === 'RBNode_elm_builtin') && (lLeft.a.$ === 'Red')) {
-				var _v3 = lLeft.a;
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					color,
-					key,
-					value,
-					$elm$core$Dict$removeMin(left),
-					right);
-			} else {
-				var _v4 = $elm$core$Dict$moveRedLeft(dict);
-				if (_v4.$ === 'RBNode_elm_builtin') {
-					var nColor = _v4.a;
-					var nKey = _v4.b;
-					var nValue = _v4.c;
-					var nLeft = _v4.d;
-					var nRight = _v4.e;
-					return A5(
-						$elm$core$Dict$balance,
-						nColor,
-						nKey,
-						nValue,
-						$elm$core$Dict$removeMin(nLeft),
-						nRight);
-				} else {
-					return $elm$core$Dict$RBEmpty_elm_builtin;
-				}
-			}
-		} else {
-			return A5(
-				$elm$core$Dict$RBNode_elm_builtin,
-				color,
-				key,
-				value,
-				$elm$core$Dict$removeMin(left),
-				right);
-		}
-	} else {
-		return $elm$core$Dict$RBEmpty_elm_builtin;
-	}
-};
-var $elm$core$Dict$removeHelp = F2(
-	function (targetKey, dict) {
-		if (dict.$ === 'RBEmpty_elm_builtin') {
-			return $elm$core$Dict$RBEmpty_elm_builtin;
-		} else {
-			var color = dict.a;
-			var key = dict.b;
-			var value = dict.c;
-			var left = dict.d;
-			var right = dict.e;
-			if (_Utils_cmp(targetKey, key) < 0) {
-				if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Black')) {
-					var _v4 = left.a;
-					var lLeft = left.d;
-					if ((lLeft.$ === 'RBNode_elm_builtin') && (lLeft.a.$ === 'Red')) {
-						var _v6 = lLeft.a;
-						return A5(
-							$elm$core$Dict$RBNode_elm_builtin,
-							color,
-							key,
-							value,
-							A2($elm$core$Dict$removeHelp, targetKey, left),
-							right);
-					} else {
-						var _v7 = $elm$core$Dict$moveRedLeft(dict);
-						if (_v7.$ === 'RBNode_elm_builtin') {
-							var nColor = _v7.a;
-							var nKey = _v7.b;
-							var nValue = _v7.c;
-							var nLeft = _v7.d;
-							var nRight = _v7.e;
-							return A5(
-								$elm$core$Dict$balance,
-								nColor,
-								nKey,
-								nValue,
-								A2($elm$core$Dict$removeHelp, targetKey, nLeft),
-								nRight);
-						} else {
-							return $elm$core$Dict$RBEmpty_elm_builtin;
-						}
-					}
-				} else {
-					return A5(
-						$elm$core$Dict$RBNode_elm_builtin,
-						color,
-						key,
-						value,
-						A2($elm$core$Dict$removeHelp, targetKey, left),
-						right);
-				}
-			} else {
-				return A2(
-					$elm$core$Dict$removeHelpEQGT,
-					targetKey,
-					A7($elm$core$Dict$removeHelpPrepEQGT, targetKey, dict, color, key, value, left, right));
-			}
-		}
-	});
-var $elm$core$Dict$removeHelpEQGT = F2(
-	function (targetKey, dict) {
-		if (dict.$ === 'RBNode_elm_builtin') {
-			var color = dict.a;
-			var key = dict.b;
-			var value = dict.c;
-			var left = dict.d;
-			var right = dict.e;
-			if (_Utils_eq(targetKey, key)) {
-				var _v1 = $elm$core$Dict$getMin(right);
-				if (_v1.$ === 'RBNode_elm_builtin') {
-					var minKey = _v1.b;
-					var minValue = _v1.c;
-					return A5(
-						$elm$core$Dict$balance,
-						color,
-						minKey,
-						minValue,
-						left,
-						$elm$core$Dict$removeMin(right));
-				} else {
-					return $elm$core$Dict$RBEmpty_elm_builtin;
-				}
-			} else {
-				return A5(
-					$elm$core$Dict$balance,
-					color,
-					key,
-					value,
-					left,
-					A2($elm$core$Dict$removeHelp, targetKey, right));
-			}
-		} else {
-			return $elm$core$Dict$RBEmpty_elm_builtin;
-		}
-	});
-var $elm$core$Dict$remove = F2(
-	function (key, dict) {
-		var _v0 = A2($elm$core$Dict$removeHelp, key, dict);
-		if ((_v0.$ === 'RBNode_elm_builtin') && (_v0.a.$ === 'Red')) {
-			var _v1 = _v0.a;
-			var k = _v0.b;
-			var v = _v0.c;
-			var l = _v0.d;
-			var r = _v0.e;
-			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, k, v, l, r);
-		} else {
-			var x = _v0;
-			return x;
-		}
-	});
-var $elm$core$Dict$update = F3(
-	function (targetKey, alter, dictionary) {
-		var _v0 = alter(
-			A2($elm$core$Dict$get, targetKey, dictionary));
-		if (_v0.$ === 'Just') {
-			var value = _v0.a;
-			return A3($elm$core$Dict$insert, targetKey, value, dictionary);
-		} else {
-			return A2($elm$core$Dict$remove, targetKey, dictionary);
-		}
-	});
-var $elm$url$Url$Parser$addParam = F2(
-	function (segment, dict) {
-		var _v0 = A2($elm$core$String$split, '=', segment);
-		if ((_v0.b && _v0.b.b) && (!_v0.b.b.b)) {
-			var rawKey = _v0.a;
-			var _v1 = _v0.b;
-			var rawValue = _v1.a;
-			var _v2 = $elm$url$Url$percentDecode(rawKey);
-			if (_v2.$ === 'Nothing') {
-				return dict;
-			} else {
-				var key = _v2.a;
-				var _v3 = $elm$url$Url$percentDecode(rawValue);
-				if (_v3.$ === 'Nothing') {
-					return dict;
-				} else {
-					var value = _v3.a;
-					return A3(
-						$elm$core$Dict$update,
-						key,
-						$elm$url$Url$Parser$addToParametersHelp(value),
-						dict);
-				}
-			}
-		} else {
-			return dict;
-		}
-	});
-var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
-var $elm$url$Url$Parser$prepareQuery = function (maybeQuery) {
-	if (maybeQuery.$ === 'Nothing') {
-		return $elm$core$Dict$empty;
-	} else {
-		var qry = maybeQuery.a;
-		return A3(
-			$elm$core$List$foldr,
-			$elm$url$Url$Parser$addParam,
-			$elm$core$Dict$empty,
-			A2($elm$core$String$split, '&', qry));
-	}
-};
-var $elm$url$Url$Parser$parse = F2(
-	function (_v0, url) {
-		var parser = _v0.a;
-		return $elm$url$Url$Parser$getFirstMatch(
-			parser(
-				A5(
-					$elm$url$Url$Parser$State,
-					_List_Nil,
-					$elm$url$Url$Parser$preparePath(url.path),
-					$elm$url$Url$Parser$prepareQuery(url.query),
-					url.fragment,
-					$elm$core$Basics$identity)));
-	});
-var $elm$url$Url$Parser$s = function (str) {
-	return $elm$url$Url$Parser$Parser(
-		function (_v0) {
-			var visited = _v0.visited;
-			var unvisited = _v0.unvisited;
-			var params = _v0.params;
-			var frag = _v0.frag;
-			var value = _v0.value;
-			if (!unvisited.b) {
-				return _List_Nil;
-			} else {
-				var next = unvisited.a;
-				var rest = unvisited.b;
-				return _Utils_eq(next, str) ? _List_fromArray(
-					[
-						A5(
-						$elm$url$Url$Parser$State,
-						A2($elm$core$List$cons, next, visited),
-						rest,
-						params,
-						frag,
-						value)
-					]) : _List_Nil;
-			}
-		});
-};
-var $elm$url$Url$Parser$slash = F2(
-	function (_v0, _v1) {
-		var parseBefore = _v0.a;
-		var parseAfter = _v1.a;
-		return $elm$url$Url$Parser$Parser(
-			function (state) {
-				return A2(
-					$elm$core$List$concatMap,
-					parseAfter,
-					parseBefore(state));
-			});
-	});
-var $elm$url$Url$Parser$custom = F2(
-	function (tipe, stringToSomething) {
-		return $elm$url$Url$Parser$Parser(
-			function (_v0) {
-				var visited = _v0.visited;
-				var unvisited = _v0.unvisited;
-				var params = _v0.params;
-				var frag = _v0.frag;
-				var value = _v0.value;
-				if (!unvisited.b) {
-					return _List_Nil;
-				} else {
-					var next = unvisited.a;
-					var rest = unvisited.b;
-					var _v2 = stringToSomething(next);
-					if (_v2.$ === 'Just') {
-						var nextValue = _v2.a;
-						return _List_fromArray(
-							[
-								A5(
-								$elm$url$Url$Parser$State,
-								A2($elm$core$List$cons, next, visited),
-								rest,
-								params,
-								frag,
-								value(nextValue))
-							]);
-					} else {
-						return _List_Nil;
-					}
-				}
-			});
-	});
-var $elm$url$Url$Parser$string = A2($elm$url$Url$Parser$custom, 'STRING', $elm$core$Maybe$Just);
-var $author$project$EventLog$Component$routeParser = $elm$url$Url$Parser$parse(
-	A2(
-		$elm$url$Url$Parser$map,
-		$elm$core$Debug$log('route'),
-		$elm$url$Url$Parser$oneOf(
-			_List_fromArray(
-				[
-					A2(
-					$elm$url$Url$Parser$map,
-					$author$project$EventLog$Component$ChannelRoot,
-					$elm$url$Url$Parser$s('channel')),
-					A2(
-					$elm$url$Url$Parser$map,
-					$author$project$EventLog$Component$Channel,
-					A2(
-						$elm$url$Url$Parser$slash,
-						$elm$url$Url$Parser$s('channel'),
-						$elm$url$Url$Parser$string))
-				]))));
-var $author$project$API$apiProtocol = function (model) {
-	return {
-		onApiRoute: function (route) {
-			return A2($author$project$API$apiRoute, route, model);
-		},
-		onUpdate: function (_v0) {
-			var apiMdl = _v0.a;
-			var cmds = _v0.b;
-			return _Utils_Tuple2(
-				_Utils_update(
-					model,
-					{api: apiMdl}),
-				cmds);
-		},
-		parseRoute: $author$project$EventLog$Component$routeParser,
-		ports: $author$project$API$apiPorts,
-		toMsg: $author$project$API$ApiMsg
-	};
-};
-var $elm$core$Platform$Sub$batch = _Platform_batch;
-var $elm$core$Platform$Sub$map = _Platform_map;
-var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
-var $elm$core$Dict$values = function (dict) {
-	return A3(
-		$elm$core$Dict$foldr,
-		F3(
-			function (key, value, valueList) {
-				return A2($elm$core$List$cons, value, valueList);
-			}),
-		_List_Nil,
-		dict);
-};
-var $brian_watkins$elm_procedure$Procedure$Program$subscriptions = function (_v0) {
-	var registry = _v0.a;
-	return $elm$core$Platform$Sub$batch(
-		$elm$core$Dict$values(registry.channels));
-};
-var $author$project$EventLog$Component$subscriptions = F2(
-	function (protocol, component) {
-		var model = component.eventLog;
-		var _v0 = A2($elm$core$Debug$log, 'EventLog.subscriptions', model);
-		if (_v0.$ === 'ModelReady') {
-			var state = _v0.a;
-			return A2(
-				$elm$core$Platform$Sub$map,
-				protocol.toMsg,
-				$brian_watkins$elm_procedure$Procedure$Program$subscriptions(state.procedure));
-		} else {
-			return $elm$core$Platform$Sub$none;
-		}
-	});
-var $author$project$Server$API$Request = function (a) {
-	return {$: 'Request', a: a};
-};
-var $author$project$Server$API$subscriptions = F2(
-	function (protocol, _v0) {
-		return A2(
-			$elm$core$Platform$Sub$map,
-			protocol.toMsg,
-			protocol.ports.request($author$project$Server$API$Request));
-	});
-var $author$project$API$subscriptions = function (model) {
-	return $elm$core$Platform$Sub$batch(
-		_List_fromArray(
-			[
-				A2(
-				$author$project$Server$API$subscriptions,
-				$author$project$API$apiProtocol(model),
-				model.api),
-				A2($author$project$EventLog$Component$subscriptions, $author$project$API$eventLogProtocol, model)
-			]));
-};
-var $brian_watkins$elm_procedure$Procedure$Program$Model = function (a) {
-	return {$: 'Model', a: a};
-};
-var $brian_watkins$elm_procedure$Procedure$Program$init = $brian_watkins$elm_procedure$Procedure$Program$Model(
-	{channels: $elm$core$Dict$empty, nextId: 0});
 var $brian_watkins$elm_procedure$Procedure$Program$addChannel = F2(
 	function (subGenerator, registry) {
 		return _Utils_update(
@@ -6306,7 +6934,7 @@ var $author$project$EventLog$Component$update = F3(
 	function (protocol, msg, component) {
 		var model = component.eventLog;
 		var _v0 = _Utils_Tuple2(model, msg);
-		_v0$3:
+		_v0$4:
 		while (true) {
 			switch (_v0.b.$) {
 				case 'ProcedureMsg':
@@ -6332,7 +6960,7 @@ var $author$project$EventLog$Component$update = F3(
 												{procedure: procMdl}),
 											procMsg)))));
 					} else {
-						break _v0$3;
+						break _v0$4;
 					}
 				case 'RandomSeed':
 					if (_v0.a.$ === 'ModelStart') {
@@ -6350,11 +6978,39 @@ var $author$project$EventLog$Component$update = F3(
 										$the_sett$elm_update_helper$Update2$pure(
 											{procedure: $brian_watkins$elm_procedure$Procedure$Program$init, seed: seed})))));
 					} else {
-						break _v0$3;
+						break _v0$4;
+					}
+				case 'HttpRequest':
+					if (_v0.a.$ === 'ModelReady') {
+						var state = _v0.a.a;
+						var _v2 = _v0.b;
+						var session = _v2.a;
+						var result = _v2.b;
+						if (result.$ === 'Ok') {
+							var apiRequest = result.a;
+							return A4($author$project$EventLog$Component$processRoute, protocol, session, apiRequest, component);
+						} else {
+							var errMsg = result.a.a;
+							return protocol.onUpdate(
+								A2(
+									$elm$core$Tuple$mapSecond,
+									$elm$core$Platform$Cmd$map(protocol.toMsg),
+									A2(
+										$elm$core$Tuple$mapFirst,
+										$author$project$EventLog$Component$setModel(component),
+										_Utils_Tuple2(
+											$author$project$EventLog$Component$ModelReady(state),
+											A2(
+												$author$project$EventLog$Component$httpServerApi.response,
+												session,
+												$author$project$Serverless$Conn$Response$err500(errMsg))))));
+						}
+					} else {
+						break _v0$4;
 					}
 				default:
 					var res = _v0.b.a;
-					var _v2 = A2($elm$core$Debug$log, '=== CreateChannelResponse', res);
+					var _v4 = A2($elm$core$Debug$log, '=== CreateChannelResponse', res);
 					return protocol.onUpdate(
 						$the_sett$elm_update_helper$Update2$pure(component));
 			}
@@ -6362,679 +7018,11 @@ var $author$project$EventLog$Component$update = F3(
 		return protocol.onUpdate(
 			$the_sett$elm_update_helper$Update2$pure(component));
 	});
-var $elm$core$Maybe$andThen = F2(
-	function (callback, maybeValue) {
-		if (maybeValue.$ === 'Just') {
-			var value = maybeValue.a;
-			return callback(value);
-		} else {
-			return $elm$core$Maybe$Nothing;
-		}
-	});
-var $elm$core$Result$andThen = F2(
-	function (callback, result) {
-		if (result.$ === 'Ok') {
-			var value = result.a;
-			return callback(value);
-		} else {
-			var msg = result.a;
-			return $elm$core$Result$Err(msg);
-		}
-	});
-var $author$project$Serverless$Conn$Request$HeadersOnly = function (headers) {
-	return {headers: headers};
-};
-var $author$project$Serverless$Conn$Request$Request = function (a) {
-	return {$: 'Request', a: a};
-};
-var $elm$json$Json$Decode$keyValuePairs = _Json_decodeKeyValuePairs;
-var $elm$json$Json$Decode$null = _Json_decodeNull;
-var $elm$json$Json$Decode$nullable = function (decoder) {
-	return $elm$json$Json$Decode$oneOf(
-		_List_fromArray(
-			[
-				$elm$json$Json$Decode$null($elm$core$Maybe$Nothing),
-				A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, decoder)
-			]));
-};
-var $author$project$Serverless$Conn$KeyValueList$decoder = A2(
-	$elm$json$Json$Decode$andThen,
-	function (maybeParams) {
-		if (maybeParams.$ === 'Just') {
-			var params = maybeParams.a;
-			return $elm$json$Json$Decode$succeed(params);
-		} else {
-			return $elm$json$Json$Decode$succeed(_List_Nil);
-		}
-	},
-	$elm$json$Json$Decode$nullable(
-		$elm$json$Json$Decode$keyValuePairs($elm$json$Json$Decode$string)));
-var $elm$core$Dict$fromList = function (assocs) {
-	return A3(
-		$elm$core$List$foldl,
-		F2(
-			function (_v0, dict) {
-				var key = _v0.a;
-				var value = _v0.b;
-				return A3($elm$core$Dict$insert, key, value, dict);
-			}),
-		$elm$core$Dict$empty,
-		assocs);
-};
-var $author$project$Serverless$Conn$Body$Empty = {$: 'Empty'};
-var $author$project$Serverless$Conn$Body$Error = function (a) {
-	return {$: 'Error', a: a};
-};
-var $author$project$Serverless$Conn$Body$Json = function (a) {
-	return {$: 'Json', a: a};
-};
-var $author$project$Serverless$Conn$Body$Text = function (a) {
-	return {$: 'Text', a: a};
-};
-var $elm$core$String$startsWith = _String_startsWith;
-var $elm$core$Maybe$withDefault = F2(
-	function (_default, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return value;
-		} else {
-			return _default;
-		}
-	});
-var $author$project$Serverless$Conn$Body$decoder = function (maybeType) {
-	return A2(
-		$elm$json$Json$Decode$andThen,
-		function (maybeString) {
-			if (maybeString.$ === 'Just') {
-				var w = maybeString.a;
-				if (A2(
-					$elm$core$String$startsWith,
-					'application/json',
-					A2($elm$core$Maybe$withDefault, '', maybeType))) {
-					var _v1 = A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, w);
-					if (_v1.$ === 'Ok') {
-						var val = _v1.a;
-						return $elm$json$Json$Decode$succeed(
-							$author$project$Serverless$Conn$Body$Json(val));
-					} else {
-						var err = _v1.a;
-						return $elm$json$Json$Decode$succeed(
-							$author$project$Serverless$Conn$Body$Error(
-								$elm$json$Json$Decode$errorToString(err)));
-					}
-				} else {
-					return $elm$json$Json$Decode$succeed(
-						$author$project$Serverless$Conn$Body$Text(w));
-				}
-			} else {
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Body$Empty);
-			}
-		},
-		$elm$json$Json$Decode$maybe($elm$json$Json$Decode$string));
-};
-var $author$project$Serverless$Conn$IpAddress$Ip4 = F4(
-	function (a, b, c, d) {
-		return {$: 'Ip4', a: a, b: b, c: c, d: d};
-	});
-var $elm$json$Json$Decode$fail = _Json_fail;
-var $elm$core$Basics$ge = _Utils_ge;
-var $elm$core$String$toInt = _String_toInt;
-var $author$project$Serverless$Conn$IpAddress$toNonNegativeInt = function (val) {
-	return A2(
-		$elm$core$Maybe$andThen,
-		function (i) {
-			return (i >= 0) ? $elm$core$Maybe$Just(i) : $elm$core$Maybe$Nothing;
-		},
-		$elm$core$String$toInt(val));
-};
-var $author$project$Serverless$Conn$IpAddress$decoder = A2(
-	$elm$json$Json$Decode$andThen,
-	function (w) {
-		var list = A2(
-			$elm$core$List$map,
-			$author$project$Serverless$Conn$IpAddress$toNonNegativeInt,
-			A2($elm$core$String$split, '.', w));
-		if ((((((((list.b && (list.a.$ === 'Just')) && list.b.b) && (list.b.a.$ === 'Just')) && list.b.b.b) && (list.b.b.a.$ === 'Just')) && list.b.b.b.b) && (list.b.b.b.a.$ === 'Just')) && (!list.b.b.b.b.b)) {
-			var a = list.a.a;
-			var _v1 = list.b;
-			var b = _v1.a.a;
-			var _v2 = _v1.b;
-			var c = _v2.a.a;
-			var _v3 = _v2.b;
-			var d = _v3.a.a;
-			return $elm$json$Json$Decode$succeed(
-				A4($author$project$Serverless$Conn$IpAddress$Ip4, a, b, c, d));
-		} else {
-			return $elm$json$Json$Decode$fail('Unsupported IP address: ' + w);
-		}
-	},
-	$elm$json$Json$Decode$string);
-var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
-var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$hardcoded = A2($elm$core$Basics$composeR, $elm$json$Json$Decode$succeed, $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom);
-var $elm$json$Json$Decode$int = _Json_decodeInt;
-var $author$project$Serverless$Conn$Request$CONNECT = {$: 'CONNECT'};
-var $author$project$Serverless$Conn$Request$DELETE = {$: 'DELETE'};
-var $author$project$Serverless$Conn$Request$GET = {$: 'GET'};
-var $author$project$Serverless$Conn$Request$HEAD = {$: 'HEAD'};
-var $author$project$Serverless$Conn$Request$OPTIONS = {$: 'OPTIONS'};
-var $author$project$Serverless$Conn$Request$PATCH = {$: 'PATCH'};
-var $author$project$Serverless$Conn$Request$POST = {$: 'POST'};
-var $author$project$Serverless$Conn$Request$PUT = {$: 'PUT'};
-var $author$project$Serverless$Conn$Request$TRACE = {$: 'TRACE'};
-var $elm$core$String$toLower = _String_toLower;
-var $author$project$Serverless$Conn$Request$methodDecoder = A2(
-	$elm$json$Json$Decode$andThen,
-	function (w) {
-		var _v0 = $elm$core$String$toLower(w);
-		switch (_v0) {
-			case 'connect':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$CONNECT);
-			case 'delete':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$DELETE);
-			case 'get':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$GET);
-			case 'head':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$HEAD);
-			case 'options':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$OPTIONS);
-			case 'patch':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$PATCH);
-			case 'post':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$POST);
-			case 'put':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$PUT);
-			case 'trace':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$TRACE);
-			default:
-				return $elm$json$Json$Decode$fail('Unsupported method: ' + w);
-		}
-	},
-	$elm$json$Json$Decode$string);
-var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required = F3(
-	function (key, valDecoder, decoder) {
-		return A2(
-			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom,
-			A2($elm$json$Json$Decode$field, key, valDecoder),
-			decoder);
-	});
-var $author$project$Serverless$Conn$Request$Http = {$: 'Http'};
-var $author$project$Serverless$Conn$Request$Https = {$: 'Https'};
-var $author$project$Serverless$Conn$Request$schemeDecoder = A2(
-	$elm$json$Json$Decode$andThen,
-	function (w) {
-		var _v0 = $elm$core$String$toLower(w);
-		switch (_v0) {
-			case 'http':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$Http);
-			case 'https':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$Https);
-			default:
-				return $elm$json$Json$Decode$fail('Unsupported scheme: ' + w);
-		}
-	},
-	$elm$json$Json$Decode$string);
-var $author$project$Serverless$Conn$Request$schemeToString = function (scheme) {
-	if (scheme.$ === 'Http') {
-		return 'http:';
-	} else {
-		return 'https:';
-	}
-};
-var $author$project$Serverless$Conn$Request$modelDecoder = function (_v0) {
-	var headers = _v0.headers;
-	return A3(
-		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
-		'queryString',
-		$elm$json$Json$Decode$string,
-		A3(
-			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
-			'queryParams',
-			A2($elm$json$Json$Decode$map, $elm$core$Dict$fromList, $author$project$Serverless$Conn$KeyValueList$decoder),
-			A3(
-				$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
-				'stage',
-				$elm$json$Json$Decode$string,
-				A3(
-					$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
-					'scheme',
-					$author$project$Serverless$Conn$Request$schemeDecoder,
-					A3(
-						$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
-						'remoteIp',
-						$author$project$Serverless$Conn$IpAddress$decoder,
-						A3(
-							$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
-							'port',
-							$elm$json$Json$Decode$int,
-							A3(
-								$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
-								'path',
-								$elm$json$Json$Decode$string,
-								A3(
-									$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
-									'method',
-									$author$project$Serverless$Conn$Request$methodDecoder,
-									A3(
-										$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
-										'host',
-										$elm$json$Json$Decode$string,
-										A2(
-											$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$hardcoded,
-											headers,
-											A3(
-												$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
-												'body',
-												$author$project$Serverless$Conn$Body$decoder(
-													A2($elm$core$Dict$get, 'content-type', headers)),
-												$elm$json$Json$Decode$succeed(
-													function (bodyVal) {
-														return function (headersVal) {
-															return function (hostVal) {
-																return function (methodVal) {
-																	return function (pathVal) {
-																		return function (portVal) {
-																			return function (remoteIpVal) {
-																				return function (schemeVal) {
-																					return function (stageVal) {
-																						return function (queryParamsVal) {
-																							return function (queryStringVal) {
-																								return {
-																									body: bodyVal,
-																									headers: headersVal,
-																									host: hostVal,
-																									method: methodVal,
-																									path: pathVal,
-																									port_: portVal,
-																									queryParams: queryParamsVal,
-																									queryString: queryStringVal,
-																									remoteIp: remoteIpVal,
-																									scheme: schemeVal,
-																									stage: stageVal,
-																									url: $author$project$Serverless$Conn$Request$schemeToString(schemeVal) + ('//' + (hostVal + (':' + ($elm$core$String$fromInt(portVal) + (pathVal + queryStringVal)))))
-																								};
-																							};
-																						};
-																					};
-																				};
-																			};
-																		};
-																	};
-																};
-															};
-														};
-													}))))))))))));
-};
-var $author$project$Serverless$Conn$Request$decoder = A2(
-	$elm$json$Json$Decode$andThen,
-	A2(
-		$elm$core$Basics$composeL,
-		$elm$json$Json$Decode$map($author$project$Serverless$Conn$Request$Request),
-		$author$project$Serverless$Conn$Request$modelDecoder),
-	A3(
-		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
-		'headers',
-		A2($elm$json$Json$Decode$map, $elm$core$Dict$fromList, $author$project$Serverless$Conn$KeyValueList$decoder),
-		$elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$HeadersOnly)));
-var $elm$url$Url$Http = {$: 'Http'};
-var $elm$url$Url$Https = {$: 'Https'};
-var $elm$url$Url$Url = F6(
-	function (protocol, host, port_, path, query, fragment) {
-		return {fragment: fragment, host: host, path: path, port_: port_, protocol: protocol, query: query};
-	});
-var $elm$core$String$contains = _String_contains;
-var $elm$core$String$length = _String_length;
-var $elm$core$String$slice = _String_slice;
-var $elm$core$String$dropLeft = F2(
-	function (n, string) {
-		return (n < 1) ? string : A3(
-			$elm$core$String$slice,
-			n,
-			$elm$core$String$length(string),
-			string);
-	});
-var $elm$core$String$indexes = _String_indexes;
-var $elm$core$String$isEmpty = function (string) {
-	return string === '';
-};
-var $elm$core$String$left = F2(
-	function (n, string) {
-		return (n < 1) ? '' : A3($elm$core$String$slice, 0, n, string);
-	});
-var $elm$url$Url$chompBeforePath = F5(
-	function (protocol, path, params, frag, str) {
-		if ($elm$core$String$isEmpty(str) || A2($elm$core$String$contains, '@', str)) {
-			return $elm$core$Maybe$Nothing;
-		} else {
-			var _v0 = A2($elm$core$String$indexes, ':', str);
-			if (!_v0.b) {
-				return $elm$core$Maybe$Just(
-					A6($elm$url$Url$Url, protocol, str, $elm$core$Maybe$Nothing, path, params, frag));
-			} else {
-				if (!_v0.b.b) {
-					var i = _v0.a;
-					var _v1 = $elm$core$String$toInt(
-						A2($elm$core$String$dropLeft, i + 1, str));
-					if (_v1.$ === 'Nothing') {
-						return $elm$core$Maybe$Nothing;
-					} else {
-						var port_ = _v1;
-						return $elm$core$Maybe$Just(
-							A6(
-								$elm$url$Url$Url,
-								protocol,
-								A2($elm$core$String$left, i, str),
-								port_,
-								path,
-								params,
-								frag));
-					}
-				} else {
-					return $elm$core$Maybe$Nothing;
-				}
-			}
-		}
-	});
-var $elm$url$Url$chompBeforeQuery = F4(
-	function (protocol, params, frag, str) {
-		if ($elm$core$String$isEmpty(str)) {
-			return $elm$core$Maybe$Nothing;
-		} else {
-			var _v0 = A2($elm$core$String$indexes, '/', str);
-			if (!_v0.b) {
-				return A5($elm$url$Url$chompBeforePath, protocol, '/', params, frag, str);
-			} else {
-				var i = _v0.a;
-				return A5(
-					$elm$url$Url$chompBeforePath,
-					protocol,
-					A2($elm$core$String$dropLeft, i, str),
-					params,
-					frag,
-					A2($elm$core$String$left, i, str));
-			}
-		}
-	});
-var $elm$url$Url$chompBeforeFragment = F3(
-	function (protocol, frag, str) {
-		if ($elm$core$String$isEmpty(str)) {
-			return $elm$core$Maybe$Nothing;
-		} else {
-			var _v0 = A2($elm$core$String$indexes, '?', str);
-			if (!_v0.b) {
-				return A4($elm$url$Url$chompBeforeQuery, protocol, $elm$core$Maybe$Nothing, frag, str);
-			} else {
-				var i = _v0.a;
-				return A4(
-					$elm$url$Url$chompBeforeQuery,
-					protocol,
-					$elm$core$Maybe$Just(
-						A2($elm$core$String$dropLeft, i + 1, str)),
-					frag,
-					A2($elm$core$String$left, i, str));
-			}
-		}
-	});
-var $elm$url$Url$chompAfterProtocol = F2(
-	function (protocol, str) {
-		if ($elm$core$String$isEmpty(str)) {
-			return $elm$core$Maybe$Nothing;
-		} else {
-			var _v0 = A2($elm$core$String$indexes, '#', str);
-			if (!_v0.b) {
-				return A3($elm$url$Url$chompBeforeFragment, protocol, $elm$core$Maybe$Nothing, str);
-			} else {
-				var i = _v0.a;
-				return A3(
-					$elm$url$Url$chompBeforeFragment,
-					protocol,
-					$elm$core$Maybe$Just(
-						A2($elm$core$String$dropLeft, i + 1, str)),
-					A2($elm$core$String$left, i, str));
-			}
-		}
-	});
-var $elm$url$Url$fromString = function (str) {
-	return A2($elm$core$String$startsWith, 'http://', str) ? A2(
-		$elm$url$Url$chompAfterProtocol,
-		$elm$url$Url$Http,
-		A2($elm$core$String$dropLeft, 7, str)) : (A2($elm$core$String$startsWith, 'https://', str) ? A2(
-		$elm$url$Url$chompAfterProtocol,
-		$elm$url$Url$Https,
-		A2($elm$core$String$dropLeft, 8, str)) : $elm$core$Maybe$Nothing);
-};
-var $author$project$Serverless$Conn$Request$url = function (_v0) {
-	var request = _v0.a;
-	return request.url;
-};
-var $author$project$Server$API$decodeRequestAndRoute = F2(
-	function (rawRequest, parseRoute) {
-		return A2(
-			$elm$core$Result$andThen,
-			function (req) {
-				return function (maybeRoute) {
-					if (maybeRoute.$ === 'Nothing') {
-						return $elm$core$Result$Err('No matching route.');
-					} else {
-						var route = maybeRoute.a;
-						return $elm$core$Result$Ok(
-							_Utils_Tuple2(req, route));
-					}
-				}(
-					A2(
-						$elm$core$Maybe$andThen,
-						parseRoute,
-						$elm$url$Url$fromString(
-							$author$project$Serverless$Conn$Request$url(req))));
-			},
-			A2(
-				$elm$core$Result$mapError,
-				$elm$json$Json$Decode$errorToString,
-				A2($elm$json$Json$Decode$decodeValue, $author$project$Serverless$Conn$Request$decoder, rawRequest)));
-	});
-var $author$project$Serverless$Conn$Body$contentType = function (body) {
-	switch (body.$) {
-		case 'Json':
-			return 'application/json';
-		case 'Binary':
-			var binType = body.a;
-			return binType;
-		default:
-			return 'text/text';
-	}
-};
-var $author$project$Serverless$Conn$Charset$toString = function (charset) {
-	return 'utf-8';
-};
-var $author$project$Serverless$Conn$Response$contentType = function (_v0) {
-	var body = _v0.body;
-	var charset = _v0.charset;
-	return $author$project$Serverless$Conn$Body$contentType(body) + ('; charset=' + $author$project$Serverless$Conn$Charset$toString(charset));
-};
-var $author$project$Serverless$Conn$Body$encode = function (body) {
-	switch (body.$) {
-		case 'Empty':
-			return $elm$json$Json$Encode$null;
-		case 'Error':
-			var err = body.a;
-			return $elm$json$Json$Encode$string(err);
-		case 'Text':
-			var w = body.a;
-			return $elm$json$Json$Encode$string(w);
-		case 'Json':
-			var j = body.a;
-			return j;
-		default:
-			var v = body.b;
-			return $elm$json$Json$Encode$string(v);
-	}
-};
-var $author$project$Serverless$Conn$KeyValueList$encode = function (params) {
-	return $elm$json$Json$Encode$object(
-		A2(
-			$elm$core$List$map,
-			function (_v0) {
-				var a = _v0.a;
-				var b = _v0.b;
-				return _Utils_Tuple2(
-					a,
-					$elm$json$Json$Encode$string(b));
-			},
-			$elm$core$List$reverse(params)));
-};
-var $author$project$Serverless$Conn$Body$isBase64Encoded = function (body) {
-	if (body.$ === 'Binary') {
-		return true;
-	} else {
-		return false;
-	}
-};
-var $author$project$Serverless$Conn$Response$encode = function (_v0) {
-	var res = _v0.a;
-	return $elm$json$Json$Encode$object(
-		_List_fromArray(
-			[
-				_Utils_Tuple2(
-				'body',
-				$author$project$Serverless$Conn$Body$encode(res.body)),
-				_Utils_Tuple2(
-				'headers',
-				$author$project$Serverless$Conn$KeyValueList$encode(
-					_Utils_ap(
-						res.headers,
-						_List_fromArray(
-							[
-								_Utils_Tuple2(
-								'content-type',
-								$author$project$Serverless$Conn$Response$contentType(res))
-							])))),
-				_Utils_Tuple2(
-				'statusCode',
-				$elm$json$Json$Encode$int(res.status)),
-				_Utils_Tuple2(
-				'isBase64Encoded',
-				$elm$json$Json$Encode$bool(
-					$author$project$Serverless$Conn$Body$isBase64Encoded(res.body)))
-			]));
-};
-var $author$project$Serverless$Conn$Response$Model = F4(
-	function (body, charset, headers, status) {
-		return {body: body, charset: charset, headers: headers, status: status};
-	});
-var $author$project$Serverless$Conn$Response$Response = function (a) {
-	return {$: 'Response', a: a};
-};
-var $author$project$Serverless$Conn$Body$empty = $author$project$Serverless$Conn$Body$Empty;
-var $author$project$Serverless$Conn$Charset$Utf8 = {$: 'Utf8'};
-var $author$project$Serverless$Conn$Charset$utf8 = $author$project$Serverless$Conn$Charset$Utf8;
-var $author$project$Serverless$Conn$Response$init = $author$project$Serverless$Conn$Response$Response(
-	A4(
-		$author$project$Serverless$Conn$Response$Model,
-		$author$project$Serverless$Conn$Body$empty,
-		$author$project$Serverless$Conn$Charset$utf8,
-		_List_fromArray(
-			[
-				_Utils_Tuple2('cache-control', 'max-age=0, private, must-revalidate')
-			]),
-		200));
-var $author$project$Serverless$Conn$Response$setBody = F2(
-	function (body, _v0) {
-		var res = _v0.a;
-		return $author$project$Serverless$Conn$Response$Response(
-			_Utils_update(
-				res,
-				{body: body}));
-	});
-var $author$project$Serverless$Conn$Response$setStatus = F2(
-	function (value, _v0) {
-		var res = _v0.a;
-		return $author$project$Serverless$Conn$Response$Response(
-			_Utils_update(
-				res,
-				{status: value}));
-	});
-var $author$project$Serverless$Conn$Body$text = $author$project$Serverless$Conn$Body$Text;
-var $author$project$Server$API$err500 = F3(
-	function (session, err, model) {
-		var response = $author$project$Serverless$Conn$Response$encode(
-			A2(
-				$author$project$Serverless$Conn$Response$setStatus,
-				500,
-				A2(
-					$author$project$Serverless$Conn$Response$setBody,
-					$author$project$Serverless$Conn$Body$text(err),
-					$author$project$Serverless$Conn$Response$init)));
-		return _Utils_Tuple2(
-			model,
-			$author$project$Ports$responsePort(
-				{res: response, session: session}));
-	});
-var $author$project$Server$API$ok200 = F2(
-	function (session, model) {
-		var response = $author$project$Serverless$Conn$Response$encode(
-			A2(
-				$author$project$Serverless$Conn$Response$setBody,
-				$author$project$Serverless$Conn$Body$text('Hello from Elm, it works!'),
-				$author$project$Serverless$Conn$Response$init));
-		return _Utils_Tuple2(
-			model,
-			$author$project$Ports$responsePort(
-				{res: response, session: session}));
-	});
-var $author$project$Server$API$checkAndForwardRoute = F4(
-	function (protocol, session, rawRequest, model) {
-		var _v0 = A2($author$project$Server$API$decodeRequestAndRoute, rawRequest, protocol.parseRoute);
-		if (_v0.$ === 'Ok') {
-			var _v1 = _v0.a;
-			var req = _v1.a;
-			var route = _v1.b;
-			var _v2 = A2($elm$core$Debug$log, 'decodeRequestAndRoute', route);
-			return A2(
-				protocol.onApiRoute,
-				{request: req, route: route},
-				A2(
-					$elm$core$Tuple$mapSecond,
-					$elm$core$Platform$Cmd$map(protocol.toMsg),
-					A2(
-						$the_sett$elm_update_helper$Update2$andThen,
-						$author$project$Server$API$ok200(session),
-						$the_sett$elm_update_helper$Update2$pure(model))));
-		} else {
-			var err = _v0.a;
-			var _v3 = A2($elm$core$Debug$log, 'decodeRequestAndRoute', err);
-			return protocol.onUpdate(
-				A2(
-					$elm$core$Tuple$mapSecond,
-					$elm$core$Platform$Cmd$map(protocol.toMsg),
-					A2(
-						$the_sett$elm_update_helper$Update2$andThen,
-						A2($author$project$Server$API$err500, session, err),
-						$the_sett$elm_update_helper$Update2$pure(model))));
-		}
-	});
-var $author$project$Server$API$update = F3(
-	function (protocol, msg, model) {
-		var _v0 = A2($elm$core$Debug$log, 'update', 'called');
-		var session = msg.a.session;
-		var req = msg.a.req;
-		return A2(
-			$the_sett$elm_update_helper$Update2$andMap,
-			A3($author$project$Server$API$checkAndForwardRoute, protocol, session, req),
-			$the_sett$elm_update_helper$Update2$pure(model));
-	});
 var $author$project$API$update = F2(
 	function (msg, model) {
 		var _v0 = A2($elm$core$Debug$log, 'API.update', msg);
-		if (_v0.$ === 'ApiMsg') {
-			var innerMsg = _v0.a;
-			return A3(
-				$author$project$Server$API$update,
-				$author$project$API$apiProtocol(model),
-				innerMsg,
-				model.api);
-		} else {
-			var innerMsg = _v0.a;
-			return A3($author$project$EventLog$Component$update, $author$project$API$eventLogProtocol, innerMsg, model);
-		}
+		var innerMsg = _v0.a;
+		return A3($author$project$EventLog$Component$update, $author$project$API$eventLogProtocol, innerMsg, model);
 	});
 var $elm$core$Platform$worker = _Platform_worker;
 var $author$project$API$main = $elm$core$Platform$worker(

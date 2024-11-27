@@ -1,9 +1,6 @@
 module API exposing (Flags, Model, MomentoSecret, Msg, main)
 
 import EventLog.Component as EventLog
-import Ports
-import Server.API as Api exposing (ApiRoute)
-import Update2 as U2
 
 
 {-| API for managing realtime channels.
@@ -30,17 +27,14 @@ type alias Model =
     , channelApiUrl : String
 
     -- Elm modules
-    , api : Api.Model
     , eventLog : EventLog.Model
 
-    -- Routing state
     -- Shared state
     }
 
 
 type Msg
-    = ApiMsg Api.Msg
-    | EventLogMsg EventLog.Msg
+    = EventLogMsg EventLog.Msg
 
 
 type alias MomentoSecret =
@@ -68,20 +62,15 @@ main =
 init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
-        ( apiMdl, apiCmds ) =
-            Api.init ApiMsg
-
         ( eventLogMdl, eventLogCmds ) =
             EventLog.init EventLogMsg
     in
     ( { momentoApiKey = flags.momentoSecret.apiKey
       , channelApiUrl = flags.channelApiUrl
-      , api = apiMdl
       , eventLog = eventLogMdl
       }
     , Cmd.batch
-        [ apiCmds
-        , eventLogCmds
+        [ eventLogCmds
         ]
     )
 
@@ -89,51 +78,17 @@ init flags =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ Api.subscriptions (apiProtocol model) model.api
-        , EventLog.subscriptions eventLogProtocol model
+        [ EventLog.subscriptions eventLogProtocol model
         ]
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case Debug.log "API.update" msg of
-        ApiMsg innerMsg ->
-            Api.update (apiProtocol model)
-                innerMsg
-                model.api
-
         EventLogMsg innerMsg ->
             EventLog.update eventLogProtocol
                 innerMsg
                 model
-
-
-
--- API Protocol
-
-
-apiPorts : Api.Ports msg
-apiPorts =
-    { request = Ports.requestPort
-    , response = Ports.responsePort
-    }
-
-
-apiProtocol : Model -> Api.Protocol Api.Model Msg Model EventLog.Route
-apiProtocol model =
-    { toMsg = ApiMsg
-    , ports = apiPorts
-    , parseRoute = EventLog.routeParser
-    , onUpdate = \( apiMdl, cmds ) -> ( { model | api = apiMdl }, cmds )
-    , onApiRoute = \route -> apiRoute route model
-    }
-
-
-apiRoute : ApiRoute EventLog.Route -> Model -> ( Api.Model, Cmd Msg ) -> ( Model, Cmd Msg )
-apiRoute route model =
-    \( apiMdl, cmds ) ->
-        ( { model | api = apiMdl }, cmds )
-            |> U2.andThen (EventLog.processRoute eventLogProtocol route)
 
 
 

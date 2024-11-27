@@ -2,6 +2,7 @@ module Serverless.Conn.Response exposing
     ( Response, Status
     , addHeader, setBody, updateBody, setStatus
     , init, encode
+    , err500, ok200
     )
 
 {-| Query and update the HTTP response.
@@ -134,3 +135,16 @@ contentType { body, charset } =
     Body.contentType body
         ++ "; charset="
         ++ Charset.toString charset
+
+
+ok200 : String -> Response
+ok200 msg =
+    init
+        |> setBody (Body.text msg)
+
+
+err500 : String -> Response
+err500 err =
+    init
+        |> setBody (Body.text err)
+        |> setStatus 500

@@ -1,25 +1,10 @@
 module EventLog.Component exposing
     ( Component
     , Model(..)
-    , Msg(..)
+    , Msg
     , Protocol
-    , ReadyState
-    , Route(..)
-    , StartState
-    , cacheName
-    , createChannel
     , init
-    , modelTopicName
-    , nameGenerator
-    , notifyTopicName
-    , processRoute
-    , randomize
-    , routeParser
-    , saveChannelEvent
-    , saveListName
-    , setModel
     , subscriptions
-    , switchState
     , update
     )
 
@@ -28,16 +13,17 @@ module EventLog.Component exposing
 
 import AWS.Dynamo as Dynamo
 import Json.Encode as Encode
-import Momento exposing (Error, SessionKey)
+import Momento exposing (Error, MomentoSessionKey)
 import Ports
 import Procedure
 import Procedure.Program
 import Random
 import Random.Char
 import Random.String
-import Server.API exposing (ApiRoute)
+import Server.API as Api exposing (ApiRequest, Error(..), HttpSessionKey)
 import Serverless.Conn.Body as Body
 import Serverless.Conn.Request as Request exposing (Method(..))
+import Serverless.Conn.Response as Body
 import Update2 as U2
 import Url exposing (Url)
 import Url.Parser as UP exposing ((</>), (<?>))
@@ -88,8 +74,8 @@ routeParser =
         |> UP.parse
 
 
-processRoute : Protocol (Component a) msg model -> ApiRoute Route -> Component a -> ( model, Cmd msg )
-processRoute protocol route component =
+processRoute : Protocol (Component a) msg model -> HttpSessionKey -> ApiRequest Route -> Component a -> ( model, Cmd msg )
+processRoute protocol session route component =
     let
         model =
             component.eventLog
@@ -97,11 +83,11 @@ processRoute protocol route component =
     case ( Request.method route.request, route.route, model ) |> Debug.log "processRoute" of
         ( GET, ChannelRoot, ModelReady state ) ->
             U2.pure component
-                |> U2.andMap (createChannel protocol state)
+                |> U2.andMap (createChannel protocol session state)
 
         ( POST, ChannelRoot, ModelReady state ) ->
             U2.pure component
-                |> U2.andMap (createChannel protocol state)
+                |> U2.andMap (createChannel protocol session state)
 
         ( POST, Channel _, ModelReady _ ) ->
             let
@@ -125,8 +111,8 @@ processRoute protocol route component =
     * Return a confirmation that everything has been set up.
 
 -}
-createChannel : Protocol (Component a) msg model -> ReadyState -> Component a -> ( model, Cmd msg )
-createChannel protocol state component =
+createChannel : Protocol (Component a) msg model -> HttpSessionKey -> ReadyState -> Component a -> ( model, Cmd msg )
+createChannel protocol session state component =
     let
         _ =
             Debug.log "createChannel" channelName
@@ -140,6 +126,7 @@ createChannel protocol state component =
                 |> Procedure.andThen (openMomentoCache component)
                 |> Procedure.andThen recordChannelToDB
                 |> Procedure.andThen (setupChannelWebhook component channelName)
+                |> Procedure.andThen (createChannelResponse session "Created Channel Ok")
     in
     ( { seed = nextSeed
       , procedure = state.procedure
@@ -155,7 +142,7 @@ createChannel protocol state component =
 openMomentoCache :
     Component a
     -> String
-    -> Procedure.Procedure String SessionKey Msg
+    -> Procedure.Procedure String MomentoSessionKey Msg
 openMomentoCache component channelName =
     let
         _ =
@@ -169,7 +156,7 @@ openMomentoCache component channelName =
         |> Procedure.mapError (always "Momento error")
 
 
-recordChannelToDB : SessionKey -> Procedure.Procedure String SessionKey Msg
+recordChannelToDB : MomentoSessionKey -> Procedure.Procedure String MomentoSessionKey Msg
 recordChannelToDB sessionKey =
     let
         _ =
@@ -187,7 +174,7 @@ recordChannelToDB sessionKey =
 setupChannelWebhook :
     Component a
     -> String
-    -> SessionKey
+    -> MomentoSessionKey
     -> Procedure.Procedure String () Msg
 setupChannelWebhook component channelName sessionKey =
     let
@@ -202,6 +189,21 @@ setupChannelWebhook component channelName sessionKey =
         |> Procedure.fetchResult
         |> Procedure.map (always ())
         |> Procedure.mapError (always "Momento error")
+
+
+createChannelResponse :
+    HttpSessionKey
+    -> String
+    -> ()
+    -> Procedure.Procedure String () Msg
+createChannelResponse session message _ =
+    let
+        _ =
+            Debug.log "procedure" "createChannelResponse"
+    in
+    httpServerApi.response session (Body.ok200 message)
+        |> Procedure.do
+        |> Procedure.mapError (always "HTTP error")
 
 
 nameGenerator : Random.Generator String
@@ -266,9 +268,25 @@ momentoApi =
     Momento.momentoApi ProcedureMsg momentoPorts
 
 
+httpServerProtocol : Api.Protocol Msg Route
+httpServerProtocol =
+    { ports =
+        { request = Ports.requestPort
+        , response = Ports.responsePort
+        }
+    , parseRoute = routeParser
+    }
+
+
+httpServerApi : Api.HttpServerApi Msg Route
+httpServerApi =
+    Api.httpServerApi httpServerProtocol
+
+
 type Msg
     = ProcedureMsg (Procedure.Program.Msg Msg)
     | RandomSeed Random.Seed
+    | HttpRequest HttpSessionKey (Result Api.Error (ApiRequest Route))
     | CreateChannelResponse (Result String ())
 
 
@@ -302,7 +320,10 @@ subscriptions protocol component =
     in
     case model |> Debug.log "EventLog.subscriptions" of
         ModelReady state ->
-            Procedure.Program.subscriptions state.procedure
+            [ Procedure.Program.subscriptions state.procedure
+            , httpServerApi.request HttpRequest
+            ]
+                |> Sub.batch
                 |> Sub.map protocol.toMsg
 
         _ ->
@@ -338,6 +359,20 @@ update protocol msg component =
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
+
+        ( ModelReady state, HttpRequest session result ) ->
+            case result of
+                Ok apiRequest ->
+                    processRoute protocol session apiRequest component
+
+                Err (Error errMsg) ->
+                    ( ModelReady state
+                    , Body.err500 errMsg
+                        |> httpServerApi.response session
+                    )
+                        |> Tuple.mapFirst (setModel component)
+                        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                        |> protocol.onUpdate
 
         ( _, CreateChannelResponse res ) ->
             let

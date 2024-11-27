@@ -1,11 +1,11 @@
 module Momento exposing
     ( Error(..)
     , MomentoApi
+    , MomentoSessionKey
     , OpenParams
     , Ports
     , PublishParams
     , PushListParams
-    , SessionKey
     , SubscribeParams
     , WebhookParams
     , momentoApi
@@ -35,11 +35,11 @@ type alias Ports msg =
 
 
 type alias MomentoApi msg =
-    { open : OpenParams -> (Result Error SessionKey -> msg) -> Cmd msg
-    , subscribe : SessionKey -> SubscribeParams -> (Result Error SessionKey -> msg) -> Cmd msg
-    , pushList : SessionKey -> PushListParams -> (Result Error SessionKey -> msg) -> Cmd msg
-    , webhook : SessionKey -> WebhookParams -> (Result Error SessionKey -> msg) -> Cmd msg
-    , publish : SessionKey -> PublishParams -> Cmd msg
+    { open : OpenParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
+    , subscribe : MomentoSessionKey -> SubscribeParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
+    , pushList : MomentoSessionKey -> PushListParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
+    , webhook : MomentoSessionKey -> WebhookParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
+    , publish : MomentoSessionKey -> PublishParams -> Cmd msg
     }
 
 
@@ -53,8 +53,8 @@ momentoApi pt ports =
     }
 
 
-type SessionKey
-    = SessionKey Value
+type MomentoSessionKey
+    = MomentoSessionKey Value
 
 
 type alias OpenParams =
@@ -85,11 +85,11 @@ type Error
 -- Implementation
 
 
-decodeResponse : { a | type_ : String, response : Value } -> Result Error SessionKey
+decodeResponse : { a | type_ : String, response : Value } -> Result Error MomentoSessionKey
 decodeResponse res =
     case res.type_ of
         "Ok" ->
-            SessionKey res.response |> Ok
+            MomentoSessionKey res.response |> Ok
 
         "Error" ->
             Err Failed
@@ -102,7 +102,7 @@ open :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
     -> OpenParams
-    -> (Result Error SessionKey -> msg)
+    -> (Result Error MomentoSessionKey -> msg)
     -> Cmd msg
 open pt ports openParams dt =
     Channel.open (\key -> ports.open { id = key, cache = openParams.cache, apiKey = openParams.apiKey })
@@ -115,11 +115,11 @@ open pt ports openParams dt =
 subscribe :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
-    -> SessionKey
+    -> MomentoSessionKey
     -> SubscribeParams
-    -> (Result Error SessionKey -> msg)
+    -> (Result Error MomentoSessionKey -> msg)
     -> Cmd msg
-subscribe pt ports (SessionKey sessionKey) subscribeParams dt =
+subscribe pt ports (MomentoSessionKey sessionKey) subscribeParams dt =
     Channel.open (\key -> ports.subscribe { id = key, session = sessionKey, topic = subscribeParams.topic })
         |> Channel.connect ports.response
         |> Channel.filter (\key { id } -> id == key)
@@ -130,11 +130,11 @@ subscribe pt ports (SessionKey sessionKey) subscribeParams dt =
 pushList :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
-    -> SessionKey
+    -> MomentoSessionKey
     -> PushListParams
-    -> (Result Error SessionKey -> msg)
+    -> (Result Error MomentoSessionKey -> msg)
     -> Cmd msg
-pushList pt ports (SessionKey sessionKey) { list, payload } dt =
+pushList pt ports (MomentoSessionKey sessionKey) { list, payload } dt =
     Channel.open (\key -> ports.pushList { id = key, session = sessionKey, list = list, payload = payload })
         |> Channel.connect ports.response
         |> Channel.filter (\key { id } -> id == key)
@@ -145,11 +145,11 @@ pushList pt ports (SessionKey sessionKey) { list, payload } dt =
 webhook :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
-    -> SessionKey
+    -> MomentoSessionKey
     -> WebhookParams
-    -> (Result Error SessionKey -> msg)
+    -> (Result Error MomentoSessionKey -> msg)
     -> Cmd msg
-webhook pt ports (SessionKey sessionKey) { topic, url } dt =
+webhook pt ports (MomentoSessionKey sessionKey) { topic, url } dt =
     Channel.open (\key -> ports.createWebhook { id = key, session = sessionKey, topic = topic, url = url })
         |> Channel.connect ports.response
         |> Channel.filter (\key { id } -> id == key)
@@ -160,8 +160,8 @@ webhook pt ports (SessionKey sessionKey) { topic, url } dt =
 {-| Publishes a message on a topic. Publish is asynchronous and will not generate a response message in Elm,
 but may report errors on the asyncError subscription.
 -}
-publish : Ports msg -> SessionKey -> PublishParams -> Cmd msg
-publish ports (SessionKey sessionKey) { topic, payload } =
+publish : Ports msg -> MomentoSessionKey -> PublishParams -> Cmd msg
+publish ports (MomentoSessionKey sessionKey) { topic, payload } =
     ports.publish { id = "", session = sessionKey, topic = topic, payload = payload }
 
 
