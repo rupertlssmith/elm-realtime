@@ -12,33 +12,39 @@ const client = new DynamoDB();
 const documentClient = DynamoDBDocument.from(client);
 
 type GetArgs = {
-    id: String;
+    id: string;
     req: GetCommandInput;
 }
 
 type PutArgs = {
-    id: String;
+    id: string;
     req: PutCommandInput;
 }
 
 type DeleteArgs = {
-    id: String;
+    id: string;
     req: DeleteCommandInput;
 }
 
 type BatchGetArgs = {
-    id: String;
+    id: string;
     req: BatchGetCommandInput;
 }
 
 type BatchWriteArgs = {
-    id: String;
+    id: string;
     req: BatchWriteCommandInput;
 }
 
 type QueryArgs = {
-    id: String;
+    id: string;
     req: QueryCommandInput;
+}
+
+type Error = {
+    type_: string;
+    message: string;
+    details: any;
 }
 
 type Ports = {
@@ -49,6 +55,15 @@ type Ports = {
     dynamoBatchWrite: { subscribe: any };
     dynamoQuery: { subscribe: any };
     dynamoResponse: { send: any };
+}
+
+function errorResponse(error): Error
+{
+    return {
+        type_: "Error",
+        message: error.message,
+        details: error
+    };
 }
 
 export class DynamoPorts {
@@ -76,15 +91,13 @@ export class DynamoPorts {
         app.ports.dynamoQuery.subscribe(this.dynamoQuery);
     }
 
+
     dynamoGet = async (args: GetArgs) => {
         documentClient.get(args.req, (error, result) => {
             var getResponse;
 
             if (error) {
-                getResponse = {
-                    type_: "Error",
-                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(args.req, null, 2)
-                };
+                getResponse = errorResponse(error);
             } else if (Object.entries(result).length === 0) {
                 getResponse = {
                     type_: "ItemNotFound"
@@ -107,10 +120,7 @@ export class DynamoPorts {
             var putResponse;
 
             if (error) {
-                putResponse = {
-                    type_: "Error",
-                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(args.req, null, 2)
-                };
+                putResponse = errorResponse(error);
             } else {
                 putResponse = {
                     type_: "Ok"
@@ -126,10 +136,7 @@ export class DynamoPorts {
             var deleteResponse;
 
             if (error) {
-                deleteResponse = {
-                    type_: "Error",
-                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(args.req, null, 2)
-                };
+                deleteResponse = errorResponse(error);
             } else {
                 deleteResponse = {
                     type_: "Ok"
@@ -145,10 +152,7 @@ export class DynamoPorts {
             var getResponse;
 
             if (error) {
-                getResponse = {
-                    type_: "Error",
-                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(args.req, null, 2)
-                };
+                getResponse = errorResponse(error);
             } else if (Object.entries(result).length === 0) {
                 getResponse = {
                     type_: "Item",
@@ -170,10 +174,7 @@ export class DynamoPorts {
             var putResponse;
 
             if (error) {
-                putResponse = {
-                    type_: "Error",
-                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(args.req, null, 2)
-                };
+                putResponse = errorResponse(error);
             } else {
                 putResponse = {
                     type_: "Ok"
@@ -189,10 +190,7 @@ export class DynamoPorts {
             var getResponse;
 
             if (error) {
-                getResponse = {
-                    type_: "Error",
-                    errorMsg: JSON.stringify(error, null, 2) + "\n" + JSON.stringify(args.req, null, 2)
-                };
+                getResponse = errorResponse(error);
             } else if (Object.entries(result).length === 0) {
                 getResponse = {
                     type_: "Items",

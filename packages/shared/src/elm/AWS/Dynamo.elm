@@ -4,7 +4,7 @@ module AWS.Dynamo exposing
     , Put, put
     , Get, get
     , Delete, delete
-    , Error, errorToString
+    , Error, errorToString, errorToJson
     , Query, Order(..), query, queryIndex, partitionKeyEquals, limitResults, orderResults
     , rangeKeyEquals, rangeKeyLessThan, rangeKeyLessThanOrEqual, rangeKeyGreaterThan
     , rangeKeyGreaterThanOrEqual, rangeKeyBetween
@@ -35,7 +35,7 @@ module AWS.Dynamo exposing
 
 # Error reporting
 
-@docs Error, errorToString
+@docs Error, errorToString, errorToJson
 
 
 # Database Queries
@@ -48,6 +48,7 @@ module AWS.Dynamo exposing
 -}
 
 import Json.Decode as Decode exposing (Decoder)
+import Json.Decode.Extra as DE
 import Json.Encode as Encode exposing (Value)
 import Maybe.Extra
 import Procedure
@@ -95,18 +96,47 @@ dynamoApi pt ports =
 
 
 type Error
-    = Error String
+    = Error { message : String, details : Value }
     | DecodeError String
 
 
 errorToString : Error -> String
 errorToString err =
     case err of
-        Error val ->
-            val
+        Error { message } ->
+            message
 
         DecodeError val ->
             val
+
+
+errorToJson : Error -> Value
+errorToJson err =
+    case err of
+        Error { message, details } ->
+            [ ( "message", Encode.string message )
+            , ( "details", details )
+            ]
+                |> Encode.object
+
+        DecodeError message ->
+            [ ( "message", Encode.string message )
+            ]
+                |> Encode.object
+
+
+errorDecoder : Decoder (Result Error a)
+errorDecoder =
+    Decode.succeed
+        (\message details ->
+            { message = message
+            , details = details
+            }
+        )
+        |> DE.andMap (Decode.field "message" Decode.string)
+        |> DE.andMap (Decode.field "details" Decode.value)
+        |> Decode.map Error
+        |> Decode.map Err
 
 
 
@@ -153,8 +183,7 @@ putResponseDecoder val =
                                 Decode.succeed (Ok ())
 
                             _ ->
-                                Decode.field "errorMsg" Decode.string
-                                    |> Decode.map (Error >> Err)
+                                errorDecoder
                     )
     in
     Decode.decodeValue decoder val
@@ -210,8 +239,7 @@ getResponseDecoder val =
                                 Decode.succeed (Ok Nothing)
 
                             _ ->
-                                Decode.field "errorMsg" Decode.string
-                                    |> Decode.map (Error >> Err)
+                                errorDecoder
                     )
     in
     Decode.decodeValue decoder val
@@ -263,8 +291,7 @@ deleteResponseDecoder val =
                                 Decode.succeed (Ok ())
 
                             _ ->
-                                Decode.field "errorMsg" Decode.string
-                                    |> Decode.map (Error >> Err)
+                                errorDecoder
                     )
     in
     Decode.decodeValue decoder val
@@ -366,8 +393,7 @@ batchPutResponseDecoder val =
                                 Decode.succeed (Ok ())
 
                             _ ->
-                                Decode.field "errorMsg" Decode.string
-                                    |> Decode.map (Error >> Err)
+                                errorDecoder
                     )
     in
     Decode.decodeValue decoder val
@@ -435,8 +461,7 @@ batchGetResponseDecoder tableName val =
                                     |> Decode.map Ok
 
                             _ ->
-                                Decode.field "errorMsg" Decode.string
-                                    |> Decode.map (Error >> Err)
+                                errorDecoder
                     )
     in
     Decode.decodeValue decoder val
