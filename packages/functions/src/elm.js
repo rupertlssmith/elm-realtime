@@ -4872,34 +4872,6 @@ var $elm_community$result_extra$Result$Extra$merge = function (r) {
 		return rr;
 	}
 };
-var $author$project$Serverless$Conn$Body$asJson = function (body) {
-	switch (body.$) {
-		case 'Empty':
-			return $elm$core$Result$Ok($elm$json$Json$Encode$null);
-		case 'Error':
-			var err = body.a;
-			return $elm$core$Result$Err(err);
-		case 'Text':
-			var val = body.a;
-			return A2(
-				$elm$core$Result$mapError,
-				$elm$json$Json$Decode$errorToString,
-				A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, val));
-		case 'Json':
-			var val = body.a;
-			return $elm$core$Result$Ok(val);
-		default:
-			var val = body.b;
-			return A2(
-				$elm$core$Result$mapError,
-				$elm$json$Json$Decode$errorToString,
-				A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, val));
-	}
-};
-var $author$project$Serverless$Conn$Request$body = function (_v0) {
-	var request = _v0.a;
-	return request.body;
-};
 var $author$project$EventLog$Component$HttpResponse = F2(
 	function (a, b) {
 		return {$: 'HttpResponse', a: a, b: b};
@@ -6789,17 +6761,67 @@ var $author$project$EventLog$Component$createChannel = F4(
 								$author$project$EventLog$Component$HttpResponse(session),
 								procedure))))));
 	});
-var $elm$core$Debug$log = _Debug_log;
 var $author$project$Serverless$Conn$Request$method = function (_v0) {
 	var request = _v0.a;
 	return request.method;
 };
+var $author$project$Serverless$Conn$Body$asJson = function (body) {
+	switch (body.$) {
+		case 'Empty':
+			return $elm$core$Result$Ok($elm$json$Json$Encode$null);
+		case 'Error':
+			var err = body.a;
+			return $elm$core$Result$Err(err);
+		case 'Text':
+			var val = body.a;
+			return A2(
+				$elm$core$Result$mapError,
+				$elm$json$Json$Decode$errorToString,
+				A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, val));
+		case 'Json':
+			var val = body.a;
+			return $elm$core$Result$Ok(val);
+		default:
+			var val = body.b;
+			return A2(
+				$elm$core$Result$mapError,
+				$elm$json$Json$Decode$errorToString,
+				A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, val));
+	}
+};
+var $author$project$Serverless$Conn$Request$body = function (_v0) {
+	var request = _v0.a;
+	return request.body;
+};
+var $elm$core$Debug$log = _Debug_log;
+var $author$project$EventLog$Component$processSaveChannel = F6(
+	function (protocol, session, state, apiRequest, channelName, component) {
+		var _v0 = A2(
+			$elm$core$Debug$log,
+			'EventLog.processRoute',
+			A2(
+				$elm$core$Result$map,
+				$elm$json$Json$Encode$encode(4),
+				$author$project$Serverless$Conn$Body$asJson(
+					$author$project$Serverless$Conn$Request$body(apiRequest.request))));
+		return protocol.onUpdate(
+			A2(
+				$elm$core$Tuple$mapSecond,
+				$elm$core$Platform$Cmd$map(protocol.toMsg),
+				A2(
+					$elm$core$Tuple$mapFirst,
+					$author$project$EventLog$Component$setModel(component),
+					A2(
+						$the_sett$elm_update_helper$Update2$andMap,
+						$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelReady),
+						$the_sett$elm_update_helper$Update2$pure(state)))));
+	});
 var $author$project$EventLog$Component$processRoute = F4(
-	function (protocol, session, route, component) {
+	function (protocol, session, apiRequest, component) {
 		var model = component.eventLog;
 		var _v0 = _Utils_Tuple3(
-			$author$project$Serverless$Conn$Request$method(route.request),
-			route.route,
+			$author$project$Serverless$Conn$Request$method(apiRequest.request),
+			apiRequest.route,
 			model);
 		_v0$3:
 		while (true) {
@@ -6831,15 +6853,11 @@ var $author$project$EventLog$Component$processRoute = F4(
 			} else {
 				if ((_v0.a.$ === 'POST') && (_v0.c.$ === 'ModelReady')) {
 					var _v5 = _v0.a;
-					var _v6 = A2(
-						$elm$core$Debug$log,
-						'EventLog.processRoute',
-						A2(
-							$elm$core$Result$map,
-							$elm$json$Json$Encode$encode(4),
-							$author$project$Serverless$Conn$Body$asJson(
-								$author$project$Serverless$Conn$Request$body(route.request))));
-					return protocol.onUpdate(
+					var channelName = _v0.b.a;
+					var state = _v0.c.a;
+					return A2(
+						$the_sett$elm_update_helper$Update2$andMap,
+						A5($author$project$EventLog$Component$processSaveChannel, protocol, session, state, apiRequest, channelName),
 						$the_sett$elm_update_helper$Update2$pure(component));
 				} else {
 					break _v0$3;

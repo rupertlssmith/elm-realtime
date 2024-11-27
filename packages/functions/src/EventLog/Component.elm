@@ -229,12 +229,12 @@ routeParser =
 
 
 processRoute : Protocol (Component a) msg model -> HttpSessionKey -> ApiRequest Route -> Component a -> ( model, Cmd msg )
-processRoute protocol session route component =
+processRoute protocol session apiRequest component =
     let
         model =
             component.eventLog
     in
-    case ( Request.method route.request, route.route, model ) of
+    case ( Request.method apiRequest.request, apiRequest.route, model ) of
         ( GET, ChannelRoot, ModelReady state ) ->
             U2.pure component
                 |> U2.andMap (createChannel protocol session state)
@@ -243,14 +243,9 @@ processRoute protocol session route component =
             U2.pure component
                 |> U2.andMap (createChannel protocol session state)
 
-        ( POST, Channel _, ModelReady _ ) ->
-            let
-                _ =
-                    Debug.log "EventLog.processRoute"
-                        (Request.body route.request |> Body.asJson |> Result.map (Encode.encode 4))
-            in
+        ( POST, Channel channelName, ModelReady state ) ->
             U2.pure component
-                |> protocol.onUpdate
+                |> U2.andMap (processSaveChannel protocol session state apiRequest channelName)
 
         _ ->
             U2.pure component
@@ -336,7 +331,7 @@ setupChannelWebhook component channelName sessionKey =
 
 
 
--- Proces a save channel notification.
+-- Process a save channel notification.
 
 
 {-| Channel save:
@@ -348,8 +343,25 @@ setupChannelWebhook component channelName sessionKey =
     * Publish the saved event to the model topic.
 
 -}
-processSaveChannel =
-    ()
+processSaveChannel :
+    Protocol (Component a) msg model
+    -> HttpSessionKey
+    -> ReadyState
+    -> ApiRequest Route
+    -> String
+    -> Component a
+    -> ( model, Cmd msg )
+processSaveChannel protocol session state apiRequest channelName component =
+    let
+        _ =
+            Debug.log "EventLog.processRoute"
+                (Request.body apiRequest.request |> Body.asJson |> Result.map (Encode.encode 4))
+    in
+    U2.pure state
+        |> U2.andMap (ModelReady |> switchState)
+        |> Tuple.mapFirst (setModel component)
+        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+        |> protocol.onUpdate
 
 
 
