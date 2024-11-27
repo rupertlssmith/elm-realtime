@@ -741,8 +741,7 @@ queryResponseDecoder val =
                                     (Decode.field "items" (Decode.list Decode.value))
 
                             _ ->
-                                Decode.field "errorMsg" Decode.string
-                                    |> Decode.map (Error >> Err)
+                                errorDecoder
                     )
     in
     Decode.decodeValue decoder val

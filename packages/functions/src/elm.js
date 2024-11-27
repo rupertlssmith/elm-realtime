@@ -5686,13 +5686,31 @@ var $author$project$AWS$Dynamo$batchGetEncoder = function (getOp) {
 var $author$project$AWS$Dynamo$DecodeError = function (a) {
 	return {$: 'DecodeError', a: a};
 };
-var $author$project$AWS$Dynamo$Error = function (a) {
-	return {$: 'Error', a: a};
-};
 var $elm$json$Json$Decode$at = F2(
 	function (fields, decoder) {
 		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
 	});
+var $author$project$AWS$Dynamo$Error = function (a) {
+	return {$: 'Error', a: a};
+};
+var $elm_community$json_extra$Json$Decode$Extra$andMap = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
+var $author$project$AWS$Dynamo$errorDecoder = A2(
+	$elm$json$Json$Decode$map,
+	$elm$core$Result$Err,
+	A2(
+		$elm$json$Json$Decode$map,
+		$author$project$AWS$Dynamo$Error,
+		A2(
+			$elm_community$json_extra$Json$Decode$Extra$andMap,
+			A2($elm$json$Json$Decode$field, 'details', $elm$json$Json$Decode$value),
+			A2(
+				$elm_community$json_extra$Json$Decode$Extra$andMap,
+				A2($elm$json$Json$Decode$field, 'message', $elm$json$Json$Decode$string),
+				$elm$json$Json$Decode$succeed(
+					F2(
+						function (message, details) {
+							return {details: details, message: message};
+						}))))));
 var $elm$json$Json$Decode$list = _Json_decodeList;
 var $author$project$AWS$Dynamo$batchGetResponseDecoder = F2(
 	function (tableName, val) {
@@ -5709,10 +5727,7 @@ var $author$project$AWS$Dynamo$batchGetResponseDecoder = F2(
 								['item', 'Responses', tableName]),
 							$elm$json$Json$Decode$list($elm$json$Json$Decode$value)));
 				} else {
-					return A2(
-						$elm$json$Json$Decode$map,
-						A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$Error, $elm$core$Result$Err),
-						A2($elm$json$Json$Decode$field, 'errorMsg', $elm$json$Json$Decode$string));
+					return $author$project$AWS$Dynamo$errorDecoder;
 				}
 			},
 			A2($elm$json$Json$Decode$field, 'type_', $elm$json$Json$Decode$string));
@@ -5792,10 +5807,7 @@ var $author$project$AWS$Dynamo$batchPutResponseDecoder = function (val) {
 				return $elm$json$Json$Decode$succeed(
 					$elm$core$Result$Ok(_Utils_Tuple0));
 			} else {
-				return A2(
-					$elm$json$Json$Decode$map,
-					A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$Error, $elm$core$Result$Err),
-					A2($elm$json$Json$Decode$field, 'errorMsg', $elm$json$Json$Decode$string));
+				return $author$project$AWS$Dynamo$errorDecoder;
 			}
 		},
 		A2($elm$json$Json$Decode$field, 'type_', $elm$json$Json$Decode$string));
@@ -6033,10 +6045,7 @@ var $author$project$AWS$Dynamo$deleteResponseDecoder = function (val) {
 				return $elm$json$Json$Decode$succeed(
 					$elm$core$Result$Ok(_Utils_Tuple0));
 			} else {
-				return A2(
-					$elm$json$Json$Decode$map,
-					A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$Error, $elm$core$Result$Err),
-					A2($elm$json$Json$Decode$field, 'errorMsg', $elm$json$Json$Decode$string));
+				return $author$project$AWS$Dynamo$errorDecoder;
 			}
 		},
 		A2($elm$json$Json$Decode$field, 'type_', $elm$json$Json$Decode$string));
@@ -6107,10 +6116,7 @@ var $author$project$AWS$Dynamo$getResponseDecoder = function (val) {
 					return $elm$json$Json$Decode$succeed(
 						$elm$core$Result$Ok($elm$core$Maybe$Nothing));
 				default:
-					return A2(
-						$elm$json$Json$Decode$map,
-						A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$Error, $elm$core$Result$Err),
-						A2($elm$json$Json$Decode$field, 'errorMsg', $elm$json$Json$Decode$string));
+					return $author$project$AWS$Dynamo$errorDecoder;
 			}
 		},
 		A2($elm$json$Json$Decode$field, 'type_', $elm$json$Json$Decode$string));
@@ -6171,10 +6177,7 @@ var $author$project$AWS$Dynamo$putResponseDecoder = function (val) {
 				return $elm$json$Json$Decode$succeed(
 					$elm$core$Result$Ok(_Utils_Tuple0));
 			} else {
-				return A2(
-					$elm$json$Json$Decode$map,
-					A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$Error, $elm$core$Result$Err),
-					A2($elm$json$Json$Decode$field, 'errorMsg', $elm$json$Json$Decode$string));
+				return $author$project$AWS$Dynamo$errorDecoder;
 			}
 		},
 		A2($elm$json$Json$Decode$field, 'type_', $elm$json$Json$Decode$string));
@@ -6451,10 +6454,7 @@ var $author$project$AWS$Dynamo$queryResponseDecoder = function (val) {
 						'items',
 						$elm$json$Json$Decode$list($elm$json$Json$Decode$value)));
 			} else {
-				return A2(
-					$elm$json$Json$Decode$map,
-					A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$Error, $elm$core$Result$Err),
-					A2($elm$json$Json$Decode$field, 'errorMsg', $elm$json$Json$Decode$string));
+				return $author$project$AWS$Dynamo$errorDecoder;
 			}
 		},
 		A2($elm$json$Json$Decode$field, 'type_', $elm$json$Json$Decode$string));
@@ -6668,8 +6668,8 @@ var $author$project$EventLog$Component$dynamoApi = A2(
 	{batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse});
 var $author$project$AWS$Dynamo$errorToString = function (err) {
 	if (err.$ === 'Error') {
-		var val = err.a;
-		return val;
+		var message = err.a.message;
+		return message;
 	} else {
 		var val = err.a;
 		return val;
