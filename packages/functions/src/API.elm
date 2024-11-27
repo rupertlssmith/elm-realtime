@@ -84,7 +84,7 @@ subscriptions model =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case Debug.log "API.update" msg of
+    case msg of
         EventLogMsg innerMsg ->
             EventLog.update eventLogProtocol
                 innerMsg

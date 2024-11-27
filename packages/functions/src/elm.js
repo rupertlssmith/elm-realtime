@@ -4108,7 +4108,6 @@ var $author$project$EventLog$Component$Channel = function (a) {
 	return {$: 'Channel', a: a};
 };
 var $author$project$EventLog$Component$ChannelRoot = {$: 'ChannelRoot'};
-var $elm$core$Debug$log = _Debug_log;
 var $elm$url$Url$Parser$Parser = function (a) {
 	return {$: 'Parser', a: a};
 };
@@ -4737,24 +4736,21 @@ var $elm$url$Url$Parser$custom = F2(
 	});
 var $elm$url$Url$Parser$string = A2($elm$url$Url$Parser$custom, 'STRING', $elm$core$Maybe$Just);
 var $author$project$EventLog$Component$routeParser = $elm$url$Url$Parser$parse(
-	A2(
-		$elm$url$Url$Parser$map,
-		$elm$core$Debug$log('route'),
-		$elm$url$Url$Parser$oneOf(
-			_List_fromArray(
-				[
-					A2(
-					$elm$url$Url$Parser$map,
-					$author$project$EventLog$Component$ChannelRoot,
-					$elm$url$Url$Parser$s('channel')),
-					A2(
-					$elm$url$Url$Parser$map,
-					$author$project$EventLog$Component$Channel,
-					A2(
-						$elm$url$Url$Parser$slash,
-						$elm$url$Url$Parser$s('channel'),
-						$elm$url$Url$Parser$string))
-				]))));
+	$elm$url$Url$Parser$oneOf(
+		_List_fromArray(
+			[
+				A2(
+				$elm$url$Url$Parser$map,
+				$author$project$EventLog$Component$ChannelRoot,
+				$elm$url$Url$Parser$s('channel')),
+				A2(
+				$elm$url$Url$Parser$map,
+				$author$project$EventLog$Component$Channel,
+				A2(
+					$elm$url$Url$Parser$slash,
+					$elm$url$Url$Parser$s('channel'),
+					$elm$url$Url$Parser$string))
+			])));
 var $author$project$EventLog$Component$httpServerProtocol = {
 	parseRoute: $author$project$EventLog$Component$routeParser,
 	ports: {request: $author$project$Ports$requestPort, response: $author$project$Ports$responsePort}
@@ -4779,9 +4775,8 @@ var $brian_watkins$elm_procedure$Procedure$Program$subscriptions = function (_v0
 var $author$project$EventLog$Component$subscriptions = F2(
 	function (protocol, component) {
 		var model = component.eventLog;
-		var _v0 = A2($elm$core$Debug$log, 'EventLog.subscriptions', model);
-		if (_v0.$ === 'ModelReady') {
-			var state = _v0.a;
+		if (model.$ === 'ModelReady') {
+			var state = model.a;
 			return A2(
 				$elm$core$Platform$Sub$map,
 				protocol.toMsg,
@@ -5667,7 +5662,6 @@ var $author$project$EventLog$Component$momentoPorts = {asyncError: $author$proje
 var $author$project$EventLog$Component$momentoApi = A2($author$project$Momento$momentoApi, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$momentoPorts);
 var $author$project$EventLog$Component$openMomentoCache = F2(
 	function (component, channelName) {
-		var _v0 = A2($elm$core$Debug$log, 'procedure', 'momentoApi.open');
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$mapError,
 			$elm$core$Basics$always('Momento error'),
@@ -6690,7 +6684,6 @@ var $author$project$Ports$dynamoResponse = _Platform_incomingPort(
 var $author$project$EventLog$Component$dynamoPorts = {batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse};
 var $author$project$EventLog$Component$dynamoApi = A2($author$project$AWS$Dynamo$dynamoApi, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$dynamoPorts);
 var $author$project$EventLog$Component$recordChannelToDB = function (sessionKey) {
-	var _v0 = A2($elm$core$Debug$log, 'procedure', 'dynamoApi.put');
 	return A2(
 		$brian_watkins$elm_procedure$Procedure$mapError,
 		$elm$core$Basics$always('Dynamo error'),
@@ -6721,7 +6714,6 @@ var $author$project$EventLog$Component$notifyTopicName = function (channel) {
 };
 var $author$project$EventLog$Component$setupChannelWebhook = F3(
 	function (component, channelName, sessionKey) {
-		var _v0 = A2($elm$core$Debug$log, 'procedure', 'momentoApi.processOps');
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$mapError,
 			$elm$core$Basics$always('Momento error'),
@@ -6759,7 +6751,6 @@ var $author$project$EventLog$Component$createChannel = F4(
 							$brian_watkins$elm_procedure$Procedure$andThen,
 							$author$project$EventLog$Component$openMomentoCache(component),
 							$brian_watkins$elm_procedure$Procedure$provide(channelName))))));
-		var _v1 = A2($elm$core$Debug$log, 'createChannel', channelName);
 		return protocol.onUpdate(
 			A2(
 				$elm$core$Tuple$mapSecond,
@@ -6778,6 +6769,7 @@ var $author$project$EventLog$Component$createChannel = F4(
 								$author$project$EventLog$Component$HttpResponse(session),
 								procedure))))));
 	});
+var $elm$core$Debug$log = _Debug_log;
 var $author$project$Serverless$Conn$Request$method = function (_v0) {
 	var request = _v0.a;
 	return request.method;
@@ -6785,13 +6777,10 @@ var $author$project$Serverless$Conn$Request$method = function (_v0) {
 var $author$project$EventLog$Component$processRoute = F4(
 	function (protocol, session, route, component) {
 		var model = component.eventLog;
-		var _v0 = A2(
-			$elm$core$Debug$log,
-			'processRoute',
-			_Utils_Tuple3(
-				$author$project$Serverless$Conn$Request$method(route.request),
-				route.route,
-				model));
+		var _v0 = _Utils_Tuple3(
+			$author$project$Serverless$Conn$Request$method(route.request),
+			route.route,
+			model);
 		_v0$3:
 		while (true) {
 			if (_v0.b.$ === 'ChannelRoot') {
@@ -6987,7 +6976,6 @@ var $author$project$EventLog$Component$update = F3(
 					var _v4 = _v0.b;
 					var session = _v4.a;
 					var result = _v4.b;
-					var _v5 = A2($elm$core$Debug$log, '=== CreateChannelResponse', result);
 					return protocol.onUpdate(
 						A2(
 							$elm$core$Tuple$mapSecond,
@@ -7005,8 +6993,7 @@ var $author$project$EventLog$Component$update = F3(
 	});
 var $author$project$API$update = F2(
 	function (msg, model) {
-		var _v0 = A2($elm$core$Debug$log, 'API.update', msg);
-		var innerMsg = _v0.a;
+		var innerMsg = msg.a;
 		return A3($author$project$EventLog$Component$update, $author$project$API$eventLogProtocol, innerMsg, model);
 	});
 var $elm$core$Platform$worker = _Platform_worker;

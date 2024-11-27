@@ -19,7 +19,7 @@ new MomentoPorts(app);
 new DynamoPorts(app);
 
 export async function main(event, context) {
-    console.log("====== ------ Request Handler Entry Point ------ ======");
+    //console.log("====== ------ Request Handler Entry Point ------ ======");
     //console.log(event);
 
     const handler = elmServerless.httpApi({

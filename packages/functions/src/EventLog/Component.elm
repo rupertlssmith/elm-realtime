@@ -71,7 +71,6 @@ routeParser =
         [ UP.map ChannelRoot (UP.s "channel")
         , UP.map Channel (UP.s "channel" </> UP.string)
         ]
-        |> UP.map (Debug.log "route")
         |> UP.parse
 
 
@@ -81,7 +80,7 @@ processRoute protocol session route component =
         model =
             component.eventLog
     in
-    case ( Request.method route.request, route.route, model ) |> Debug.log "processRoute" of
+    case ( Request.method route.request, route.route, model ) of
         ( GET, ChannelRoot, ModelReady state ) ->
             U2.pure component
                 |> U2.andMap (createChannel protocol session state)
@@ -115,9 +114,6 @@ processRoute protocol session route component =
 createChannel : Protocol (Component a) msg model -> HttpSessionKey -> ReadyState -> Component a -> ( model, Cmd msg )
 createChannel protocol session state component =
     let
-        _ =
-            Debug.log "createChannel" channelName
-
         ( channelName, nextSeed ) =
             Random.step nameGenerator state.seed
 
@@ -146,10 +142,6 @@ openMomentoCache :
     -> String
     -> Procedure.Procedure String MomentoSessionKey Msg
 openMomentoCache component channelName =
-    let
-        _ =
-            Debug.log "procedure" "momentoApi.open"
-    in
     momentoApi.open
         { apiKey = component.momentoApiKey
         , cache = cacheName channelName
@@ -160,10 +152,6 @@ openMomentoCache component channelName =
 
 recordChannelToDB : MomentoSessionKey -> Procedure.Procedure String MomentoSessionKey Msg
 recordChannelToDB sessionKey =
-    let
-        _ =
-            Debug.log "procedure" "dynamoApi.put"
-    in
     dynamoApi.put
         { tableName = "someTable"
         , item = Encode.object [ ( "test", Encode.string "val" ) ]
@@ -179,10 +167,6 @@ setupChannelWebhook :
     -> MomentoSessionKey
     -> Procedure.Procedure String () Msg
 setupChannelWebhook component channelName sessionKey =
-    let
-        _ =
-            Debug.log "procedure" "momentoApi.processOps"
-    in
     momentoApi.webhook
         sessionKey
         { topic = notifyTopicName channelName
@@ -305,7 +289,7 @@ subscriptions protocol component =
         model =
             component.eventLog
     in
-    case model |> Debug.log "EventLog.subscriptions" of
+    case model of
         ModelReady state ->
             [ Procedure.Program.subscriptions state.procedure
             , httpServerApi.request HttpRequest
@@ -362,14 +346,8 @@ update protocol msg component =
                         |> protocol.onUpdate
 
         ( _, HttpResponse session result ) ->
-            let
-                _ =
-                    Debug.log "=== CreateChannelResponse" result
-            in
             ( component
-            , result
-                |> Result.Extra.merge
-                |> httpServerApi.response session
+            , result |> Result.Extra.merge |> httpServerApi.response session
             )
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate

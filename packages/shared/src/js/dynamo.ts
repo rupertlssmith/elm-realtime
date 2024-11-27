@@ -101,7 +101,7 @@ export class DynamoPorts {
     }
 
     dynamoPut = async (args: PutArgs) => {
-        console.log("dynamoPut: called");
+        //console.log("dynamoPut: called");
 
         documentClient.put(args.req, (error, result) => {
             var putResponse;
