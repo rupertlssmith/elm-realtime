@@ -20,10 +20,11 @@ import Procedure.Program
 import Random
 import Random.Char
 import Random.String
+import Result.Extra
 import Server.API as Api exposing (ApiRequest, Error(..), HttpSessionKey)
-import Serverless.Conn.Body as Body
+import Serverless.Conn.Body as Body exposing (Body)
 import Serverless.Conn.Request as Request exposing (Method(..))
-import Serverless.Conn.Response as Body
+import Serverless.Conn.Response as Response exposing (Response)
 import Update2 as U2
 import Url exposing (Url)
 import Url.Parser as UP exposing ((</>), (<?>))
@@ -120,18 +121,19 @@ createChannel protocol session state component =
         ( channelName, nextSeed ) =
             Random.step nameGenerator state.seed
 
-        procedure : Procedure.Procedure String () Msg
+        procedure : Procedure.Procedure Response Response Msg
         procedure =
             Procedure.provide channelName
                 |> Procedure.andThen (openMomentoCache component)
                 |> Procedure.andThen recordChannelToDB
                 |> Procedure.andThen (setupChannelWebhook component channelName)
-                |> Procedure.andThen (createChannelResponse session "Created Channel Ok")
+                |> Procedure.mapError Response.err500
+                |> Procedure.map (Response.ok200 "Created Channel Ok" |> always)
     in
     ( { seed = nextSeed
       , procedure = state.procedure
       }
-    , Procedure.try ProcedureMsg CreateChannelResponse procedure
+    , Procedure.try ProcedureMsg (HttpResponse session) procedure
     )
         |> U2.andMap (ModelReady |> switchState)
         |> Tuple.mapFirst (setModel component)
@@ -189,21 +191,6 @@ setupChannelWebhook component channelName sessionKey =
         |> Procedure.fetchResult
         |> Procedure.map (always ())
         |> Procedure.mapError (always "Momento error")
-
-
-createChannelResponse :
-    HttpSessionKey
-    -> String
-    -> ()
-    -> Procedure.Procedure String () Msg
-createChannelResponse session message _ =
-    let
-        _ =
-            Debug.log "procedure" "createChannelResponse"
-    in
-    httpServerApi.response session (Body.ok200 message)
-        |> Procedure.do
-        |> Procedure.mapError (always "HTTP error")
 
 
 nameGenerator : Random.Generator String
@@ -287,7 +274,7 @@ type Msg
     = ProcedureMsg (Procedure.Program.Msg Msg)
     | RandomSeed Random.Seed
     | HttpRequest HttpSessionKey (Result Api.Error (ApiRequest Route))
-    | CreateChannelResponse (Result String ())
+    | HttpResponse HttpSessionKey (Result Response Response)
 
 
 type Model
@@ -367,19 +354,24 @@ update protocol msg component =
 
                 Err (Error errMsg) ->
                     ( ModelReady state
-                    , Body.err500 errMsg
+                    , Response.err500 errMsg
                         |> httpServerApi.response session
                     )
                         |> Tuple.mapFirst (setModel component)
                         |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                         |> protocol.onUpdate
 
-        ( _, CreateChannelResponse res ) ->
+        ( _, HttpResponse session result ) ->
             let
                 _ =
-                    Debug.log "=== CreateChannelResponse" res
+                    Debug.log "=== CreateChannelResponse" result
             in
-            U2.pure component
+            ( component
+            , result
+                |> Result.Extra.merge
+                |> httpServerApi.response session
+            )
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 
         _ ->

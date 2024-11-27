@@ -4864,6 +4864,15 @@ var $elm$core$Tuple$mapFirst = F2(
 			func(x),
 			y);
 	});
+var $elm_community$result_extra$Result$Extra$merge = function (r) {
+	if (r.$ === 'Ok') {
+		var rr = r.a;
+		return rr;
+	} else {
+		var rr = r.a;
+		return rr;
+	}
+};
 var $author$project$Serverless$Conn$Body$asJson = function (body) {
 	switch (body.$) {
 		case 'Empty':
@@ -4892,12 +4901,17 @@ var $author$project$Serverless$Conn$Request$body = function (_v0) {
 	var request = _v0.a;
 	return request.body;
 };
-var $author$project$EventLog$Component$CreateChannelResponse = function (a) {
-	return {$: 'CreateChannelResponse', a: a};
-};
+var $author$project$EventLog$Component$HttpResponse = F2(
+	function (a, b) {
+		return {$: 'HttpResponse', a: a, b: b};
+	});
 var $author$project$EventLog$Component$ProcedureMsg = function (a) {
 	return {$: 'ProcedureMsg', a: a};
 };
+var $elm$core$Basics$always = F2(
+	function (a, _v0) {
+		return a;
+	});
 var $elm$core$Task$fail = _Scheduler_fail;
 var $brian_watkins$elm_procedure$Procedure$Internal$Procedure = function (a) {
 	return {$: 'Procedure', a: a};
@@ -5039,39 +5053,11 @@ var $brian_watkins$elm_procedure$Procedure$andThen = F2(
 				}
 			});
 	});
-var $elm$core$Basics$always = F2(
-	function (a, _v0) {
-		return a;
-	});
-var $elm$core$Task$perform = F2(
-	function (toMessage, task) {
-		return $elm$core$Task$command(
-			$elm$core$Task$Perform(
-				A2($elm$core$Task$map, toMessage, task)));
-	});
-var $brian_watkins$elm_procedure$Procedure$do = function (command) {
-	return $brian_watkins$elm_procedure$Procedure$Internal$Procedure(
-		F3(
-			function (procId, msgTagger, resultTagger) {
-				return A2(
-					$elm$core$Task$perform,
-					function (_v0) {
-						var nextCommand = A2(
-							$elm$core$Task$perform,
-							A2($elm$core$Basics$composeL, resultTagger, $elm$core$Result$Ok),
-							$elm$core$Task$succeed(_Utils_Tuple0));
-						return msgTagger(
-							A2(
-								$brian_watkins$elm_procedure$Procedure$Internal$Execute,
-								procId,
-								$elm$core$Platform$Cmd$batch(
-									_List_fromArray(
-										[command, nextCommand]))));
-					},
-					$elm$core$Task$succeed(_Utils_Tuple0));
-			}));
-};
 var $brian_watkins$elm_procedure$Procedure$provide = A2($elm$core$Basics$composeL, $brian_watkins$elm_procedure$Procedure$fromTask, $elm$core$Task$succeed);
+var $brian_watkins$elm_procedure$Procedure$map = function (mapper) {
+	return $brian_watkins$elm_procedure$Procedure$andThen(
+		A2($elm$core$Basics$composeL, $brian_watkins$elm_procedure$Procedure$provide, mapper));
+};
 var $brian_watkins$elm_procedure$Procedure$mapError = F2(
 	function (mapper, procedure) {
 		return A2(
@@ -5087,24 +5073,6 @@ var $brian_watkins$elm_procedure$Procedure$mapError = F2(
 						mapper(eData));
 				}
 			});
-	});
-var $author$project$Serverless$Conn$Response$ok200 = function (msg) {
-	return A2(
-		$author$project$Serverless$Conn$Response$setBody,
-		$author$project$Serverless$Conn$Body$text(msg),
-		$author$project$Serverless$Conn$Response$init);
-};
-var $author$project$EventLog$Component$createChannelResponse = F3(
-	function (session, message, _v0) {
-		var _v1 = A2($elm$core$Debug$log, 'procedure', 'createChannelResponse');
-		return A2(
-			$brian_watkins$elm_procedure$Procedure$mapError,
-			$elm$core$Basics$always('HTTP error'),
-			$brian_watkins$elm_procedure$Procedure$do(
-				A2(
-					$author$project$EventLog$Component$httpServerApi.response,
-					session,
-					$author$project$Serverless$Conn$Response$ok200(message))));
 	});
 var $elm$core$Basics$abs = function (n) {
 	return (n < 0) ? (-n) : n;
@@ -5249,6 +5217,12 @@ var $elm_community$random_extra$Random$String$string = F2(
 			A2($elm$random$Random$list, stringLength, charGenerator));
 	});
 var $author$project$EventLog$Component$nameGenerator = A2($elm_community$random_extra$Random$String$string, 10, $elm_community$random_extra$Random$Char$english);
+var $author$project$Serverless$Conn$Response$ok200 = function (msg) {
+	return A2(
+		$author$project$Serverless$Conn$Response$setBody,
+		$author$project$Serverless$Conn$Body$text(msg),
+		$author$project$Serverless$Conn$Response$init);
+};
 var $author$project$EventLog$Component$cacheName = function (channel) {
 	return 'elm-realtime' + '-cache';
 };
@@ -5271,6 +5245,12 @@ var $brian_watkins$elm_procedure$Procedure$Internal$Unsubscribe = F3(
 var $brian_watkins$elm_procedure$Procedure$Channel$channelKey = function (channelId) {
 	return 'Channel-' + $elm$core$String$fromInt(channelId);
 };
+var $elm$core$Task$perform = F2(
+	function (toMessage, task) {
+		return $elm$core$Task$command(
+			$elm$core$Task$Perform(
+				A2($elm$core$Task$map, toMessage, task)));
+	});
 var $brian_watkins$elm_procedure$Procedure$Channel$acceptUntil = F2(
 	function (shouldUnsubscribe, _v0) {
 		var channel = _v0.a;
@@ -5739,15 +5719,6 @@ var $elm$json$Json$Decode$at = F2(
 		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
 	});
 var $elm$json$Json$Decode$list = _Json_decodeList;
-var $elm_community$result_extra$Result$Extra$merge = function (r) {
-	if (r.$ === 'Ok') {
-		var rr = r.a;
-		return rr;
-	} else {
-		var rr = r.a;
-		return rr;
-	}
-};
 var $author$project$AWS$Dynamo$batchGetResponseDecoder = F2(
 	function (tableName, val) {
 		var decoder = A2(
@@ -6718,10 +6689,6 @@ var $author$project$Ports$dynamoResponse = _Platform_incomingPort(
 		A2($elm$json$Json$Decode$field, 'res', $elm$json$Json$Decode$value)));
 var $author$project$EventLog$Component$dynamoPorts = {batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse};
 var $author$project$EventLog$Component$dynamoApi = A2($author$project$AWS$Dynamo$dynamoApi, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$dynamoPorts);
-var $brian_watkins$elm_procedure$Procedure$map = function (mapper) {
-	return $brian_watkins$elm_procedure$Procedure$andThen(
-		A2($elm$core$Basics$composeL, $brian_watkins$elm_procedure$Procedure$provide, mapper));
-};
 var $author$project$EventLog$Component$recordChannelToDB = function (sessionKey) {
 	var _v0 = A2($elm$core$Debug$log, 'procedure', 'dynamoApi.put');
 	return A2(
@@ -6776,18 +6743,22 @@ var $author$project$EventLog$Component$createChannel = F4(
 		var channelName = _v0.a;
 		var nextSeed = _v0.b;
 		var procedure = A2(
-			$brian_watkins$elm_procedure$Procedure$andThen,
-			A2($author$project$EventLog$Component$createChannelResponse, session, 'Created Channel Ok'),
+			$brian_watkins$elm_procedure$Procedure$map,
+			$elm$core$Basics$always(
+				$author$project$Serverless$Conn$Response$ok200('Created Channel Ok')),
 			A2(
-				$brian_watkins$elm_procedure$Procedure$andThen,
-				A2($author$project$EventLog$Component$setupChannelWebhook, component, channelName),
+				$brian_watkins$elm_procedure$Procedure$mapError,
+				$author$project$Serverless$Conn$Response$err500,
 				A2(
 					$brian_watkins$elm_procedure$Procedure$andThen,
-					$author$project$EventLog$Component$recordChannelToDB,
+					A2($author$project$EventLog$Component$setupChannelWebhook, component, channelName),
 					A2(
 						$brian_watkins$elm_procedure$Procedure$andThen,
-						$author$project$EventLog$Component$openMomentoCache(component),
-						$brian_watkins$elm_procedure$Procedure$provide(channelName)))));
+						$author$project$EventLog$Component$recordChannelToDB,
+						A2(
+							$brian_watkins$elm_procedure$Procedure$andThen,
+							$author$project$EventLog$Component$openMomentoCache(component),
+							$brian_watkins$elm_procedure$Procedure$provide(channelName))))));
 		var _v1 = A2($elm$core$Debug$log, 'createChannel', channelName);
 		return protocol.onUpdate(
 			A2(
@@ -6801,7 +6772,11 @@ var $author$project$EventLog$Component$createChannel = F4(
 						$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelReady),
 						_Utils_Tuple2(
 							{procedure: state.procedure, seed: nextSeed},
-							A3($brian_watkins$elm_procedure$Procedure$try, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$CreateChannelResponse, procedure))))));
+							A3(
+								$brian_watkins$elm_procedure$Procedure$try,
+								$author$project$EventLog$Component$ProcedureMsg,
+								$author$project$EventLog$Component$HttpResponse(session),
+								procedure))))));
 	});
 var $author$project$Serverless$Conn$Request$method = function (_v0) {
 	var request = _v0.a;
@@ -7009,10 +6984,20 @@ var $author$project$EventLog$Component$update = F3(
 						break _v0$4;
 					}
 				default:
-					var res = _v0.b.a;
-					var _v4 = A2($elm$core$Debug$log, '=== CreateChannelResponse', res);
+					var _v4 = _v0.b;
+					var session = _v4.a;
+					var result = _v4.b;
+					var _v5 = A2($elm$core$Debug$log, '=== CreateChannelResponse', result);
 					return protocol.onUpdate(
-						$the_sett$elm_update_helper$Update2$pure(component));
+						A2(
+							$elm$core$Tuple$mapSecond,
+							$elm$core$Platform$Cmd$map(protocol.toMsg),
+							_Utils_Tuple2(
+								component,
+								A2(
+									$author$project$EventLog$Component$httpServerApi.response,
+									session,
+									$elm_community$result_extra$Result$Extra$merge(result)))));
 			}
 		}
 		return protocol.onUpdate(
