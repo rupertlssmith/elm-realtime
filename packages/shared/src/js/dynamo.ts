@@ -42,9 +42,12 @@ type QueryArgs = {
 }
 
 type Error = {
-    type_: string;
-    message: string;
-    details: any;
+    id: string;
+    res: {
+        type_: string;
+        message: string;
+        details: any;
+    }
 }
 
 type Ports = {
@@ -57,12 +60,14 @@ type Ports = {
     dynamoResponse: { send: any };
 }
 
-function errorResponse(error): Error
-{
+function errorResponse(id: string, error): Error {
     return {
-        type_: "Error",
-        message: error.message,
-        details: error
+        id: id,
+        res: {
+            type_: "Error",
+            message: error.message,
+            details: error
+        }
     };
 }
 
@@ -97,7 +102,7 @@ export class DynamoPorts {
             var getResponse;
 
             if (error) {
-                getResponse = errorResponse(error);
+                getResponse = errorResponse(args.id, error);
             } else if (Object.entries(result).length === 0) {
                 getResponse = {
                     type_: "ItemNotFound"
@@ -120,7 +125,7 @@ export class DynamoPorts {
             var putResponse;
 
             if (error) {
-                putResponse = errorResponse(error);
+                putResponse = errorResponse(args.id, error);
             } else {
                 putResponse = {
                     type_: "Ok"
@@ -136,7 +141,7 @@ export class DynamoPorts {
             var deleteResponse;
 
             if (error) {
-                deleteResponse = errorResponse(error);
+                deleteResponse = errorResponse(args.id, error);
             } else {
                 deleteResponse = {
                     type_: "Ok"
@@ -152,7 +157,7 @@ export class DynamoPorts {
             var getResponse;
 
             if (error) {
-                getResponse = errorResponse(error);
+                getResponse = errorResponse(args.id, error);
             } else if (Object.entries(result).length === 0) {
                 getResponse = {
                     type_: "Item",
@@ -174,7 +179,7 @@ export class DynamoPorts {
             var putResponse;
 
             if (error) {
-                putResponse = errorResponse(error);
+                putResponse = errorResponse(args.id, error);
             } else {
                 putResponse = {
                     type_: "Ok"
@@ -190,7 +195,7 @@ export class DynamoPorts {
             var getResponse;
 
             if (error) {
-                getResponse = errorResponse(error);
+                getResponse = errorResponse(args.id, error);
             } else if (Object.entries(result).length === 0) {
                 getResponse = {
                     type_: "Items",
