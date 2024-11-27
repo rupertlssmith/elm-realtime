@@ -42,12 +42,9 @@ type QueryArgs = {
 }
 
 type Error = {
-    id: string;
-    res: {
-        type_: string;
-        message: string;
-        details: any;
-    }
+    type_: string;
+    message: string;
+    details: any;
 }
 
 type Ports = {
@@ -60,14 +57,11 @@ type Ports = {
     dynamoResponse: { send: any };
 }
 
-function errorResponse(id: string, error): Error {
+function errorResponse(error): Error {
     return {
-        id: id,
-        res: {
-            type_: "Error",
-            message: error.message,
-            details: error
-        }
+        type_: "Error",
+        message: error.message,
+        details: error
     };
 }
 
