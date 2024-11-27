@@ -50,7 +50,6 @@ unit tests.
 import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder, andThen)
 import Json.Decode.Pipeline exposing (hardcoded, required)
-import Json.Encode
 import Serverless.Conn.Body as Body exposing (Body)
 import Serverless.Conn.IpAddress as IpAddress exposing (IpAddress)
 import Serverless.Conn.KeyValueList as KeyValueList
