@@ -23,7 +23,7 @@ type alias ApiRequest route =
 
 
 type HttpSessionKey
-    = HttpSessionKey Value
+    = HttpSessionKey Value -- This actually holds the `callback` in an util.promisify()
 
 
 type alias Ports msg =

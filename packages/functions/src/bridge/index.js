@@ -1,3 +1,5 @@
+import util from "util";
+
 const xmlhttprequest = require('./xmlhttprequest');
 
 const defaultLogger = require('./logger');
@@ -21,10 +23,11 @@ const httpApi = ({
         handleResponse(session, res);
     });
 
-    return requestHandler({
-        requestPort: app.ports[requestPort],
-        logger: logger
-    });
+    return util.promisify(
+        requestHandler({
+            requestPort: app.ports[requestPort],
+            logger: logger
+        }));
 };
 
 module.exports = {httpApi};
