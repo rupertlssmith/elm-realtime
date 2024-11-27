@@ -1,7 +1,7 @@
 module Server.API exposing (ApiRoute, Model, Msg(..), Ports, Protocol, checkAndForwardRoute, decodeRequestAndRoute, err500, init, ok200, subscriptions, update)
 
 import Json.Decode as Decode
-import Json.Encode as Encode exposing (Value)
+import Json.Encode exposing (Value)
 import Ports
 import Serverless.Conn.Body as Body
 import Serverless.Conn.Request as Request
@@ -11,16 +11,16 @@ import Url exposing (Url)
 
 
 type Msg
-    = Request ( String, Encode.Value, Encode.Value )
+    = Request { session : Value, req : Value }
 
 
 type alias Model =
     {}
 
 
-type alias Ports =
-    { request : (( String, Value, Value ) -> Msg) -> Sub Msg
-    , response : ( String, Value, Value ) -> Cmd Msg
+type alias Ports msg =
+    { request : ({ session : Value, req : Value } -> msg) -> Sub msg
+    , response : { session : Value, res : Value } -> Cmd msg
     }
 
 
@@ -32,7 +32,7 @@ type alias ApiRoute route =
 
 type alias Protocol submodel msg model route =
     { toMsg : Msg -> msg
-    , ports : Ports
+    , ports : Ports Msg
     , parseRoute : Url -> Maybe route
     , onUpdate : ( submodel, Cmd msg ) -> ( model, Cmd msg )
     , onApiRoute : ApiRoute route -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
@@ -47,7 +47,7 @@ init toMsg =
 
 
 subscriptions : Protocol Model msg model route -> Model -> Sub msg
-subscriptions protocol model =
+subscriptions protocol _ =
     protocol.ports.request Request
         |> Sub.map protocol.toMsg
 
@@ -59,13 +59,13 @@ update protocol msg model =
             Debug.log "update" "called"
     in
     case msg of
-        Request ( id, cb, rawRequest ) ->
+        Request { session, req } ->
             U2.pure model
-                |> U2.andMap (checkAndForwardRoute protocol id cb rawRequest)
+                |> U2.andMap (checkAndForwardRoute protocol session req)
 
 
-checkAndForwardRoute : Protocol Model msg model route -> String -> Value -> Value -> Model -> ( model, Cmd msg )
-checkAndForwardRoute protocol id cb rawRequest model =
+checkAndForwardRoute : Protocol Model msg model route -> Value -> Value -> Model -> ( model, Cmd msg )
+checkAndForwardRoute protocol session rawRequest model =
     case decodeRequestAndRoute rawRequest protocol.parseRoute of
         Ok ( req, route ) ->
             let
@@ -73,7 +73,7 @@ checkAndForwardRoute protocol id cb rawRequest model =
                     Debug.log "decodeRequestAndRoute" route
             in
             U2.pure model
-                |> U2.andThen (ok200 id cb)
+                |> U2.andThen (ok200 session)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onApiRoute
                     { route = route
@@ -86,7 +86,7 @@ checkAndForwardRoute protocol id cb rawRequest model =
                     Debug.log "decodeRequestAndRoute" err
             in
             U2.pure model
-                |> U2.andThen (err500 id cb err)
+                |> U2.andThen (err500 session err)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 
@@ -111,19 +111,19 @@ decodeRequestAndRoute rawRequest parseRoute =
             )
 
 
-ok200 : String -> Value -> Model -> ( Model, Cmd msg )
-ok200 id cb model =
+ok200 : Value -> Model -> ( Model, Cmd msg )
+ok200 session model =
     let
         response =
             Response.init
                 |> Response.setBody (Body.text "Hello from Elm, it works!")
                 |> Response.encode
     in
-    ( model, Ports.responsePort ( id, cb, response ) )
+    ( model, Ports.responsePort { session = session, res = response } )
 
 
-err500 : String -> Value -> String -> Model -> ( Model, Cmd msg )
-err500 id cb err model =
+err500 : Value -> String -> Model -> ( Model, Cmd msg )
+err500 session err model =
     let
         response =
             Response.init
@@ -131,4 +131,4 @@ err500 id cb err model =
                 |> Response.setStatus 500
                 |> Response.encode
     in
-    ( model, Ports.responsePort ( id, cb, response ) )
+    ( model, Ports.responsePort { session = session, res = response } )

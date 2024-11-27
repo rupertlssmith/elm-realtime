@@ -38,10 +38,10 @@ import Json.Encode exposing (Value)
 -- AWS Lambda ports
 
 
-port requestPort : (( String, Value, Value ) -> msg) -> Sub msg
+port requestPort : ({ session : Value, req : Value } -> msg) -> Sub msg
 
 
-port responsePort : ( String, Value, Value ) -> Cmd msg
+port responsePort : { session : Value, res : Value } -> Cmd msg
 
 
 

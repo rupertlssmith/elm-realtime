@@ -24,7 +24,6 @@ module.exports = ({
                                                     body,
                                                     headers = {},
                                                     httpMethod,
-                                                    id = uuid.v4(),
                                                     method = httpMethod,
                                                     pathParameters,
                                                     queryStringParameters = {},
@@ -35,7 +34,7 @@ module.exports = ({
     const req = {
         body: encodeBody(body),
         headers: norm(headers),
-        host:requestContext.http.sourceIp,
+        host: requestContext.http.sourceIp,
         method: requestContext.http.method,
         path: path(pathParameters || {}),
         port: parseInt(headers['X-Forwarded-Port'] || port || 80, 10), // Assume port 80, if none given.
@@ -47,5 +46,5 @@ module.exports = ({
     };
 
     logger.info(JSON.stringify({req}, null, 2));
-    requestPort.send([id, callback, req]);
+    requestPort.send({session: callback, req: req});
 };

@@ -112,7 +112,7 @@ update msg model =
 -- API Protocol
 
 
-apiPorts : Api.Ports
+apiPorts : Api.Ports msg
 apiPorts =
     { request = Ports.requestPort
     , response = Ports.responsePort

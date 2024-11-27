@@ -3207,52 +3207,47 @@ var $author$project$API$init = function (flags) {
 				[apiCmds, eventLogCmds])));
 };
 var $elm$json$Json$Decode$string = _Json_decodeString;
-var $elm$json$Json$Decode$index = _Json_decodeIndex;
 var $elm$json$Json$Decode$succeed = _Json_succeed;
 var $elm$json$Json$Decode$value = _Json_decodeValue;
 var $author$project$Ports$requestPort = _Platform_incomingPort(
 	'requestPort',
 	A2(
 		$elm$json$Json$Decode$andThen,
-		function (_v0) {
+		function (session) {
 			return A2(
 				$elm$json$Json$Decode$andThen,
-				function (_v1) {
-					return A2(
-						$elm$json$Json$Decode$andThen,
-						function (_v2) {
-							return $elm$json$Json$Decode$succeed(
-								_Utils_Tuple3(_v0, _v1, _v2));
-						},
-						A2($elm$json$Json$Decode$index, 2, $elm$json$Json$Decode$value));
+				function (req) {
+					return $elm$json$Json$Decode$succeed(
+						{req: req, session: session});
 				},
-				A2($elm$json$Json$Decode$index, 1, $elm$json$Json$Decode$value));
+				A2($elm$json$Json$Decode$field, 'req', $elm$json$Json$Decode$value));
 		},
-		A2($elm$json$Json$Decode$index, 0, $elm$json$Json$Decode$string)));
-var $elm$json$Json$Encode$list = F2(
-	function (func, entries) {
-		return _Json_wrap(
-			A3(
-				$elm$core$List$foldl,
-				_Json_addEntry(func),
-				_Json_emptyArray(_Utils_Tuple0),
-				entries));
-	});
-var $elm$json$Json$Encode$string = _Json_wrap;
+		A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value)));
+var $elm$json$Json$Encode$object = function (pairs) {
+	return _Json_wrap(
+		A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v0, obj) {
+					var k = _v0.a;
+					var v = _v0.b;
+					return A3(_Json_addField, k, v, obj);
+				}),
+			_Json_emptyObject(_Utils_Tuple0),
+			pairs));
+};
 var $author$project$Ports$responsePort = _Platform_outgoingPort(
 	'responsePort',
 	function ($) {
-		var a = $.a;
-		var b = $.b;
-		var c = $.c;
-		return A2(
-			$elm$json$Json$Encode$list,
-			$elm$core$Basics$identity,
+		return $elm$json$Json$Encode$object(
 			_List_fromArray(
 				[
-					$elm$json$Json$Encode$string(a),
-					$elm$core$Basics$identity(b),
-					$elm$core$Basics$identity(c)
+					_Utils_Tuple2(
+					'res',
+					$elm$core$Basics$identity($.res)),
+					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session))
 				]));
 	});
 var $author$project$API$apiPorts = {request: $author$project$Ports$requestPort, response: $author$project$Ports$responsePort};
@@ -4002,19 +3997,7 @@ var $author$project$Ports$mmAsyncError = _Platform_incomingPort(
 				A2($elm$json$Json$Decode$field, 'error', $elm$json$Json$Decode$value));
 		},
 		A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string)));
-var $elm$json$Json$Encode$object = function (pairs) {
-	return _Json_wrap(
-		A3(
-			$elm$core$List$foldl,
-			F2(
-				function (_v0, obj) {
-					var k = _v0.a;
-					var v = _v0.b;
-					return A3(_Json_addField, k, v, obj);
-				}),
-			_Json_emptyObject(_Utils_Tuple0),
-			pairs));
-};
+var $elm$json$Json$Encode$string = _Json_wrap;
 var $author$project$Ports$mmClose = _Platform_outgoingPort(
 	'mmClose',
 	function ($) {
@@ -4175,6 +4158,15 @@ var $author$project$EventLog$Component$openMomentoCache = F2(
 						apiKey: component.momentoApiKey,
 						cache: $author$project$EventLog$Component$cacheName(channelName)
 					})));
+	});
+var $elm$json$Json$Encode$list = F2(
+	function (func, entries) {
+		return _Json_wrap(
+			A3(
+				$elm$core$List$foldl,
+				_Json_addEntry(func),
+				_Json_emptyArray(_Utils_Tuple0),
+				entries));
 	});
 var $author$project$AWS$Dynamo$batchGetEncoder = function (getOp) {
 	return $elm$json$Json$Encode$object(
@@ -6223,7 +6215,7 @@ var $author$project$Server$API$Request = function (a) {
 	return {$: 'Request', a: a};
 };
 var $author$project$Server$API$subscriptions = F2(
-	function (protocol, model) {
+	function (protocol, _v0) {
 		return A2(
 			$elm$core$Platform$Sub$map,
 			protocol.toMsg,
@@ -6961,8 +6953,8 @@ var $author$project$Serverless$Conn$Response$setStatus = F2(
 				{status: value}));
 	});
 var $author$project$Serverless$Conn$Body$text = $author$project$Serverless$Conn$Body$Text;
-var $author$project$Server$API$err500 = F4(
-	function (id, cb, err, model) {
+var $author$project$Server$API$err500 = F3(
+	function (session, err, model) {
 		var response = $author$project$Serverless$Conn$Response$encode(
 			A2(
 				$author$project$Serverless$Conn$Response$setStatus,
@@ -6974,10 +6966,10 @@ var $author$project$Server$API$err500 = F4(
 		return _Utils_Tuple2(
 			model,
 			$author$project$Ports$responsePort(
-				_Utils_Tuple3(id, cb, response)));
+				{res: response, session: session}));
 	});
-var $author$project$Server$API$ok200 = F3(
-	function (id, cb, model) {
+var $author$project$Server$API$ok200 = F2(
+	function (session, model) {
 		var response = $author$project$Serverless$Conn$Response$encode(
 			A2(
 				$author$project$Serverless$Conn$Response$setBody,
@@ -6986,10 +6978,10 @@ var $author$project$Server$API$ok200 = F3(
 		return _Utils_Tuple2(
 			model,
 			$author$project$Ports$responsePort(
-				_Utils_Tuple3(id, cb, response)));
+				{res: response, session: session}));
 	});
-var $author$project$Server$API$checkAndForwardRoute = F5(
-	function (protocol, id, cb, rawRequest, model) {
+var $author$project$Server$API$checkAndForwardRoute = F4(
+	function (protocol, session, rawRequest, model) {
 		var _v0 = A2($author$project$Server$API$decodeRequestAndRoute, rawRequest, protocol.parseRoute);
 		if (_v0.$ === 'Ok') {
 			var _v1 = _v0.a;
@@ -7004,7 +6996,7 @@ var $author$project$Server$API$checkAndForwardRoute = F5(
 					$elm$core$Platform$Cmd$map(protocol.toMsg),
 					A2(
 						$the_sett$elm_update_helper$Update2$andThen,
-						A2($author$project$Server$API$ok200, id, cb),
+						$author$project$Server$API$ok200(session),
 						$the_sett$elm_update_helper$Update2$pure(model))));
 		} else {
 			var err = _v0.a;
@@ -7015,20 +7007,18 @@ var $author$project$Server$API$checkAndForwardRoute = F5(
 					$elm$core$Platform$Cmd$map(protocol.toMsg),
 					A2(
 						$the_sett$elm_update_helper$Update2$andThen,
-						A3($author$project$Server$API$err500, id, cb, err),
+						A2($author$project$Server$API$err500, session, err),
 						$the_sett$elm_update_helper$Update2$pure(model))));
 		}
 	});
 var $author$project$Server$API$update = F3(
 	function (protocol, msg, model) {
 		var _v0 = A2($elm$core$Debug$log, 'update', 'called');
-		var _v2 = msg.a;
-		var id = _v2.a;
-		var cb = _v2.b;
-		var rawRequest = _v2.c;
+		var session = msg.a.session;
+		var req = msg.a.req;
 		return A2(
 			$the_sett$elm_update_helper$Update2$andMap,
-			A4($author$project$Server$API$checkAndForwardRoute, protocol, id, cb, rawRequest),
+			A3($author$project$Server$API$checkAndForwardRoute, protocol, session, req),
 			$the_sett$elm_update_helper$Update2$pure(model));
 	});
 var $author$project$API$update = F2(

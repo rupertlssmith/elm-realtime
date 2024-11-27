@@ -17,8 +17,8 @@ const httpApi = ({
 
     const handleResponse = responseHandler({logger});
 
-    app.ports[responsePort].subscribe(([id, callback, jsonValue]) => {
-        handleResponse(id, callback, jsonValue);
+    app.ports[responsePort].subscribe(({session, res}) => {
+        handleResponse(session, res);
     });
 
     return requestHandler({

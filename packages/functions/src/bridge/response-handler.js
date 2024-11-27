@@ -18,7 +18,7 @@ const encodeBody = (body) => {
     }
 };
 
-const handler = ({logger = defaultLogger}) => function responseHandler(id, callback, resp) {
+const handler = ({logger = defaultLogger}) => function responseHandler(callback, resp) {
     logger.info(JSON.stringify({resp}, null, 2));
     const statusCode = parseInt(resp.statusCode, 10);
 
