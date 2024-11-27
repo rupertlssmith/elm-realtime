@@ -3200,11 +3200,14 @@ var $author$project$EventLog$Component$HttpRequest = F2(
 	function (a, b) {
 		return {$: 'HttpRequest', a: a, b: b};
 	});
-var $author$project$Serverless$HttpServer$Error = function (a) {
-	return {$: 'Error', a: a};
-};
 var $author$project$Serverless$HttpServer$HttpSessionKey = function (a) {
 	return {$: 'HttpSessionKey', a: a};
+};
+var $author$project$Serverless$HttpServer$InvalidRequestFormat = function (a) {
+	return {$: 'InvalidRequestFormat', a: a};
+};
+var $author$project$Serverless$HttpServer$NoMatchingRoute = function (a) {
+	return {$: 'NoMatchingRoute', a: a};
 };
 var $elm$core$Maybe$andThen = F2(
 	function (callback, maybeValue) {
@@ -3904,7 +3907,9 @@ var $author$project$Serverless$HttpServer$decodeRequestAndRoute = F2(
 			function (req) {
 				return function (maybeRoute) {
 					if (maybeRoute.$ === 'Nothing') {
-						return $elm$core$Result$Err('No matching route.');
+						return $elm$core$Result$Err(
+							$author$project$Serverless$HttpServer$NoMatchingRoute(
+								$author$project$Serverless$Conn$Request$url(req)));
 					} else {
 						var route = maybeRoute.a;
 						return $elm$core$Result$Ok(
@@ -3919,7 +3924,7 @@ var $author$project$Serverless$HttpServer$decodeRequestAndRoute = F2(
 			},
 			A2(
 				$elm$core$Result$mapError,
-				$elm$json$Json$Decode$errorToString,
+				$author$project$Serverless$HttpServer$InvalidRequestFormat,
 				A2($elm$json$Json$Decode$decodeValue, $author$project$Serverless$Conn$Request$decoder, rawRequest)));
 	});
 var $elm$core$Platform$Sub$map = _Platform_map;
@@ -3943,16 +3948,13 @@ var $author$project$Serverless$HttpServer$requestSub = F2(
 				requestFn,
 				$author$project$Serverless$HttpServer$HttpSessionKey(session),
 				A2(
-					$elm$core$Result$mapError,
-					$author$project$Serverless$HttpServer$Error,
-					A2(
-						$elm$core$Result$map,
-						function (_v0) {
-							var request = _v0.a;
-							var route = _v0.b;
-							return {request: request, route: route};
-						},
-						A2($author$project$Serverless$HttpServer$decodeRequestAndRoute, req, protocol.parseRoute))));
+					$elm$core$Result$map,
+					function (_v0) {
+						var request = _v0.a;
+						var route = _v0.b;
+						return {request: request, route: route};
+					},
+					A2($author$project$Serverless$HttpServer$decodeRequestAndRoute, req, protocol.parseRoute)));
 		};
 		return A2(
 			$elm$core$Platform$Sub$map,
@@ -4846,9 +4848,14 @@ var $author$project$Serverless$Conn$Response$err500 = function (err) {
 			$author$project$Serverless$Conn$Body$text(err),
 			$author$project$Serverless$Conn$Response$init));
 };
-var $author$project$Serverless$HttpServer$errorToString = function (_v0) {
-	var message = _v0.a;
-	return message;
+var $author$project$Serverless$HttpServer$errorToString = function (error) {
+	if (error.$ === 'NoMatchingRoute') {
+		var url = error.a;
+		return 'No matching route for: ' + url;
+	} else {
+		var decodeError = error.a;
+		return 'Problem decoding the request: ' + $elm$json$Json$Decode$errorToString(decodeError);
+	}
 };
 var $brian_watkins$elm_procedure$Procedure$Program$Model = function (a) {
 	return {$: 'Model', a: a};

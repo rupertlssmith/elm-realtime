@@ -1,14 +1,14 @@
 module AWS.Dynamo exposing
     ( Ports
     , dynamoApi, DynamoApi
-    , Put, put
-    , Get, get
-    , Delete, delete
-    , Error, errorToString, errorToDetails
-    , Query, Order(..), query, queryIndex, partitionKeyEquals, limitResults, orderResults
+    , Put
+    , Get
+    , Delete
+    , Query, Order(..), partitionKeyEquals, limitResults, orderResults
     , rangeKeyEquals, rangeKeyLessThan, rangeKeyLessThanOrEqual, rangeKeyGreaterThan
     , rangeKeyGreaterThanOrEqual, rangeKeyBetween
     , int, string
+    , Error, errorToString, errorToDetails
     )
 
 {-| A wrapper around the AWS DynamoDB Document API.
@@ -26,24 +26,24 @@ module AWS.Dynamo exposing
 
 # Read and Write Operations
 
-@docs Put, put
-@docs Get, get
-@docs Delete, delete
-@docs BatchPut, batchPut
-@docs BatchGet, batchGet
+@docs Put
+@docs Get
+@docs Delete
+@docs BatchPut
+@docs BatchGet
+
+
+# Database Queries
+
+@docs Query, Order, partitionKeyEquals, limitResults, orderResults
+@docs rangeKeyEquals, rangeKeyLessThan, rangeKeyLessThanOrEqual, rangeKeyGreaterThan
+@docs rangeKeyGreaterThanOrEqual, rangeKeyBetween
+@docs int, string
 
 
 # Error reporting
 
 @docs Error, errorToString, errorToDetails
-
-
-# Database Queries
-
-@docs Query, Order, query, queryIndex, partitionKeyEquals, limitResults, orderResults
-@docs rangeKeyEquals, rangeKeyLessThan, rangeKeyLessThanOrEqual, rangeKeyGreaterThan
-@docs rangeKeyGreaterThanOrEqual, rangeKeyBetween
-@docs int, string
 
 -}
 

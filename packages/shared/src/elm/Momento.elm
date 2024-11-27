@@ -1,16 +1,43 @@
 module Momento exposing
-    ( Error(..)
-    , MomentoApi
-    , MomentoSessionKey
-    , OpenParams
-    , Ports
-    , PublishParams
+    ( Ports
+    , MomentoApi, momentoApi
+    , OpenParams, MomentoSessionKey
     , PushListParams
-    , SubscribeParams
     , WebhookParams
-    , errorToString
-    , momentoApi
+    , SubscribeParams, PublishParams
+    , Error, errorToDetails, errorToString
     )
+
+{-| A wrapper around the GoMomento serverless cache API.
+
+
+# Ports
+
+@docs Ports
+
+
+# Packaged API
+
+@docs MomentoApi, momentoApi
+
+
+# Synchronous operations
+
+@docs OpenParams, MomentoSessionKey
+@docs PushListParams
+@docs WebhookParams
+
+
+# Asynchronous operations
+
+@docs SubscribeParams, PublishParams
+
+
+# Error reporting
+
+@docs Error, errorToDetails, errorToString
+
+-}
 
 import Json.Encode as Encode exposing (Value)
 import Procedure
