@@ -5031,6 +5031,26 @@ var $brian_watkins$elm_procedure$Procedure$andThen = F2(
 				}
 			});
 	});
+var $author$project$EventLog$Component$encodeErrorFormat = function (error) {
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'message',
+				$elm$json$Json$Encode$string(error.message)),
+				_Utils_Tuple2('details', error.details)
+			]));
+};
+var $author$project$Serverless$Conn$Body$json = $author$project$Serverless$Conn$Body$Json;
+var $author$project$Serverless$Conn$Response$err500json = function (err) {
+	return A2(
+		$author$project$Serverless$Conn$Response$setStatus,
+		500,
+		A2(
+			$author$project$Serverless$Conn$Response$setBody,
+			$author$project$Serverless$Conn$Body$json(err),
+			$author$project$Serverless$Conn$Response$init));
+};
 var $brian_watkins$elm_procedure$Procedure$provide = A2($elm$core$Basics$composeL, $brian_watkins$elm_procedure$Procedure$fromTask, $elm$core$Task$succeed);
 var $brian_watkins$elm_procedure$Procedure$map = function (mapper) {
 	return $brian_watkins$elm_procedure$Procedure$andThen(
@@ -5204,8 +5224,8 @@ var $author$project$Serverless$Conn$Response$ok200 = function (msg) {
 var $author$project$EventLog$Component$cacheName = function (channel) {
 	return 'elm-realtime' + '-cache';
 };
-var $author$project$Momento$errorToString = function (_v0) {
-	return 'Momento Error';
+var $author$project$Momento$errorToDetails = function (_v0) {
+	return {details: $elm$json$Json$Encode$null, message: 'Momento Error'};
 };
 var $brian_watkins$elm_procedure$Procedure$fetchResult = function (generator) {
 	return $brian_watkins$elm_procedure$Procedure$Internal$Procedure(
@@ -5652,7 +5672,7 @@ var $author$project$EventLog$Component$openMomentoCache = F2(
 	function (component, channelName) {
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$mapError,
-			$author$project$Momento$errorToString,
+			$author$project$Momento$errorToDetails,
 			$brian_watkins$elm_procedure$Procedure$fetchResult(
 				$author$project$EventLog$Component$momentoApi.open(
 					{
@@ -6655,19 +6675,23 @@ var $author$project$EventLog$Component$dynamoApi = A2(
 	$author$project$AWS$Dynamo$dynamoApi,
 	$author$project$EventLog$Component$ProcedureMsg,
 	{batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse});
-var $author$project$AWS$Dynamo$errorToString = function (error) {
+var $author$project$AWS$Dynamo$errorToDetails = function (error) {
 	if (error.$ === 'Error') {
 		var message = error.a.message;
-		return 'AWS.Dynamo: ' + message;
+		var details = error.a.details;
+		return {details: details, message: message};
 	} else {
 		var err = error.a;
-		return 'AWS.Dynamo: ' + $elm$json$Json$Decode$errorToString(err);
+		return {
+			details: $elm$json$Json$Encode$null,
+			message: $elm$json$Json$Decode$errorToString(err)
+		};
 	}
 };
 var $author$project$EventLog$Component$recordChannelToDB = function (sessionKey) {
 	return A2(
 		$brian_watkins$elm_procedure$Procedure$mapError,
-		$author$project$AWS$Dynamo$errorToString,
+		$author$project$AWS$Dynamo$errorToDetails,
 		A2(
 			$brian_watkins$elm_procedure$Procedure$map,
 			$elm$core$Basics$always(sessionKey),
@@ -6697,7 +6721,7 @@ var $author$project$EventLog$Component$setupChannelWebhook = F3(
 	function (component, channelName, sessionKey) {
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$mapError,
-			$author$project$Momento$errorToString,
+			$author$project$Momento$errorToDetails,
 			A2(
 				$brian_watkins$elm_procedure$Procedure$map,
 				$elm$core$Basics$always(_Utils_Tuple0),
@@ -6721,7 +6745,7 @@ var $author$project$EventLog$Component$createChannel = F4(
 				$author$project$Serverless$Conn$Response$ok200('Created Channel Ok')),
 			A2(
 				$brian_watkins$elm_procedure$Procedure$mapError,
-				$author$project$Serverless$Conn$Response$err500,
+				A2($elm$core$Basics$composeR, $author$project$EventLog$Component$encodeErrorFormat, $author$project$Serverless$Conn$Response$err500json),
 				A2(
 					$brian_watkins$elm_procedure$Procedure$andThen,
 					A2($author$project$EventLog$Component$setupChannelWebhook, component, channelName),

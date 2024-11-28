@@ -12,6 +12,7 @@ module EventLog.Component exposing
 -}
 
 import AWS.Dynamo as Dynamo
+import Json.Decode exposing (Value)
 import Json.Encode as Encode
 import Momento exposing (Error, MomentoSessionKey)
 import Ports
@@ -276,7 +277,7 @@ createChannel protocol session state component =
                 |> Procedure.andThen (openMomentoCache component)
                 |> Procedure.andThen recordChannelToDB
                 |> Procedure.andThen (setupChannelWebhook component channelName)
-                |> Procedure.mapError Response.err500
+                |> Procedure.mapError (encodeErrorFormat >> Response.err500json)
                 |> Procedure.map (Response.ok200 "Created Channel Ok" |> always)
     in
     ( { seed = nextSeed
@@ -290,20 +291,34 @@ createChannel protocol session state component =
         |> protocol.onUpdate
 
 
+type alias ErrorFormat =
+    { message : String
+    , details : Value
+    }
+
+
+encodeErrorFormat : ErrorFormat -> Value
+encodeErrorFormat error =
+    [ ( "message", Encode.string error.message )
+    , ( "details", error.details )
+    ]
+        |> Encode.object
+
+
 openMomentoCache :
     Component a
     -> String
-    -> Procedure.Procedure String MomentoSessionKey Msg
+    -> Procedure.Procedure ErrorFormat MomentoSessionKey Msg
 openMomentoCache component channelName =
     momentoApi.open
         { apiKey = component.momentoApiKey
         , cache = cacheName channelName
         }
         |> Procedure.fetchResult
-        |> Procedure.mapError Momento.errorToString
+        |> Procedure.mapError Momento.errorToDetails
 
 
-recordChannelToDB : MomentoSessionKey -> Procedure.Procedure String MomentoSessionKey Msg
+recordChannelToDB : MomentoSessionKey -> Procedure.Procedure ErrorFormat MomentoSessionKey Msg
 recordChannelToDB sessionKey =
     dynamoApi.put
         { tableName = "someTable"
@@ -311,14 +326,14 @@ recordChannelToDB sessionKey =
         }
         |> Procedure.fetchResult
         |> Procedure.map (always sessionKey)
-        |> Procedure.mapError Dynamo.errorToString
+        |> Procedure.mapError Dynamo.errorToDetails
 
 
 setupChannelWebhook :
     Component a
     -> String
     -> MomentoSessionKey
-    -> Procedure.Procedure String () Msg
+    -> Procedure.Procedure ErrorFormat () Msg
 setupChannelWebhook component channelName sessionKey =
     momentoApi.webhook
         sessionKey
@@ -327,7 +342,7 @@ setupChannelWebhook component channelName sessionKey =
         }
         |> Procedure.fetchResult
         |> Procedure.map (always ())
-        |> Procedure.mapError Momento.errorToString
+        |> Procedure.mapError Momento.errorToDetails
 
 
 

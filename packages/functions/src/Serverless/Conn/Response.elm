@@ -2,29 +2,26 @@ module Serverless.Conn.Response exposing
     ( Response, Status
     , addHeader, setBody, updateBody, setStatus
     , init, encode
-    , err500, ok200
+    , err500, err500json, ok200, ok200json
     )
 
-{-| Query and update the HTTP response.
+{-| DSL for building HTTP responses.
+
+
+# Build a response
 
 @docs Response, Status
-
-
-## Updating
-
 @docs addHeader, setBody, updateBody, setStatus
-
-
-## Misc
-
-These functions are typically not needed when building an application. They are
-used internally by the framework. They may be useful when debugging or writing
-unit tests.
-
 @docs init, encode
+
+
+# Helpers
+
+@docs err500, err500json, ok200, ok200json
 
 -}
 
+import Json.Decode exposing (Value)
 import Json.Encode as Encode
 import Serverless.Conn.Body as Body exposing (Body, text)
 import Serverless.Conn.Charset as Charset exposing (Charset)
@@ -147,4 +144,17 @@ err500 : String -> Response
 err500 err =
     init
         |> setBody (Body.text err)
+        |> setStatus 500
+
+
+ok200json : Value -> Response
+ok200json msg =
+    init
+        |> setBody (Body.json msg)
+
+
+err500json : Value -> Response
+err500json err =
+    init
+        |> setBody (Body.json err)
         |> setStatus 500
