@@ -6533,8 +6533,8 @@ var $author$project$AWS$Dynamo$queryInner = F5(
 									});
 							})))));
 	});
-var $author$project$AWS$Dynamo$query = F6(
-	function (pt, ports, table, maybeIndex, q, dt) {
+var $author$project$AWS$Dynamo$query = F4(
+	function (pt, ports, qry, dt) {
 		return A3(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
@@ -6542,10 +6542,10 @@ var $author$project$AWS$Dynamo$query = F6(
 				var res = _v0.b;
 				return dt(res);
 			},
-			A5($author$project$AWS$Dynamo$queryInner, ports, table, maybeIndex, q, _List_Nil));
+			A5($author$project$AWS$Dynamo$queryInner, ports, qry.tableName, $elm$core$Maybe$Nothing, qry.match, _List_Nil));
 	});
-var $author$project$AWS$Dynamo$queryIndex = F6(
-	function (pt, ports, table, index, q, dt) {
+var $author$project$AWS$Dynamo$queryIndex = F4(
+	function (pt, ports, qry, dt) {
 		return A3(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
@@ -6556,9 +6556,9 @@ var $author$project$AWS$Dynamo$queryIndex = F6(
 			A5(
 				$author$project$AWS$Dynamo$queryInner,
 				ports,
-				table,
-				$elm$core$Maybe$Just(index),
-				q,
+				qry.tableName,
+				$elm$core$Maybe$Just(qry.indexName),
+				qry.match,
 				_List_Nil));
 	});
 var $author$project$AWS$Dynamo$dynamoApi = F2(

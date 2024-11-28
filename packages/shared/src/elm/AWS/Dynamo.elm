@@ -4,7 +4,7 @@ module AWS.Dynamo exposing
     , Put
     , Get
     , Delete
-    , Query, Order(..), partitionKeyEquals, limitResults, orderResults
+    , Match, Order(..), partitionKeyEquals, limitResults, orderResults
     , rangeKeyEquals, rangeKeyLessThan, rangeKeyLessThanOrEqual, rangeKeyGreaterThan
     , rangeKeyGreaterThanOrEqual, rangeKeyBetween
     , int, string
@@ -35,7 +35,7 @@ module AWS.Dynamo exposing
 
 # Database Queries
 
-@docs Query, Order, partitionKeyEquals, limitResults, orderResults
+@docs Match, Order, partitionKeyEquals, limitResults, orderResults
 @docs rangeKeyEquals, rangeKeyLessThan, rangeKeyLessThanOrEqual, rangeKeyGreaterThan
 @docs rangeKeyGreaterThanOrEqual, rangeKeyBetween
 @docs int, string
@@ -69,13 +69,24 @@ type alias Ports msg =
 
 
 type alias DynamoApi msg =
-    { get : Get -> (Result Error (Maybe Value) -> msg) -> Cmd msg
-    , put : Put -> (Result Error () -> msg) -> Cmd msg
-    , delete : Delete -> (Result Error () -> msg) -> Cmd msg
-    , batchGet : BatchGet -> (Result Error (List Value) -> msg) -> Cmd msg
-    , batchPut : BatchPut -> (Result Error () -> msg) -> Cmd msg
-    , query : String -> Maybe String -> Query -> (Result Error (List Value) -> msg) -> Cmd msg
-    , queryIndex : String -> String -> Query -> (Result Error (List Value) -> msg) -> Cmd msg
+    { get : Get Value -> (Result Error (Maybe Value) -> msg) -> Cmd msg
+    , put : Put Value -> (Result Error () -> msg) -> Cmd msg
+    , delete : Delete Value -> (Result Error () -> msg) -> Cmd msg
+    , batchGet : BatchGet Value -> (Result Error (List Value) -> msg) -> Cmd msg
+    , batchPut : BatchPut Value -> (Result Error () -> msg) -> Cmd msg
+    , query : Query -> (Result Error (List Value) -> msg) -> Cmd msg
+    , queryIndex : QueryIndex -> (Result Error (List Value) -> msg) -> Cmd msg
+    }
+
+
+type alias DynamoTypedApi k v msg =
+    { get : Get k -> (Result Error (Maybe v) -> msg) -> Cmd msg
+    , put : Put v -> (Result Error () -> msg) -> Cmd msg
+    , delete : Delete k -> (Result Error () -> msg) -> Cmd msg
+    , batchGet : BatchGet k -> (Result Error (List v) -> msg) -> Cmd msg
+    , batchPut : BatchPut v -> (Result Error () -> msg) -> Cmd msg
+    , query : Query -> (Result Error (List v) -> msg) -> Cmd msg
+    , queryIndex : QueryIndex -> (Result Error (List v) -> msg) -> Cmd msg
     }
 
 
@@ -142,16 +153,16 @@ errorDecoder =
 ---- Put a document in DynamoDB
 
 
-type alias Put =
+type alias Put v =
     { tableName : String
-    , item : Value
+    , item : v
     }
 
 
 put :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
-    -> Put
+    -> Put Value
     -> (Result Error () -> msg)
     -> Cmd msg
 put pt ports putProps dt =
@@ -162,7 +173,7 @@ put pt ports putProps dt =
         |> Procedure.run pt (\{ res } -> putResponseDecoder res |> dt)
 
 
-putEncoder : Put -> Value
+putEncoder : Put Value -> Value
 putEncoder putOp =
     Encode.object
         [ ( "TableName", Encode.string putOp.tableName )
@@ -194,16 +205,16 @@ putResponseDecoder val =
 ---- Get a document from DynamoDB
 
 
-type alias Get =
+type alias Get k =
     { tableName : String
-    , key : Value
+    , key : k
     }
 
 
 get :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
-    -> Get
+    -> Get Value
     -> (Result Error (Maybe Value) -> msg)
     -> Cmd msg
 get pt ports getProps dt =
@@ -214,7 +225,7 @@ get pt ports getProps dt =
         |> Procedure.run pt (\{ res } -> getResponseDecoder res |> dt)
 
 
-getEncoder : Get -> Value
+getEncoder : Get Value -> Value
 getEncoder getOp =
     Encode.object
         [ ( "TableName", Encode.string getOp.tableName )
@@ -250,16 +261,16 @@ getResponseDecoder val =
 ---- Delete
 
 
-type alias Delete =
+type alias Delete k =
     { tableName : String
-    , key : Value
+    , key : k
     }
 
 
 delete :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
-    -> Delete
+    -> Delete Value
     -> (Result Error () -> msg)
     -> Cmd msg
 delete pt ports deleteProps dt =
@@ -270,7 +281,7 @@ delete pt ports deleteProps dt =
         |> Procedure.run pt (\{ res } -> deleteResponseDecoder res |> dt)
 
 
-deleteEncoder : Delete -> Value
+deleteEncoder : Delete Value -> Value
 deleteEncoder deleteOp =
     Encode.object
         [ ( "TableName", Encode.string deleteOp.tableName )
@@ -302,16 +313,16 @@ deleteResponseDecoder val =
 ---- Batch Put
 
 
-type alias BatchPut =
+type alias BatchPut v =
     { tableName : String
-    , items : List Value
+    , items : List v
     }
 
 
 batchPut :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
-    -> BatchPut
+    -> BatchPut Value
     -> (Result Error () -> msg)
     -> Cmd msg
 batchPut pt ports batchPutProps dt =
@@ -358,7 +369,7 @@ batchPutInner ports table vals =
             )
 
 
-batchPutEncoder : BatchPut -> Value
+batchPutEncoder : BatchPut Value -> Value
 batchPutEncoder putOp =
     let
         encodeItem item =
@@ -404,16 +415,16 @@ batchPutResponseDecoder val =
 ---- Batch Get
 
 
-type alias BatchGet =
+type alias BatchGet v =
     { tableName : String
-    , keys : List Value
+    , keys : List v
     }
 
 
 batchGet :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
-    -> BatchGet
+    -> BatchGet Value
     -> (Result Error (List Value) -> msg)
     -> Cmd msg
 batchGet pt ports batchGetProps dt =
@@ -495,7 +506,26 @@ type Order
     | Reverse
 
 
+{-| A complete query against a table.
+-}
 type alias Query =
+    { tableName : String
+    , match : Match
+    }
+
+
+{-| A complete query against a table and index.
+-}
+type alias QueryIndex =
+    { tableName : String
+    , indexName : String
+    , match : Match
+    }
+
+
+{-| The query conditions to be matched.
+-}
+type alias Match =
     { partitionKeyName : String
     , partitionKeyValue : AttributeValue
     , rangeKeyCondition : Maybe KeyCondition
@@ -584,7 +614,7 @@ encodeAttr attr =
             Encode.int val
 
 
-partitionKeyEquals : String -> String -> Query
+partitionKeyEquals : String -> String -> Match
 partitionKeyEquals key val =
     { partitionKeyName = key
     , partitionKeyValue = StringAttr val
@@ -595,47 +625,47 @@ partitionKeyEquals key val =
     }
 
 
-rangeKeyEquals : String -> AttributeValue -> Query -> Query
+rangeKeyEquals : String -> AttributeValue -> Match -> Match
 rangeKeyEquals keyName attr q =
     { q | rangeKeyCondition = Equals keyName attr |> Just }
 
 
-rangeKeyLessThan : String -> AttributeValue -> Query -> Query
+rangeKeyLessThan : String -> AttributeValue -> Match -> Match
 rangeKeyLessThan keyName attr q =
     { q | rangeKeyCondition = LessThan keyName attr |> Just }
 
 
-rangeKeyLessThanOrEqual : String -> AttributeValue -> Query -> Query
+rangeKeyLessThanOrEqual : String -> AttributeValue -> Match -> Match
 rangeKeyLessThanOrEqual keyName attr q =
     { q | rangeKeyCondition = LessThenOrEqual keyName attr |> Just }
 
 
-rangeKeyGreaterThan : String -> AttributeValue -> Query -> Query
+rangeKeyGreaterThan : String -> AttributeValue -> Match -> Match
 rangeKeyGreaterThan keyName attr q =
     { q | rangeKeyCondition = GreaterThan keyName attr |> Just }
 
 
-rangeKeyGreaterThanOrEqual : String -> AttributeValue -> Query -> Query
+rangeKeyGreaterThanOrEqual : String -> AttributeValue -> Match -> Match
 rangeKeyGreaterThanOrEqual keyName attr q =
     { q | rangeKeyCondition = GreaterThanOrEqual keyName attr |> Just }
 
 
-rangeKeyBetween : String -> AttributeValue -> AttributeValue -> Query -> Query
+rangeKeyBetween : String -> AttributeValue -> AttributeValue -> Match -> Match
 rangeKeyBetween keyName lowAttr highAttr q =
     { q | rangeKeyCondition = Between keyName lowAttr highAttr |> Just }
 
 
-orderResults : Order -> Query -> Query
+orderResults : Order -> Match -> Match
 orderResults ord q =
     { q | order = ord }
 
 
-limitResults : Int -> Query -> Query
+limitResults : Int -> Match -> Match
 limitResults limit q =
     { q | limit = Just limit }
 
 
-nextPage : Value -> Query -> Query
+nextPage : Value -> Match -> Match
 nextPage lastEvalKey q =
     { q | exclusiveStartKey = Just lastEvalKey }
 
@@ -643,26 +673,22 @@ nextPage lastEvalKey q =
 query :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
-    -> String
-    -> Maybe String
     -> Query
     -> (Result Error (List Value) -> msg)
     -> Cmd msg
-query pt ports table maybeIndex q dt =
-    queryInner ports table maybeIndex q []
+query pt ports qry dt =
+    queryInner ports qry.tableName Nothing qry.match []
         |> Procedure.run pt (\( _, res ) -> dt res)
 
 
 queryIndex :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
-    -> String
-    -> String
-    -> Query
+    -> QueryIndex
     -> (Result Error (List Value) -> msg)
     -> Cmd msg
-queryIndex pt ports table index q dt =
-    queryInner ports table (Just index) q []
+queryIndex pt ports qry dt =
+    queryInner ports qry.tableName (Just qry.indexName) qry.match []
         |> Procedure.run pt (\( _, res ) -> dt res)
 
 
@@ -670,7 +696,7 @@ queryInner :
     Ports msg
     -> String
     -> Maybe String
-    -> Query
+    -> Match
     -> List Value
     -> Procedure.Procedure e ( String, Result Error (List Value) ) msg
 queryInner ports table maybeIndex q accum =
@@ -696,7 +722,7 @@ queryInner ports table maybeIndex q accum =
             )
 
 
-queryEncoder : String -> Maybe String -> Query -> Value
+queryEncoder : String -> Maybe String -> Match -> Value
 queryEncoder table maybeIndex q =
     let
         ( keyExpressionsString, attrVals ) =
