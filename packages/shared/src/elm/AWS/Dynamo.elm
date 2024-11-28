@@ -81,12 +81,13 @@ type alias DynamoApi msg =
 
 type alias DynamoTypedApi k v msg =
     { get : Get k -> (Result Error (Maybe v) -> msg) -> Cmd msg
-    , put : Put v -> (Result Error () -> msg) -> Cmd msg
-    , delete : Delete k -> (Result Error () -> msg) -> Cmd msg
-    , batchGet : BatchGet k -> (Result Error (List v) -> msg) -> Cmd msg
-    , batchPut : BatchPut v -> (Result Error () -> msg) -> Cmd msg
-    , query : Query -> (Result Error (List v) -> msg) -> Cmd msg
-    , queryIndex : QueryIndex -> (Result Error (List v) -> msg) -> Cmd msg
+
+    --, put : Put v -> (Result Error () -> msg) -> Cmd msg
+    --, delete : Delete k -> (Result Error () -> msg) -> Cmd msg
+    --, batchGet : BatchGet k -> (Result Error (List v) -> msg) -> Cmd msg
+    --, batchPut : BatchPut v -> (Result Error () -> msg) -> Cmd msg
+    --, query : Query -> (Result Error (List v) -> msg) -> Cmd msg
+    --, queryIndex : QueryIndex -> (Result Error (List v) -> msg) -> Cmd msg
     }
 
 
@@ -100,6 +101,67 @@ dynamoApi pt ports =
     , query = query pt ports
     , queryIndex = queryIndex pt ports
     }
+
+
+dynamoTypedApi : (Procedure.Program.Msg msg -> msg) -> Ports msg -> (k -> Value) -> (v -> Value) -> Decoder v -> DynamoTypedApi k v msg
+dynamoTypedApi pt ports keyEncoder valEncoder decoder =
+    { get = typedGet pt ports keyEncoder decoder
+
+    --, put = typedPut pt ports valEncoder
+    --, delete = typedDelete pt ports keyEncoder
+    --, batchGet = typedBatchGet pt ports keyEncoder decoder
+    --, batchPut = typedBatchPut pt ports valEncoder
+    --, query = typedQuery pt ports decoder
+    --, queryIndex = typedQueryIndex pt ports decoder
+    }
+
+
+decodeTypedResults : Decoder v -> Result Error (Maybe Value) -> Result Error (Maybe v)
+decodeTypedResults decoder jsonResult =
+    jsonResult
+        |> Result.map
+            (Maybe.map
+                (Decode.decodeValue decoder
+                    >> Result.map Just
+                    >> Result.mapError DecodeError
+                )
+                >> Maybe.withDefault (Ok Nothing)
+            )
+        |> Result.Extra.join
+
+
+typedGet pt ports encoder decoder getProps dt =
+    get
+        pt
+        ports
+        { tableName = getProps.tableName
+        , key = encoder getProps.key
+        }
+        (decodeTypedResults decoder >> dt)
+
+
+typedPut pt ports encoder =
+    put pt ports
+
+
+typedDelete pt ports encoder =
+    delete pt ports
+
+
+typedBatchGet pt ports encoder decoder =
+    batchGet pt ports
+
+
+typedBatchPut pt ports encoder =
+    batchPut pt ports
+
+
+typedQuery pt ports decoder =
+    query pt ports
+
+
+typedQueryIndex pt ports decoder =
+    queryIndex pt ports
 
 
 
