@@ -97,29 +97,29 @@ dynamoApi pt ports =
 
 type Error
     = Error { message : String, details : Value }
-    | DecodeError String
+    | DecodeError Decode.Error
 
 
 errorToString : Error -> String
-errorToString err =
-    case err of
+errorToString error =
+    case error of
         Error { message } ->
-            message
+            "AWS.Dynamo: " ++ message
 
-        DecodeError val ->
-            val
+        DecodeError err ->
+            "AWS.Dynamo: " ++ Decode.errorToString err
 
 
 errorToDetails : Error -> { message : String, details : Value }
-errorToDetails err =
-    case err of
+errorToDetails error =
+    case error of
         Error { message, details } ->
             { message = message
             , details = details
             }
 
-        DecodeError message ->
-            { message = message
+        DecodeError err ->
+            { message = Decode.errorToString err
             , details = Encode.null
             }
 
@@ -186,7 +186,7 @@ putResponseDecoder val =
                     )
     in
     Decode.decodeValue decoder val
-        |> Result.mapError (Decode.errorToString >> DecodeError >> Err)
+        |> Result.mapError (DecodeError >> Err)
         |> Result.Extra.merge
 
 
@@ -242,7 +242,7 @@ getResponseDecoder val =
                     )
     in
     Decode.decodeValue decoder val
-        |> Result.mapError (Decode.errorToString >> DecodeError >> Err)
+        |> Result.mapError (DecodeError >> Err)
         |> Result.Extra.merge
 
 
@@ -294,7 +294,7 @@ deleteResponseDecoder val =
                     )
     in
     Decode.decodeValue decoder val
-        |> Result.mapError (Decode.errorToString >> DecodeError >> Err)
+        |> Result.mapError (DecodeError >> Err)
         |> Result.Extra.merge
 
 
@@ -396,7 +396,7 @@ batchPutResponseDecoder val =
                     )
     in
     Decode.decodeValue decoder val
-        |> Result.mapError (Decode.errorToString >> DecodeError >> Err)
+        |> Result.mapError (DecodeError >> Err)
         |> Result.Extra.merge
 
 
@@ -464,7 +464,7 @@ batchGetResponseDecoder tableName val =
                     )
     in
     Decode.decodeValue decoder val
-        |> Result.mapError (Decode.errorToString >> DecodeError >> Err)
+        |> Result.mapError (DecodeError >> Err)
         |> Result.Extra.merge
 
 
@@ -744,5 +744,5 @@ queryResponseDecoder val =
                     )
     in
     Decode.decodeValue decoder val
-        |> Result.mapError (Decode.errorToString >> DecodeError >> Err)
+        |> Result.mapError (DecodeError >> Err)
         |> Result.Extra.merge

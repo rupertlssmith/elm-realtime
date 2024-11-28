@@ -5741,10 +5741,7 @@ var $author$project$AWS$Dynamo$batchGetResponseDecoder = F2(
 		return $elm_community$result_extra$Result$Extra$merge(
 			A2(
 				$elm$core$Result$mapError,
-				A2(
-					$elm$core$Basics$composeR,
-					$elm$json$Json$Decode$errorToString,
-					A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err)),
+				A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err),
 				A2($elm$json$Json$Decode$decodeValue, decoder, val)));
 	});
 var $author$project$AWS$Dynamo$batchGet = F4(
@@ -5821,10 +5818,7 @@ var $author$project$AWS$Dynamo$batchPutResponseDecoder = function (val) {
 	return $elm_community$result_extra$Result$Extra$merge(
 		A2(
 			$elm$core$Result$mapError,
-			A2(
-				$elm$core$Basics$composeR,
-				$elm$json$Json$Decode$errorToString,
-				A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err)),
+			A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err),
 			A2($elm$json$Json$Decode$decodeValue, decoder, val)));
 };
 var $elm$core$List$drop = F2(
@@ -6059,10 +6053,7 @@ var $author$project$AWS$Dynamo$deleteResponseDecoder = function (val) {
 	return $elm_community$result_extra$Result$Extra$merge(
 		A2(
 			$elm$core$Result$mapError,
-			A2(
-				$elm$core$Basics$composeR,
-				$elm$json$Json$Decode$errorToString,
-				A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err)),
+			A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err),
 			A2($elm$json$Json$Decode$decodeValue, decoder, val)));
 };
 var $author$project$AWS$Dynamo$delete = F4(
@@ -6130,10 +6121,7 @@ var $author$project$AWS$Dynamo$getResponseDecoder = function (val) {
 	return $elm_community$result_extra$Result$Extra$merge(
 		A2(
 			$elm$core$Result$mapError,
-			A2(
-				$elm$core$Basics$composeR,
-				$elm$json$Json$Decode$errorToString,
-				A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err)),
+			A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err),
 			A2($elm$json$Json$Decode$decodeValue, decoder, val)));
 };
 var $author$project$AWS$Dynamo$get = F4(
@@ -6191,10 +6179,7 @@ var $author$project$AWS$Dynamo$putResponseDecoder = function (val) {
 	return $elm_community$result_extra$Result$Extra$merge(
 		A2(
 			$elm$core$Result$mapError,
-			A2(
-				$elm$core$Basics$composeR,
-				$elm$json$Json$Decode$errorToString,
-				A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err)),
+			A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err),
 			A2($elm$json$Json$Decode$decodeValue, decoder, val)));
 };
 var $author$project$AWS$Dynamo$put = F4(
@@ -6468,10 +6453,7 @@ var $author$project$AWS$Dynamo$queryResponseDecoder = function (val) {
 	return $elm_community$result_extra$Result$Extra$merge(
 		A2(
 			$elm$core$Result$mapError,
-			A2(
-				$elm$core$Basics$composeR,
-				$elm$json$Json$Decode$errorToString,
-				A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err)),
+			A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err),
 			A2($elm$json$Json$Decode$decodeValue, decoder, val)));
 };
 var $author$project$AWS$Dynamo$queryInner = F5(
@@ -6673,13 +6655,13 @@ var $author$project$EventLog$Component$dynamoApi = A2(
 	$author$project$AWS$Dynamo$dynamoApi,
 	$author$project$EventLog$Component$ProcedureMsg,
 	{batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse});
-var $author$project$AWS$Dynamo$errorToString = function (err) {
-	if (err.$ === 'Error') {
-		var message = err.a.message;
-		return message;
+var $author$project$AWS$Dynamo$errorToString = function (error) {
+	if (error.$ === 'Error') {
+		var message = error.a.message;
+		return 'AWS.Dynamo: ' + message;
 	} else {
-		var val = err.a;
-		return val;
+		var err = error.a;
+		return 'AWS.Dynamo: ' + $elm$json$Json$Decode$errorToString(err);
 	}
 };
 var $author$project$EventLog$Component$recordChannelToDB = function (sessionKey) {

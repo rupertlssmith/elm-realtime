@@ -96,7 +96,7 @@ export class DynamoPorts {
             var getResponse;
 
             if (error) {
-                getResponse = errorResponse(args.id, error);
+                getResponse = errorResponse(error);
             } else if (Object.entries(result).length === 0) {
                 getResponse = {
                     type_: "ItemNotFound"
@@ -119,7 +119,7 @@ export class DynamoPorts {
             var putResponse;
 
             if (error) {
-                putResponse = errorResponse(args.id, error);
+                putResponse = errorResponse(error);
             } else {
                 putResponse = {
                     type_: "Ok"
@@ -135,7 +135,7 @@ export class DynamoPorts {
             var deleteResponse;
 
             if (error) {
-                deleteResponse = errorResponse(args.id, error);
+                deleteResponse = errorResponse(error);
             } else {
                 deleteResponse = {
                     type_: "Ok"
@@ -151,7 +151,7 @@ export class DynamoPorts {
             var getResponse;
 
             if (error) {
-                getResponse = errorResponse(args.id, error);
+                getResponse = errorResponse(error);
             } else if (Object.entries(result).length === 0) {
                 getResponse = {
                     type_: "Item",
@@ -173,7 +173,7 @@ export class DynamoPorts {
             var putResponse;
 
             if (error) {
-                putResponse = errorResponse(args.id, error);
+                putResponse = errorResponse(error);
             } else {
                 putResponse = {
                     type_: "Ok"
@@ -189,7 +189,7 @@ export class DynamoPorts {
             var getResponse;
 
             if (error) {
-                getResponse = errorResponse(args.id, error);
+                getResponse = errorResponse(error);
             } else if (Object.entries(result).length === 0) {
                 getResponse = {
                     type_: "Items",
