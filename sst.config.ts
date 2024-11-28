@@ -41,8 +41,7 @@ export default $config({
         api.route("ANY /v1/{proxy+}",
             {
                 handler: "packages/functions/src/api.main",
-                link: [momentoApiKey, api, channelsTable, eventLogTable],
-                timeout: "2 seconds"
+                link: [momentoApiKey, api, channelsTable, eventLogTable]
             }
         );
 
