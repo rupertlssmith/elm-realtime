@@ -16,21 +16,32 @@ export default $config({
         };
     },
     async run() {
+        // High performance serverless cache an pubsub messaging.
         const momentoApiKey = new sst.Secret("MomentoApiKey");
 
-        const table = new sst.aws.Dynamo("Connections", {
+        // DynamoDB tables for channels and events.
+        const channelsTable = new sst.aws.Dynamo("ChannelTable", {
             fields: {
-                id: "string",
+                id: "string"
             },
-            primaryIndex: {hashKey: "id"},
+            primaryIndex: {hashKey: "id"}
         });
 
+        const eventLogTable = new sst.aws.Dynamo("EventLogTable", {
+            fields: {
+                id: "string",
+                seq: "number"
+            },
+            primaryIndex: {hashKey: "id", rangeKey: "seq" }
+        });
+
+        // API for managing the realtime channels.
         const api = new sst.aws.ApiGatewayV2("ChannelApi", {link: [momentoApiKey]});
 
         api.route("ANY /v1/{proxy+}",
             {
                 handler: "packages/functions/src/api.main",
-                link: [momentoApiKey, api],
+                link: [momentoApiKey, api, channelsTable, eventLogTable],
                 timeout: "2 seconds"
             }
         );
@@ -38,11 +49,11 @@ export default $config({
         api.route("ANY /clear",
             {
                 handler: "packages/functions/src/clear.main",
-                link: [momentoApiKey]
+                link: [momentoApiKey, channelsTable, eventLogTable]
             }
         );
 
-        // Deploy the Elm app
+        // Elm UI for realtime channel management.
         const site = new sst.aws.StaticSite("ChatSite", {
             path: "packages/web",
             build: {
@@ -56,7 +67,6 @@ export default $config({
         });
 
         return {
-            managementEndpoint: api.managementEndpoint,
             ApiEndpoint: api.url,
             SiteUrl: site.url,
         };

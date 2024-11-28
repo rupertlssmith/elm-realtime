@@ -10,11 +10,15 @@ declare module "sst" {
       "type": "sst.aws.ApiGatewayV2"
       "url": string
     }
+    "ChannelTable": {
+      "name": string
+      "type": "sst.aws.Dynamo"
+    }
     "ChatSite": {
       "type": "sst.aws.StaticSite"
       "url": string
     }
-    "Connections": {
+    "EventLogTable": {
       "name": string
       "type": "sst.aws.Dynamo"
     }
