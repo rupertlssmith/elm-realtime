@@ -6882,7 +6882,7 @@ var $author$project$EventLog$Component$recordChannelToDB = F2(
 										updatedAt: timestamp,
 										webhook: $author$project$EventLog$Component$webhookName(channelName)
 									},
-									tableName: 'ChannelTable'
+									tableName: '00-vpc-rupert-ChannelTableTable'
 								}))));
 			},
 			$brian_watkins$elm_procedure$Procedure$fromTask($elm$time$Time$now));

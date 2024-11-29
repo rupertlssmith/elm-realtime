@@ -18,6 +18,8 @@ const momentoPorts = new MomentoPorts(app);
 const dynamoPorts = new DynamoPorts(app);
 
 export async function main(event, context) {
+    console.log(Resource.ChannelTable.name);
+
     const handler = elmServerless.httpApi({
         app: app,
         logger: silent,

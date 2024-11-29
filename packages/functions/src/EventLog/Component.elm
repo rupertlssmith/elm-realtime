@@ -331,7 +331,7 @@ recordChannelToDB channelName sessionKey =
         |> Procedure.andThen
             (\timestamp ->
                 channelTableApi.put
-                    { tableName = "ChannelTable"
+                    { tableName = "00-vpc-rupert-ChannelTableTable"
                     , item =
                         { id = channelName
                         , updatedAt = timestamp
