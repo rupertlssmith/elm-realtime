@@ -344,7 +344,7 @@ createChannel protocol session state component =
                 |> Procedure.andThen (setupChannelWebhook component channelName)
                 |> Procedure.andThen (recordChannelToDB component channelName)
                 |> Procedure.mapError (encodeErrorFormat >> Response.err500json)
-                |> Procedure.map (Response.ok200 "Created Channel Ok" |> always)
+                |> Procedure.map (Codec.encoder ChannelTable.recordCodec >> Response.ok200json)
     in
     ( { seed = nextSeed
       , procedure = state.procedure
@@ -404,14 +404,13 @@ recordChannelToDB :
     Component a
     -> String
     -> MomentoSessionKey
-    -> Procedure.Procedure ErrorFormat () Msg
+    -> Procedure.Procedure ErrorFormat ChannelTable.Record Msg
 recordChannelToDB component channelName sessionKey =
     Procedure.fromTask Time.now
         |> Procedure.andThen
             (\timestamp ->
-                channelTableApi.put
-                    { tableName = component.channelTable
-                    , item =
+                let
+                    channelRecord =
                         { id = channelName
                         , updatedAt = timestamp
                         , modelTopic = modelTopicName channelName
@@ -419,9 +418,13 @@ recordChannelToDB component channelName sessionKey =
                         , saveList = saveListName channelName
                         , webhook = webhookName channelName
                         }
+                in
+                channelTableApi.put
+                    { tableName = component.channelTable
+                    , item = channelRecord
                     }
                     |> Procedure.fetchResult
-                    |> Procedure.map (always ())
+                    |> Procedure.map (always channelRecord)
                     |> Procedure.mapError Dynamo.errorToDetails
             )
 
