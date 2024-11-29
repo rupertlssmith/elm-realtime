@@ -3,10 +3,6 @@ module App.Component exposing
     , Msg
     , Protocol
     , init
-    , mmError
-    , mmMessage
-    , mmOpened
-    , mmSubscribed
     , update
     , view
     )
@@ -14,7 +10,9 @@ module App.Component exposing
 import Html.Styled as Html exposing (Html)
 import Http
 import Json.Encode as Encode
-import Momento exposing (Error, Op, OpenParams, SubscribeParams)
+import Momento exposing (Error, OpenParams, SubscribeParams)
+import Ports
+import Procedure.Program
 import Random
 import Update2 as U2
 
@@ -32,7 +30,8 @@ setModel m x =
 
 
 type Msg
-    = RandomSeed Random.Seed
+    = ProcedureMsg (Procedure.Program.Msg Msg)
+    | RandomSeed Random.Seed
     | LoggedIn (Result Http.Error ())
 
 
@@ -82,12 +81,22 @@ switchState cons state =
 type alias Protocol submodel msg model =
     { toMsg : Msg -> msg
     , onUpdate : ( submodel, Cmd msg ) -> ( model, Cmd msg )
-
-    -- Momento interface.
-    , mmOpen : String -> OpenParams -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
-    , mmSubscribe : String -> SubscribeParams -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
-    , mmOps : String -> List Op -> ( submodel, Cmd msg ) -> ( model, Cmd msg )
     }
+
+
+momentoApi : Momento.MomentoApi Msg
+momentoApi =
+    { open = Ports.mmOpen
+    , close = Ports.mmClose
+    , subscribe = Ports.mmSubscribe
+    , publish = Ports.mmPublish
+    , onMessage = Ports.mmOnMessage
+    , pushList = Ports.mmPushList
+    , createWebhook = Ports.mmCreateWebhook
+    , response = Ports.mmResponse
+    , asyncError = Ports.mmAsyncError
+    }
+        |> Momento.momentoApi ProcedureMsg
 
 
 init : String -> (Msg -> msg) -> ( Model, Cmd msg )

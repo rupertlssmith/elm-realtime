@@ -1,9 +1,8 @@
 port module Ports exposing
     ( onPointerCancel, onPointerDown, onPointerMove, onPointerUp
     , wsOpen, wsSend, wsClose, wsOnOpen, wsOnClose, wsOnMessage, wsOnError
-    , mmClose, mmOnClose, mmOnError, mmOnMessage, mmOnOpen, mmOpen, mmPushList
-    , mmSend, mmOnSubscribe, mmSubscribe
-    , mmCreateWebhook
+    , mmAsyncError, mmClose, mmCreateWebhook, mmOnMessage, mmOpen, mmPublish
+    , mmPushList, mmResponse, mmSubscribe
     )
 
 {-| Application ports
@@ -21,9 +20,8 @@ port module Ports exposing
 
 # Momento Cache
 
-@docs mmClose, mmOnClose, mmOnError, mmOnMessage, mmOnOpen, mmOpen, mmPushList
-@docs mmSend, mmOnSubscribe, mmSubscribe
-@docs mmCreateWebhook
+@docs mmAsyncError, mmClose, mmCreateWebhook, mmOnMessage, mmOpen, mmPublish
+@docs mmPushList, mmResponse, mmSubscribe
 
 -}
 
@@ -78,31 +76,25 @@ port wsOnError : ({ id : String, error : Value } -> msg) -> Sub msg
 port mmOpen : { id : String, cache : String, apiKey : String } -> Cmd msg
 
 
-port mmOnOpen : (String -> msg) -> Sub msg
+port mmClose : { id : String, session : Value } -> Cmd msg
 
 
-port mmClose : String -> Cmd msg
+port mmSubscribe : { id : String, session : Value, topic : String } -> Cmd msg
 
 
-port mmOnClose : (String -> msg) -> Sub msg
+port mmPublish : { id : String, session : Value, topic : String, payload : String } -> Cmd msg
 
 
-port mmSubscribe : { id : String, topic : String } -> Cmd msg
+port mmOnMessage : ({ id : String, session : Value, payload : String } -> msg) -> Sub msg
 
 
-port mmOnSubscribe : ({ id : String, topic : String } -> msg) -> Sub msg
+port mmPushList : { id : String, session : Value, list : String, payload : String } -> Cmd msg
 
 
-port mmSend : { id : String, topic : String, payload : String } -> Cmd msg
+port mmCreateWebhook : { id : String, session : Value, name : String, topic : String, url : String } -> Cmd msg
 
 
-port mmOnMessage : ({ id : String, payload : String } -> msg) -> Sub msg
+port mmResponse : ({ id : String, type_ : String, response : Value } -> msg) -> Sub msg
 
 
-port mmPushList : { id : String, list : String, payload : String } -> Cmd msg
-
-
-port mmCreateWebhook : { id : String, topic : String, url : String } -> Cmd msg
-
-
-port mmOnError : ({ id : String, error : Value } -> msg) -> Sub msg
+port mmAsyncError : ({ id : String, error : Value } -> msg) -> Sub msg
