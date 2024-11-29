@@ -21,7 +21,7 @@ type alias Model =
     , momentoApiKey : String
 
     -- Elm modules
-    , app : App.Model
+    , app : App.Lifecycle
 
     -- Routing state
     , route : Maybe Route

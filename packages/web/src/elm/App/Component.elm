@@ -1,5 +1,5 @@
 module App.Component exposing
-    ( Model
+    ( Lifecycle
     , Msg
     , Protocol
     , init
@@ -35,7 +35,13 @@ type Msg
     | LoggedIn (Result Http.Error ())
 
 
-type Model
+type alias Model =
+    { procedure : Procedure.Program.Model Msg
+    , lifecycle : Lifecycle
+    }
+
+
+type Lifecycle
     = ModelStart StartState
     | ModelRandomized RandomizedState
     | ModelConnected ConnectedState
@@ -117,6 +123,16 @@ update protocol msg component =
             component.app
     in
     case ( model, msg ) of
+        ( _, ProcedureMsg innerMsg ) ->
+            let
+                ( procMdl, procMsg ) =
+                    Procedure.Program.update innerMsg model.procedure
+            in
+            ( { model | procedure = procMdl }, procMsg )
+                |> Tuple.mapFirst (setModel component)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
         ( ModelStart state, RandomSeed seed ) ->
             { log = "Randomized" :: state.log
             , realtimeChannel = state.realtimeChannel
