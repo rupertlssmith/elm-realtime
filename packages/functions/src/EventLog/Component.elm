@@ -38,6 +38,8 @@ type alias Component a =
     { a
         | momentoApiKey : String
         , channelApiUrl : String
+        , channelTable : String
+        , eventLogTable : String
         , eventLog : Model
     }
 
@@ -282,7 +284,7 @@ createChannel protocol session state component =
         procedure =
             Procedure.provide channelName
                 |> Procedure.andThen (openMomentoCache component)
-                |> Procedure.andThen (recordChannelToDB channelName)
+                |> Procedure.andThen (recordChannelToDB component channelName)
                 |> Procedure.andThen (setupChannelWebhook component channelName)
                 |> Procedure.mapError (encodeErrorFormat >> Response.err500json)
                 |> Procedure.map (Response.ok200 "Created Channel Ok" |> always)
@@ -325,13 +327,17 @@ openMomentoCache component channelName =
         |> Procedure.mapError Momento.errorToDetails
 
 
-recordChannelToDB : String -> MomentoSessionKey -> Procedure.Procedure ErrorFormat MomentoSessionKey Msg
-recordChannelToDB channelName sessionKey =
+recordChannelToDB :
+    Component a
+    -> String
+    -> MomentoSessionKey
+    -> Procedure.Procedure ErrorFormat MomentoSessionKey Msg
+recordChannelToDB component channelName sessionKey =
     Procedure.fromTask Time.now
         |> Procedure.andThen
             (\timestamp ->
                 channelTableApi.put
-                    { tableName = "00-vpc-rupert-ChannelTableTable"
+                    { tableName = component.channelTable
                     , item =
                         { id = channelName
                         , updatedAt = timestamp

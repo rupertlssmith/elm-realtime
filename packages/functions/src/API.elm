@@ -9,6 +9,8 @@ type alias Model =
     { -- Flags
       momentoApiKey : String
     , channelApiUrl : String
+    , channelTable : String
+    , eventLogTable : String
 
     -- Elm modules
     , eventLog : EventLog.Model
@@ -31,6 +33,8 @@ type alias MomentoSecret =
 type alias Flags =
     { momentoSecret : MomentoSecret
     , channelApiUrl : String
+    , channelTable : String
+    , eventLogTable : String
     }
 
 
@@ -51,6 +55,8 @@ init flags =
     in
     ( { momentoApiKey = flags.momentoSecret.apiKey
       , channelApiUrl = flags.channelApiUrl
+      , channelTable = flags.channelTable
+      , eventLogTable = flags.eventLogTable
       , eventLog = eventLogMdl
       }
     , Cmd.batch

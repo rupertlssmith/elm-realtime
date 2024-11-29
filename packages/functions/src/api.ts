@@ -10,6 +10,8 @@ const channelApiUrl = Resource.ChannelApi.url;
 const app = Elm.API.init({
     flags: {
         momentoSecret: momentoSecret,
+        channelTable: Resource.ChannelTable.name,
+        eventLogTable: Resource.EventLogTable.name,
         channelApiUrl: channelApiUrl
     },
 });
@@ -18,8 +20,6 @@ const momentoPorts = new MomentoPorts(app);
 const dynamoPorts = new DynamoPorts(app);
 
 export async function main(event, context) {
-    console.log(Resource.ChannelTable.name);
-
     const handler = elmServerless.httpApi({
         app: app,
         logger: silent,

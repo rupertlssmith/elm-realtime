@@ -20,7 +20,7 @@ export default $config({
         const momentoApiKey = new sst.Secret("MomentoApiKey");
 
         // DynamoDB tables for channels and events.
-        const channelsTable = new sst.aws.Dynamo("ChannelTable", {
+        const channelTable = new sst.aws.Dynamo("ChannelTable", {
             fields: {
                 id: "string"
             },
@@ -41,14 +41,14 @@ export default $config({
         api.route("ANY /v1/{proxy+}",
             {
                 handler: "packages/functions/src/api.main",
-                link: [momentoApiKey, api, channelsTable, eventLogTable]
+                link: [momentoApiKey, api, channelTable, eventLogTable]
             }
         );
 
         api.route("ANY /clear",
             {
                 handler: "packages/functions/src/clear.main",
-                link: [momentoApiKey, channelsTable, eventLogTable]
+                link: [momentoApiKey, channelTable, eventLogTable]
             }
         );
 

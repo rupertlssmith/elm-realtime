@@ -106,7 +106,7 @@ type alias WebhookParams =
 
 
 type Error
-    = Failed
+    = MomentoError { message : String, details : Value }
 
 
 errorToString : Error -> String
@@ -115,10 +115,8 @@ errorToString _ =
 
 
 errorToDetails : Error -> { message : String, details : Value }
-errorToDetails _ =
-    { message = "Momento Error"
-    , details = Encode.null
-    }
+errorToDetails (MomentoError err) =
+    err
 
 
 
@@ -132,10 +130,18 @@ decodeResponse res =
             MomentoSessionKey res.response |> Ok
 
         "Error" ->
-            Err Failed
+            MomentoError
+                { message = "MomentoError"
+                , details = res.response
+                }
+                |> Err
 
         _ ->
-            Err Failed
+            MomentoError
+                { message = "Momento Unknown response type: " ++ res.type_
+                , details = Encode.null
+                }
+                |> Err
 
 
 open :
@@ -203,66 +209,3 @@ but may report errors on the asyncError subscription.
 publish : Ports msg -> MomentoSessionKey -> PublishParams -> Cmd msg
 publish ports (MomentoSessionKey sessionKey) { topic, payload } =
     ports.publish { id = "", session = sessionKey, topic = topic, payload = payload }
-
-
-
--- Batched operations
---type Op
---    = Publish { topic : String, payload : String }
---    | PushList { list : String, payload : String }
---    | Webhook { topic : String, url : String }
---
---publishOp : { topic : String, payload : String } -> Op
---publishOp args =
---    Publish args
---
---
---pushListOp : { list : String, payload : String } -> Op
---pushListOp args =
---    PushList args
---
---
---webhookOp : WebhookParams -> Op
---webhookOp args =
---    Webhook args
---
---
---processOps :
---    (Procedure.Program.Msg msg -> msg)
---    -> Ports msg
---    -> SessionKey
---    -> List Op
---    -> (Result Error () -> msg)
---    -> Cmd msg
---processOps pt ports (SessionKey sessionKey) ops dt =
---    innerProcessOps ports (SessionKey sessionKey) ops
---        |> Procedure.run pt dt
---
---
---innerProcessOps :
---    Ports msg
---    -> SessionKey
---    -> List Op
---    -> Procedure.Procedure Never (Result error ()) msg
---innerProcessOps ports (SessionKey sessionKey) ops =
---    case ops of
---        [] ->
---            Procedure.provide (Ok ())
---
---        op :: remOps ->
---            Procedure.do (processOp ports "" (SessionKey sessionKey) op)
---                |> Procedure.map Ok
---                |> Procedure.andThen (\_ -> innerProcessOps ports (SessionKey sessionKey) remOps)
---
---
---processOp : Ports msg -> String -> SessionKey -> Op -> Cmd msg
---processOp ports id (SessionKey sessionKey) op =
---    case op of
---        Publish { topic, payload } ->
---            ports.publish { id = id, session = sessionKey, topic = topic, payload = payload }
---
---        PushList { list, payload } ->
---            ports.pushList { id = id, session = sessionKey, list = list, payload = payload }
---
---        Webhook { topic, url } ->
---            ports.createWebhook { id = id, session = sessionKey, topic = topic, url = url }

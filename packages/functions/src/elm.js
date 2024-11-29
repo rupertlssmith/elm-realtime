@@ -3188,7 +3188,7 @@ var $author$project$API$init = function (flags) {
 	var eventLogMdl = _v0.a;
 	var eventLogCmds = _v0.b;
 	return _Utils_Tuple2(
-		{channelApiUrl: flags.channelApiUrl, eventLog: eventLogMdl, momentoApiKey: flags.momentoSecret.apiKey},
+		{channelApiUrl: flags.channelApiUrl, channelTable: flags.channelTable, eventLog: eventLogMdl, eventLogTable: flags.eventLogTable, momentoApiKey: flags.momentoSecret.apiKey},
 		$elm$core$Platform$Cmd$batch(
 			_List_fromArray(
 				[eventLogCmds])));
@@ -5225,7 +5225,8 @@ var $author$project$EventLog$Component$cacheName = function (channel) {
 	return 'elm-realtime' + '-cache';
 };
 var $author$project$Momento$errorToDetails = function (_v0) {
-	return {details: $elm$json$Json$Encode$null, message: 'Momento Error'};
+	var err = _v0.a;
+	return err;
 };
 var $brian_watkins$elm_procedure$Procedure$fetchResult = function (generator) {
 	return $brian_watkins$elm_procedure$Procedure$Internal$Procedure(
@@ -5469,7 +5470,9 @@ var $brian_watkins$elm_procedure$Procedure$Channel$connect = F2(
 		return $brian_watkins$elm_procedure$Procedure$Channel$Channel(
 			{request: requestGenerator, shouldAccept: $brian_watkins$elm_procedure$Procedure$Channel$defaultPredicate, subscription: generator});
 	});
-var $author$project$Momento$Failed = {$: 'Failed'};
+var $author$project$Momento$MomentoError = function (a) {
+	return {$: 'MomentoError', a: a};
+};
 var $author$project$Momento$MomentoSessionKey = function (a) {
 	return {$: 'MomentoSessionKey', a: a};
 };
@@ -5480,9 +5483,13 @@ var $author$project$Momento$decodeResponse = function (res) {
 			return $elm$core$Result$Ok(
 				$author$project$Momento$MomentoSessionKey(res.response));
 		case 'Error':
-			return $elm$core$Result$Err($author$project$Momento$Failed);
+			return $elm$core$Result$Err(
+				$author$project$Momento$MomentoError(
+					{details: res.response, message: 'MomentoError'}));
 		default:
-			return $elm$core$Result$Err($author$project$Momento$Failed);
+			return $elm$core$Result$Err(
+				$author$project$Momento$MomentoError(
+					{details: $elm$json$Json$Encode$null, message: 'Momento Unknown response type: ' + res.type_}));
 	}
 };
 var $brian_watkins$elm_procedure$Procedure$Channel$filter = F2(
@@ -6860,8 +6867,8 @@ var $author$project$EventLog$Component$saveListName = function (channel) {
 var $author$project$EventLog$Component$webhookName = function (channel) {
 	return channel + '-webhook';
 };
-var $author$project$EventLog$Component$recordChannelToDB = F2(
-	function (channelName, sessionKey) {
+var $author$project$EventLog$Component$recordChannelToDB = F3(
+	function (component, channelName, sessionKey) {
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$andThen,
 			function (timestamp) {
@@ -6882,7 +6889,7 @@ var $author$project$EventLog$Component$recordChannelToDB = F2(
 										updatedAt: timestamp,
 										webhook: $author$project$EventLog$Component$webhookName(channelName)
 									},
-									tableName: '00-vpc-rupert-ChannelTableTable'
+									tableName: component.channelTable
 								}))));
 			},
 			$brian_watkins$elm_procedure$Procedure$fromTask($elm$time$Time$now));
@@ -6927,7 +6934,7 @@ var $author$project$EventLog$Component$createChannel = F4(
 					A2($author$project$EventLog$Component$setupChannelWebhook, component, channelName),
 					A2(
 						$brian_watkins$elm_procedure$Procedure$andThen,
-						$author$project$EventLog$Component$recordChannelToDB(channelName),
+						A2($author$project$EventLog$Component$recordChannelToDB, component, channelName),
 						A2(
 							$brian_watkins$elm_procedure$Procedure$andThen,
 							$author$project$EventLog$Component$openMomentoCache(component),
@@ -7233,11 +7240,21 @@ _Platform_export({'API':{'init':$author$project$API$main(
 		function (momentoSecret) {
 			return A2(
 				$elm$json$Json$Decode$andThen,
-				function (channelApiUrl) {
-					return $elm$json$Json$Decode$succeed(
-						{channelApiUrl: channelApiUrl, momentoSecret: momentoSecret});
+				function (eventLogTable) {
+					return A2(
+						$elm$json$Json$Decode$andThen,
+						function (channelTable) {
+							return A2(
+								$elm$json$Json$Decode$andThen,
+								function (channelApiUrl) {
+									return $elm$json$Json$Decode$succeed(
+										{channelApiUrl: channelApiUrl, channelTable: channelTable, eventLogTable: eventLogTable, momentoSecret: momentoSecret});
+								},
+								A2($elm$json$Json$Decode$field, 'channelApiUrl', $elm$json$Json$Decode$string));
+						},
+						A2($elm$json$Json$Decode$field, 'channelTable', $elm$json$Json$Decode$string));
 				},
-				A2($elm$json$Json$Decode$field, 'channelApiUrl', $elm$json$Json$Decode$string));
+				A2($elm$json$Json$Decode$field, 'eventLogTable', $elm$json$Json$Decode$string));
 		},
 		A2(
 			$elm$json$Json$Decode$field,
