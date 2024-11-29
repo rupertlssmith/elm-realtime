@@ -1,6 +1,7 @@
 module AWS.Dynamo exposing
     ( Ports
     , dynamoApi, DynamoApi
+    , dynamoTypedApi, DynamoTypedApi
     , Put
     , Get
     , Delete
@@ -103,8 +104,14 @@ dynamoApi pt ports =
     }
 
 
-dynamoTypedApi : (Procedure.Program.Msg msg -> msg) -> Ports msg -> (k -> Value) -> (v -> Value) -> Decoder v -> DynamoTypedApi k v msg
-dynamoTypedApi pt ports keyEncoder valEncoder decoder =
+dynamoTypedApi :
+    (k -> Value)
+    -> (v -> Value)
+    -> Decoder v
+    -> (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
+    -> DynamoTypedApi k v msg
+dynamoTypedApi keyEncoder valEncoder decoder pt ports =
     { get = get pt ports keyEncoder decoder
     , put = put pt ports valEncoder
     , delete = delete pt ports keyEncoder

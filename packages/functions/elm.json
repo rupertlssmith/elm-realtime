@@ -22,6 +22,7 @@
             "elm-community/maybe-extra": "5.3.0",
             "elm-community/random-extra": "3.2.0",
             "elm-community/result-extra": "2.4.0",
+            "miniBill/elm-codec": "2.2.0",
             "the-sett/elm-error-handling": "2.3.0",
             "the-sett/elm-update-helper": "2.3.0"
         },

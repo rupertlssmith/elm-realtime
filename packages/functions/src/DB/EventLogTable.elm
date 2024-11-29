@@ -1,4 +1,4 @@
-module DB.ChannelTable exposing
+module DB.EventLogTable exposing
     ( Key
     , Record
     , operations
@@ -14,16 +14,15 @@ import Time exposing (Posix)
 
 type alias Key =
     { id : String
+    , seq : Int
     }
 
 
 type alias Record =
     { id : String
+    , seq : Int
     , updatedAt : Posix
-    , modelTopic : String
-    , saveTopic : String
-    , saveList : String
-    , webhook : String
+    , event : Value
     }
 
 
@@ -39,17 +38,15 @@ recordCodec : Codec Record
 recordCodec =
     Codec.object Record
         |> Codec.field "id" .id Codec.string
+        |> Codec.field "seq" .seq Codec.int
         |> Codec.field "updatedAt" .updatedAt posixCodec
-        |> Codec.field "modelTopic" .modelTopic Codec.string
-        |> Codec.field "saveTopic" .saveTopic Codec.string
-        |> Codec.field "saveList" .saveList Codec.string
-        |> Codec.field "webhook" .webhook Codec.string
+        |> Codec.field "event" .event Codec.value
         |> Codec.buildObject
 
 
 encodeKey : Key -> Value
 encodeKey key =
-    Encode.object [ ( "id", Encode.string key.id ) ]
+    Encode.object [ ( "id", Encode.string key.id ), ( "seq", Encode.int key.seq ) ]
 
 
 posixCodec : Codec Posix
