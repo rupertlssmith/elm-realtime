@@ -19,9 +19,10 @@ module AWS.Dynamo exposing
 @docs Ports
 
 
-# Packaged API
+# Packaged APIs
 
 @docs dynamoApi, DynamoApi
+@docs dynamoTypedApi, DynamoTypedApi
 
 
 # Read and Write Operations
@@ -81,87 +82,37 @@ type alias DynamoApi msg =
 
 type alias DynamoTypedApi k v msg =
     { get : Get k -> (Result Error (Maybe v) -> msg) -> Cmd msg
-
-    --, put : Put v -> (Result Error () -> msg) -> Cmd msg
-    --, delete : Delete k -> (Result Error () -> msg) -> Cmd msg
-    --, batchGet : BatchGet k -> (Result Error (List v) -> msg) -> Cmd msg
-    --, batchPut : BatchPut v -> (Result Error () -> msg) -> Cmd msg
-    --, query : Query -> (Result Error (List v) -> msg) -> Cmd msg
-    --, queryIndex : QueryIndex -> (Result Error (List v) -> msg) -> Cmd msg
+    , put : Put v -> (Result Error () -> msg) -> Cmd msg
+    , delete : Delete k -> (Result Error () -> msg) -> Cmd msg
+    , batchGet : BatchGet k -> (Result Error (List v) -> msg) -> Cmd msg
+    , batchPut : BatchPut v -> (Result Error () -> msg) -> Cmd msg
+    , query : Query -> (Result Error (List v) -> msg) -> Cmd msg
+    , queryIndex : QueryIndex -> (Result Error (List v) -> msg) -> Cmd msg
     }
 
 
 dynamoApi : (Procedure.Program.Msg msg -> msg) -> Ports msg -> DynamoApi msg
 dynamoApi pt ports =
-    { get = get pt ports
-    , put = put pt ports
-    , delete = delete pt ports
-    , batchGet = batchGet pt ports
-    , batchPut = batchPut pt ports
-    , query = query pt ports
-    , queryIndex = queryIndex pt ports
+    { get = get pt ports identity Decode.value
+    , put = put pt ports identity
+    , delete = delete pt ports identity
+    , batchGet = batchGet pt ports identity Decode.value
+    , batchPut = batchPut pt ports identity
+    , query = query pt ports Decode.value
+    , queryIndex = queryIndex pt ports Decode.value
     }
 
 
 dynamoTypedApi : (Procedure.Program.Msg msg -> msg) -> Ports msg -> (k -> Value) -> (v -> Value) -> Decoder v -> DynamoTypedApi k v msg
 dynamoTypedApi pt ports keyEncoder valEncoder decoder =
-    { get = typedGet pt ports keyEncoder decoder
-
-    --, put = typedPut pt ports valEncoder
-    --, delete = typedDelete pt ports keyEncoder
-    --, batchGet = typedBatchGet pt ports keyEncoder decoder
-    --, batchPut = typedBatchPut pt ports valEncoder
-    --, query = typedQuery pt ports decoder
-    --, queryIndex = typedQueryIndex pt ports decoder
+    { get = get pt ports keyEncoder decoder
+    , put = put pt ports valEncoder
+    , delete = delete pt ports keyEncoder
+    , batchGet = batchGet pt ports keyEncoder decoder
+    , batchPut = batchPut pt ports valEncoder
+    , query = query pt ports decoder
+    , queryIndex = queryIndex pt ports decoder
     }
-
-
-decodeTypedResults : Decoder v -> Result Error (Maybe Value) -> Result Error (Maybe v)
-decodeTypedResults decoder jsonResult =
-    jsonResult
-        |> Result.map
-            (Maybe.map
-                (Decode.decodeValue decoder
-                    >> Result.map Just
-                    >> Result.mapError DecodeError
-                )
-                >> Maybe.withDefault (Ok Nothing)
-            )
-        |> Result.Extra.join
-
-
-typedGet pt ports encoder decoder getProps dt =
-    get
-        pt
-        ports
-        { tableName = getProps.tableName
-        , key = encoder getProps.key
-        }
-        (decodeTypedResults decoder >> dt)
-
-
-typedPut pt ports encoder =
-    put pt ports
-
-
-typedDelete pt ports encoder =
-    delete pt ports
-
-
-typedBatchGet pt ports encoder decoder =
-    batchGet pt ports
-
-
-typedBatchPut pt ports encoder =
-    batchPut pt ports
-
-
-typedQuery pt ports decoder =
-    query pt ports
-
-
-typedQueryIndex pt ports decoder =
-    queryIndex pt ports
 
 
 
@@ -224,22 +175,23 @@ type alias Put v =
 put :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
-    -> Put Value
+    -> (v -> Value)
+    -> Put v
     -> (Result Error () -> msg)
     -> Cmd msg
-put pt ports putProps dt =
-    Channel.open (\key -> ports.put { id = key, req = putEncoder putProps })
+put pt ports encoder putProps dt =
+    Channel.open (\key -> ports.put { id = key, req = putEncoder encoder putProps })
         |> Channel.connect ports.response
         |> Channel.filter (\key { id } -> id == key)
         |> Channel.acceptOne
         |> Procedure.run pt (\{ res } -> putResponseDecoder res |> dt)
 
 
-putEncoder : Put Value -> Value
-putEncoder putOp =
+putEncoder : (v -> Value) -> Put v -> Value
+putEncoder encoder putOp =
     Encode.object
         [ ( "TableName", Encode.string putOp.tableName )
-        , ( "Item", putOp.item )
+        , ( "Item", encoder putOp.item )
         ]
 
 
@@ -276,27 +228,29 @@ type alias Get k =
 get :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
-    -> Get Value
-    -> (Result Error (Maybe Value) -> msg)
+    -> (k -> Value)
+    -> Decoder v
+    -> Get k
+    -> (Result Error (Maybe v) -> msg)
     -> Cmd msg
-get pt ports getProps dt =
-    Channel.open (\key -> ports.get { id = key, req = getEncoder getProps })
+get pt ports encoder decoder getProps dt =
+    Channel.open (\key -> ports.get { id = key, req = getEncoder encoder getProps })
         |> Channel.connect ports.response
         |> Channel.filter (\key { id } -> id == key)
         |> Channel.acceptOne
-        |> Procedure.run pt (\{ res } -> getResponseDecoder res |> dt)
+        |> Procedure.run pt (\{ res } -> getResponseDecoder decoder res |> dt)
 
 
-getEncoder : Get Value -> Value
-getEncoder getOp =
+getEncoder : (v -> Value) -> Get v -> Value
+getEncoder encoder getOp =
     Encode.object
         [ ( "TableName", Encode.string getOp.tableName )
-        , ( "Key", getOp.key )
+        , ( "Key", encoder getOp.key )
         ]
 
 
-getResponseDecoder : Value -> Result Error (Maybe Value)
-getResponseDecoder val =
+getResponseDecoder : Decoder v -> Value -> Result Error (Maybe v)
+getResponseDecoder valDecoder val =
     let
         decoder =
             Decode.field "type_" Decode.string
@@ -304,7 +258,7 @@ getResponseDecoder val =
                     (\type_ ->
                         case type_ of
                             "Item" ->
-                                Decode.at [ "item", "Item" ] Decode.value
+                                Decode.at [ "item", "Item" ] valDecoder
                                     |> Decode.map (Just >> Ok)
 
                             "ItemNotFound" ->
@@ -332,22 +286,23 @@ type alias Delete k =
 delete :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
-    -> Delete Value
+    -> (k -> Value)
+    -> Delete k
     -> (Result Error () -> msg)
     -> Cmd msg
-delete pt ports deleteProps dt =
-    Channel.open (\key -> ports.delete { id = key, req = deleteEncoder deleteProps })
+delete pt ports encoder deleteProps dt =
+    Channel.open (\key -> ports.delete { id = key, req = deleteEncoder encoder deleteProps })
         |> Channel.connect ports.response
         |> Channel.filter (\key { id } -> id == key)
         |> Channel.acceptOne
         |> Procedure.run pt (\{ res } -> deleteResponseDecoder res |> dt)
 
 
-deleteEncoder : Delete Value -> Value
-deleteEncoder deleteOp =
+deleteEncoder : (k -> Value) -> Delete k -> Value
+deleteEncoder encoder deleteOp =
     Encode.object
         [ ( "TableName", Encode.string deleteOp.tableName )
-        , ( "Key", deleteOp.key )
+        , ( "Key", encoder deleteOp.key )
         ]
 
 
@@ -384,20 +339,22 @@ type alias BatchPut v =
 batchPut :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
-    -> BatchPut Value
+    -> (v -> Value)
+    -> BatchPut v
     -> (Result Error () -> msg)
     -> Cmd msg
-batchPut pt ports batchPutProps dt =
-    batchPutInner ports batchPutProps.tableName batchPutProps.items
+batchPut pt ports encoder batchPutProps dt =
+    batchPutInner ports encoder batchPutProps.tableName batchPutProps.items
         |> Procedure.run pt (\( _, res ) -> dt res)
 
 
 batchPutInner :
     Ports msg
+    -> (v -> Value)
     -> String
-    -> List Value
+    -> List v
     -> Procedure.Procedure e ( String, Result Error () ) msg
-batchPutInner ports table vals =
+batchPutInner ports encoder table vals =
     let
         firstBatch =
             List.take 25 vals
@@ -409,7 +366,7 @@ batchPutInner ports table vals =
         (\key ->
             ports.batchWrite
                 { id = key
-                , req = batchPutEncoder { tableName = table, items = firstBatch }
+                , req = batchPutEncoder encoder { tableName = table, items = firstBatch }
                 }
         )
         |> Channel.connect ports.response
@@ -424,21 +381,21 @@ batchPutInner ports table vals =
                                 Procedure.provide ( id, Ok () )
 
                             moreItems ->
-                                batchPutInner ports table moreItems
+                                batchPutInner ports encoder table moreItems
 
                     Err err ->
                         Procedure.provide ( id, Err err )
             )
 
 
-batchPutEncoder : BatchPut Value -> Value
-batchPutEncoder putOp =
+batchPutEncoder : (v -> Value) -> BatchPut v -> Value
+batchPutEncoder encoder putOp =
     let
         encodeItem item =
             Encode.object
                 [ ( "PutRequest"
                   , Encode.object
-                        [ ( "Item", item ) ]
+                        [ ( "Item", encoder item ) ]
                   )
                 ]
     in
@@ -477,25 +434,27 @@ batchPutResponseDecoder val =
 ---- Batch Get
 
 
-type alias BatchGet v =
+type alias BatchGet k =
     { tableName : String
-    , keys : List v
+    , keys : List k
     }
 
 
 batchGet :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
-    -> BatchGet Value
-    -> (Result Error (List Value) -> msg)
+    -> (k -> Value)
+    -> Decoder v
+    -> BatchGet k
+    -> (Result Error (List v) -> msg)
     -> Cmd msg
-batchGet pt ports batchGetProps dt =
+batchGet pt ports encoder decoder batchGetProps dt =
     Channel.open
         (\key ->
             ports.batchWrite
                 { id = key
                 , req =
-                    batchGetEncoder
+                    batchGetEncoder encoder
                         { tableName = batchGetProps.tableName
                         , keys = batchGetProps.keys
                         }
@@ -504,24 +463,25 @@ batchGet pt ports batchGetProps dt =
         |> Channel.connect ports.response
         |> Channel.filter (\key { id } -> id == key)
         |> Channel.acceptOne
-        |> Procedure.run pt (\{ res } -> batchGetResponseDecoder batchGetProps.tableName res |> dt)
+        |> Procedure.run pt (\{ res } -> batchGetResponseDecoder decoder batchGetProps.tableName res |> dt)
 
 
-batchGetEncoder getOp =
+batchGetEncoder : (k -> Value) -> BatchGet k -> Value
+batchGetEncoder encoder getOp =
     Encode.object
         [ ( "RequestItems"
           , Encode.object
                 [ ( getOp.tableName
                   , Encode.object
-                        [ ( "Keys", Encode.list identity getOp.keys ) ]
+                        [ ( "Keys", Encode.list encoder getOp.keys ) ]
                   )
                 ]
           )
         ]
 
 
-batchGetResponseDecoder : String -> Value -> Result Error (List Value)
-batchGetResponseDecoder tableName val =
+batchGetResponseDecoder : Decoder v -> String -> Value -> Result Error (List v)
+batchGetResponseDecoder valDecoder tableName val =
     let
         decoder =
             Decode.field "type_" Decode.string
@@ -529,7 +489,7 @@ batchGetResponseDecoder tableName val =
                     (\type_ ->
                         case type_ of
                             "Item" ->
-                                Decode.at [ "item", "Responses", tableName ] (Decode.list Decode.value)
+                                Decode.at [ "item", "Responses", tableName ] (Decode.list valDecoder)
                                     |> Decode.map Ok
 
                             _ ->
@@ -735,45 +695,49 @@ nextPage lastEvalKey q =
 query :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
+    -> Decoder v
     -> Query
-    -> (Result Error (List Value) -> msg)
+    -> (Result Error (List v) -> msg)
     -> Cmd msg
-query pt ports qry dt =
-    queryInner ports qry.tableName Nothing qry.match []
+query pt ports decoder qry dt =
+    queryInner ports decoder qry.tableName Nothing qry.match []
         |> Procedure.run pt (\( _, res ) -> dt res)
 
 
 queryIndex :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
+    -> Decoder v
     -> QueryIndex
-    -> (Result Error (List Value) -> msg)
+    -> (Result Error (List v) -> msg)
     -> Cmd msg
-queryIndex pt ports qry dt =
-    queryInner ports qry.tableName (Just qry.indexName) qry.match []
+queryIndex pt ports decoder qry dt =
+    queryInner ports decoder qry.tableName (Just qry.indexName) qry.match []
         |> Procedure.run pt (\( _, res ) -> dt res)
 
 
 queryInner :
     Ports msg
+    -> Decoder v
     -> String
     -> Maybe String
     -> Match
-    -> List Value
-    -> Procedure.Procedure e ( String, Result Error (List Value) ) msg
-queryInner ports table maybeIndex q accum =
+    -> List v
+    -> Procedure.Procedure e ( String, Result Error (List v) ) msg
+queryInner ports decoder table maybeIndex q accum =
     Channel.open (\key -> ports.query { id = key, req = queryEncoder table maybeIndex q })
         |> Channel.connect ports.response
         |> Channel.filter (\key { id } -> id == key)
         |> Channel.acceptOne
         |> Procedure.andThen
             (\{ id, res } ->
-                case queryResponseDecoder res of
+                case queryResponseDecoder decoder res of
                     Ok ( Nothing, items ) ->
                         Procedure.provide ( id, Ok items )
 
                     Ok ( Just lastEvaluatedKey, items ) ->
                         queryInner ports
+                            decoder
                             table
                             maybeIndex
                             (nextPage lastEvaluatedKey q)
@@ -814,8 +778,8 @@ queryEncoder table maybeIndex q =
         |> Encode.object
 
 
-queryResponseDecoder : Value -> Result Error ( Maybe Value, List Value )
-queryResponseDecoder val =
+queryResponseDecoder : Decoder v -> Value -> Result Error ( Maybe Value, List v )
+queryResponseDecoder valDecoder val =
     let
         decoder =
             Decode.field "type_" Decode.string
@@ -825,7 +789,7 @@ queryResponseDecoder val =
                             "Items" ->
                                 Decode.map2 (\lastKey vals -> Tuple.pair lastKey vals |> Ok)
                                     (Decode.maybe (Decode.field "lastEvaluatedKey" Decode.value))
-                                    (Decode.field "items" (Decode.list Decode.value))
+                                    (Decode.field "items" (Decode.list valDecoder))
 
                             _ ->
                                 errorDecoder

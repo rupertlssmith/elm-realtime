@@ -5689,27 +5689,28 @@ var $elm$json$Json$Encode$list = F2(
 				_Json_emptyArray(_Utils_Tuple0),
 				entries));
 	});
-var $author$project$AWS$Dynamo$batchGetEncoder = function (getOp) {
-	return $elm$json$Json$Encode$object(
-		_List_fromArray(
-			[
-				_Utils_Tuple2(
-				'RequestItems',
-				$elm$json$Json$Encode$object(
-					_List_fromArray(
-						[
-							_Utils_Tuple2(
-							getOp.tableName,
-							$elm$json$Json$Encode$object(
-								_List_fromArray(
-									[
-										_Utils_Tuple2(
-										'Keys',
-										A2($elm$json$Json$Encode$list, $elm$core$Basics$identity, getOp.keys))
-									])))
-						])))
-			]));
-};
+var $author$project$AWS$Dynamo$batchGetEncoder = F2(
+	function (encoder, getOp) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'RequestItems',
+					$elm$json$Json$Encode$object(
+						_List_fromArray(
+							[
+								_Utils_Tuple2(
+								getOp.tableName,
+								$elm$json$Json$Encode$object(
+									_List_fromArray(
+										[
+											_Utils_Tuple2(
+											'Keys',
+											A2($elm$json$Json$Encode$list, encoder, getOp.keys))
+										])))
+							])))
+				]));
+	});
 var $author$project$AWS$Dynamo$DecodeError = function (a) {
 	return {$: 'DecodeError', a: a};
 };
@@ -5739,8 +5740,8 @@ var $author$project$AWS$Dynamo$errorDecoder = A2(
 							return {details: details, message: message};
 						}))))));
 var $elm$json$Json$Decode$list = _Json_decodeList;
-var $author$project$AWS$Dynamo$batchGetResponseDecoder = F2(
-	function (tableName, val) {
+var $author$project$AWS$Dynamo$batchGetResponseDecoder = F3(
+	function (valDecoder, tableName, val) {
 		var decoder = A2(
 			$elm$json$Json$Decode$andThen,
 			function (type_) {
@@ -5752,7 +5753,7 @@ var $author$project$AWS$Dynamo$batchGetResponseDecoder = F2(
 							$elm$json$Json$Decode$at,
 							_List_fromArray(
 								['item', 'Responses', tableName]),
-							$elm$json$Json$Decode$list($elm$json$Json$Decode$value)));
+							$elm$json$Json$Decode$list(valDecoder)));
 				} else {
 					return $author$project$AWS$Dynamo$errorDecoder;
 				}
@@ -5764,15 +5765,15 @@ var $author$project$AWS$Dynamo$batchGetResponseDecoder = F2(
 				A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err),
 				A2($elm$json$Json$Decode$decodeValue, decoder, val)));
 	});
-var $author$project$AWS$Dynamo$batchGet = F4(
-	function (pt, ports, batchGetProps, dt) {
+var $author$project$AWS$Dynamo$batchGet = F6(
+	function (pt, ports, encoder, decoder, batchGetProps, dt) {
 		return A3(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
 			function (_v1) {
 				var res = _v1.res;
 				return dt(
-					A2($author$project$AWS$Dynamo$batchGetResponseDecoder, batchGetProps.tableName, res));
+					A3($author$project$AWS$Dynamo$batchGetResponseDecoder, decoder, batchGetProps.tableName, res));
 			},
 			$brian_watkins$elm_procedure$Procedure$Channel$acceptOne(
 				A2(
@@ -5790,39 +5791,44 @@ var $author$project$AWS$Dynamo$batchGet = F4(
 								return ports.batchWrite(
 									{
 										id: key,
-										req: $author$project$AWS$Dynamo$batchGetEncoder(
+										req: A2(
+											$author$project$AWS$Dynamo$batchGetEncoder,
+											encoder,
 											{keys: batchGetProps.keys, tableName: batchGetProps.tableName})
 									});
 							})))));
 	});
-var $author$project$AWS$Dynamo$batchPutEncoder = function (putOp) {
-	var encodeItem = function (item) {
+var $author$project$AWS$Dynamo$batchPutEncoder = F2(
+	function (encoder, putOp) {
+		var encodeItem = function (item) {
+			return $elm$json$Json$Encode$object(
+				_List_fromArray(
+					[
+						_Utils_Tuple2(
+						'PutRequest',
+						$elm$json$Json$Encode$object(
+							_List_fromArray(
+								[
+									_Utils_Tuple2(
+									'Item',
+									encoder(item))
+								])))
+					]));
+		};
 		return $elm$json$Json$Encode$object(
 			_List_fromArray(
 				[
 					_Utils_Tuple2(
-					'PutRequest',
+					'RequestItems',
 					$elm$json$Json$Encode$object(
 						_List_fromArray(
 							[
-								_Utils_Tuple2('Item', item)
+								_Utils_Tuple2(
+								putOp.tableName,
+								A2($elm$json$Json$Encode$list, encodeItem, putOp.items))
 							])))
 				]));
-	};
-	return $elm$json$Json$Encode$object(
-		_List_fromArray(
-			[
-				_Utils_Tuple2(
-				'RequestItems',
-				$elm$json$Json$Encode$object(
-					_List_fromArray(
-						[
-							_Utils_Tuple2(
-							putOp.tableName,
-							A2($elm$json$Json$Encode$list, encodeItem, putOp.items))
-						])))
-			]));
-};
+	});
 var $author$project$AWS$Dynamo$batchPutResponseDecoder = function (val) {
 	var decoder = A2(
 		$elm$json$Json$Decode$andThen,
@@ -5988,8 +5994,8 @@ var $elm$core$List$take = F2(
 	function (n, list) {
 		return A3($elm$core$List$takeFast, 0, n, list);
 	});
-var $author$project$AWS$Dynamo$batchPutInner = F3(
-	function (ports, table, vals) {
+var $author$project$AWS$Dynamo$batchPutInner = F4(
+	function (ports, encoder, table, vals) {
 		var remainder = A2($elm$core$List$drop, 25, vals);
 		var firstBatch = A2($elm$core$List$take, 25, vals);
 		return A2(
@@ -6006,7 +6012,7 @@ var $author$project$AWS$Dynamo$batchPutInner = F3(
 								$elm$core$Result$Ok(_Utils_Tuple0)));
 					} else {
 						var moreItems = remainder;
-						return A3($author$project$AWS$Dynamo$batchPutInner, ports, table, moreItems);
+						return A4($author$project$AWS$Dynamo$batchPutInner, ports, encoder, table, moreItems);
 					}
 				} else {
 					var err = _v2.a;
@@ -6032,13 +6038,15 @@ var $author$project$AWS$Dynamo$batchPutInner = F3(
 								return ports.batchWrite(
 									{
 										id: key,
-										req: $author$project$AWS$Dynamo$batchPutEncoder(
+										req: A2(
+											$author$project$AWS$Dynamo$batchPutEncoder,
+											encoder,
 											{items: firstBatch, tableName: table})
 									});
 							})))));
 	});
-var $author$project$AWS$Dynamo$batchPut = F4(
-	function (pt, ports, batchPutProps, dt) {
+var $author$project$AWS$Dynamo$batchPut = F5(
+	function (pt, ports, encoder, batchPutProps, dt) {
 		return A3(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
@@ -6046,18 +6054,21 @@ var $author$project$AWS$Dynamo$batchPut = F4(
 				var res = _v0.b;
 				return dt(res);
 			},
-			A3($author$project$AWS$Dynamo$batchPutInner, ports, batchPutProps.tableName, batchPutProps.items));
+			A4($author$project$AWS$Dynamo$batchPutInner, ports, encoder, batchPutProps.tableName, batchPutProps.items));
 	});
-var $author$project$AWS$Dynamo$deleteEncoder = function (deleteOp) {
-	return $elm$json$Json$Encode$object(
-		_List_fromArray(
-			[
-				_Utils_Tuple2(
-				'TableName',
-				$elm$json$Json$Encode$string(deleteOp.tableName)),
-				_Utils_Tuple2('Key', deleteOp.key)
-			]));
-};
+var $author$project$AWS$Dynamo$deleteEncoder = F2(
+	function (encoder, deleteOp) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'TableName',
+					$elm$json$Json$Encode$string(deleteOp.tableName)),
+					_Utils_Tuple2(
+					'Key',
+					encoder(deleteOp.key))
+				]));
+	});
 var $author$project$AWS$Dynamo$deleteResponseDecoder = function (val) {
 	var decoder = A2(
 		$elm$json$Json$Decode$andThen,
@@ -6076,8 +6087,8 @@ var $author$project$AWS$Dynamo$deleteResponseDecoder = function (val) {
 			A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err),
 			A2($elm$json$Json$Decode$decodeValue, decoder, val)));
 };
-var $author$project$AWS$Dynamo$delete = F4(
-	function (pt, ports, deleteProps, dt) {
+var $author$project$AWS$Dynamo$delete = F5(
+	function (pt, ports, encoder, deleteProps, dt) {
 		return A3(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
@@ -6102,57 +6113,61 @@ var $author$project$AWS$Dynamo$delete = F4(
 								return ports._delete(
 									{
 										id: key,
-										req: $author$project$AWS$Dynamo$deleteEncoder(deleteProps)
+										req: A2($author$project$AWS$Dynamo$deleteEncoder, encoder, deleteProps)
 									});
 							})))));
 	});
-var $author$project$AWS$Dynamo$getEncoder = function (getOp) {
-	return $elm$json$Json$Encode$object(
-		_List_fromArray(
-			[
-				_Utils_Tuple2(
-				'TableName',
-				$elm$json$Json$Encode$string(getOp.tableName)),
-				_Utils_Tuple2('Key', getOp.key)
-			]));
-};
-var $author$project$AWS$Dynamo$getResponseDecoder = function (val) {
-	var decoder = A2(
-		$elm$json$Json$Decode$andThen,
-		function (type_) {
-			switch (type_) {
-				case 'Item':
-					return A2(
-						$elm$json$Json$Decode$map,
-						A2($elm$core$Basics$composeR, $elm$core$Maybe$Just, $elm$core$Result$Ok),
-						A2(
-							$elm$json$Json$Decode$at,
-							_List_fromArray(
-								['item', 'Item']),
-							$elm$json$Json$Decode$value));
-				case 'ItemNotFound':
-					return $elm$json$Json$Decode$succeed(
-						$elm$core$Result$Ok($elm$core$Maybe$Nothing));
-				default:
-					return $author$project$AWS$Dynamo$errorDecoder;
-			}
-		},
-		A2($elm$json$Json$Decode$field, 'type_', $elm$json$Json$Decode$string));
-	return $elm_community$result_extra$Result$Extra$merge(
-		A2(
-			$elm$core$Result$mapError,
-			A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err),
-			A2($elm$json$Json$Decode$decodeValue, decoder, val)));
-};
-var $author$project$AWS$Dynamo$get = F4(
-	function (pt, ports, getProps, dt) {
+var $author$project$AWS$Dynamo$getEncoder = F2(
+	function (encoder, getOp) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'TableName',
+					$elm$json$Json$Encode$string(getOp.tableName)),
+					_Utils_Tuple2(
+					'Key',
+					encoder(getOp.key))
+				]));
+	});
+var $author$project$AWS$Dynamo$getResponseDecoder = F2(
+	function (valDecoder, val) {
+		var decoder = A2(
+			$elm$json$Json$Decode$andThen,
+			function (type_) {
+				switch (type_) {
+					case 'Item':
+						return A2(
+							$elm$json$Json$Decode$map,
+							A2($elm$core$Basics$composeR, $elm$core$Maybe$Just, $elm$core$Result$Ok),
+							A2(
+								$elm$json$Json$Decode$at,
+								_List_fromArray(
+									['item', 'Item']),
+								valDecoder));
+					case 'ItemNotFound':
+						return $elm$json$Json$Decode$succeed(
+							$elm$core$Result$Ok($elm$core$Maybe$Nothing));
+					default:
+						return $author$project$AWS$Dynamo$errorDecoder;
+				}
+			},
+			A2($elm$json$Json$Decode$field, 'type_', $elm$json$Json$Decode$string));
+		return $elm_community$result_extra$Result$Extra$merge(
+			A2(
+				$elm$core$Result$mapError,
+				A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err),
+				A2($elm$json$Json$Decode$decodeValue, decoder, val)));
+	});
+var $author$project$AWS$Dynamo$get = F6(
+	function (pt, ports, encoder, decoder, getProps, dt) {
 		return A3(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
 			function (_v1) {
 				var res = _v1.res;
 				return dt(
-					$author$project$AWS$Dynamo$getResponseDecoder(res));
+					A2($author$project$AWS$Dynamo$getResponseDecoder, decoder, res));
 			},
 			$brian_watkins$elm_procedure$Procedure$Channel$acceptOne(
 				A2(
@@ -6170,20 +6185,23 @@ var $author$project$AWS$Dynamo$get = F4(
 								return ports.get(
 									{
 										id: key,
-										req: $author$project$AWS$Dynamo$getEncoder(getProps)
+										req: A2($author$project$AWS$Dynamo$getEncoder, encoder, getProps)
 									});
 							})))));
 	});
-var $author$project$AWS$Dynamo$putEncoder = function (putOp) {
-	return $elm$json$Json$Encode$object(
-		_List_fromArray(
-			[
-				_Utils_Tuple2(
-				'TableName',
-				$elm$json$Json$Encode$string(putOp.tableName)),
-				_Utils_Tuple2('Item', putOp.item)
-			]));
-};
+var $author$project$AWS$Dynamo$putEncoder = F2(
+	function (encoder, putOp) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'TableName',
+					$elm$json$Json$Encode$string(putOp.tableName)),
+					_Utils_Tuple2(
+					'Item',
+					encoder(putOp.item))
+				]));
+	});
 var $author$project$AWS$Dynamo$putResponseDecoder = function (val) {
 	var decoder = A2(
 		$elm$json$Json$Decode$andThen,
@@ -6202,8 +6220,8 @@ var $author$project$AWS$Dynamo$putResponseDecoder = function (val) {
 			A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err),
 			A2($elm$json$Json$Decode$decodeValue, decoder, val)));
 };
-var $author$project$AWS$Dynamo$put = F4(
-	function (pt, ports, putProps, dt) {
+var $author$project$AWS$Dynamo$put = F5(
+	function (pt, ports, encoder, putProps, dt) {
 		return A3(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
@@ -6228,7 +6246,7 @@ var $author$project$AWS$Dynamo$put = F4(
 								return ports.put(
 									{
 										id: key,
-										req: $author$project$AWS$Dynamo$putEncoder(putProps)
+										req: A2($author$project$AWS$Dynamo$putEncoder, encoder, putProps)
 									});
 							})))));
 	});
@@ -6447,43 +6465,44 @@ var $elm$core$Tuple$pair = F2(
 	function (a, b) {
 		return _Utils_Tuple2(a, b);
 	});
-var $author$project$AWS$Dynamo$queryResponseDecoder = function (val) {
-	var decoder = A2(
-		$elm$json$Json$Decode$andThen,
-		function (type_) {
-			if (type_ === 'Items') {
-				return A3(
-					$elm$json$Json$Decode$map2,
-					F2(
-						function (lastKey, vals) {
-							return $elm$core$Result$Ok(
-								A2($elm$core$Tuple$pair, lastKey, vals));
-						}),
-					$elm$json$Json$Decode$maybe(
-						A2($elm$json$Json$Decode$field, 'lastEvaluatedKey', $elm$json$Json$Decode$value)),
-					A2(
-						$elm$json$Json$Decode$field,
-						'items',
-						$elm$json$Json$Decode$list($elm$json$Json$Decode$value)));
-			} else {
-				return $author$project$AWS$Dynamo$errorDecoder;
-			}
-		},
-		A2($elm$json$Json$Decode$field, 'type_', $elm$json$Json$Decode$string));
-	return $elm_community$result_extra$Result$Extra$merge(
-		A2(
-			$elm$core$Result$mapError,
-			A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err),
-			A2($elm$json$Json$Decode$decodeValue, decoder, val)));
-};
-var $author$project$AWS$Dynamo$queryInner = F5(
-	function (ports, table, maybeIndex, q, accum) {
+var $author$project$AWS$Dynamo$queryResponseDecoder = F2(
+	function (valDecoder, val) {
+		var decoder = A2(
+			$elm$json$Json$Decode$andThen,
+			function (type_) {
+				if (type_ === 'Items') {
+					return A3(
+						$elm$json$Json$Decode$map2,
+						F2(
+							function (lastKey, vals) {
+								return $elm$core$Result$Ok(
+									A2($elm$core$Tuple$pair, lastKey, vals));
+							}),
+						$elm$json$Json$Decode$maybe(
+							A2($elm$json$Json$Decode$field, 'lastEvaluatedKey', $elm$json$Json$Decode$value)),
+						A2(
+							$elm$json$Json$Decode$field,
+							'items',
+							$elm$json$Json$Decode$list(valDecoder)));
+				} else {
+					return $author$project$AWS$Dynamo$errorDecoder;
+				}
+			},
+			A2($elm$json$Json$Decode$field, 'type_', $elm$json$Json$Decode$string));
+		return $elm_community$result_extra$Result$Extra$merge(
+			A2(
+				$elm$core$Result$mapError,
+				A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err),
+				A2($elm$json$Json$Decode$decodeValue, decoder, val)));
+	});
+var $author$project$AWS$Dynamo$queryInner = F6(
+	function (ports, decoder, table, maybeIndex, q, accum) {
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$andThen,
 			function (_v1) {
 				var id = _v1.id;
 				var res = _v1.res;
-				var _v2 = $author$project$AWS$Dynamo$queryResponseDecoder(res);
+				var _v2 = A2($author$project$AWS$Dynamo$queryResponseDecoder, decoder, res);
 				if (_v2.$ === 'Ok') {
 					if (_v2.a.a.$ === 'Nothing') {
 						var _v3 = _v2.a;
@@ -6497,9 +6516,10 @@ var $author$project$AWS$Dynamo$queryInner = F5(
 						var _v5 = _v2.a;
 						var lastEvaluatedKey = _v5.a.a;
 						var items = _v5.b;
-						return A5(
+						return A6(
 							$author$project$AWS$Dynamo$queryInner,
 							ports,
+							decoder,
 							table,
 							maybeIndex,
 							A2($author$project$AWS$Dynamo$nextPage, lastEvaluatedKey, q),
@@ -6533,8 +6553,8 @@ var $author$project$AWS$Dynamo$queryInner = F5(
 									});
 							})))));
 	});
-var $author$project$AWS$Dynamo$query = F4(
-	function (pt, ports, qry, dt) {
+var $author$project$AWS$Dynamo$query = F5(
+	function (pt, ports, decoder, qry, dt) {
 		return A3(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
@@ -6542,10 +6562,10 @@ var $author$project$AWS$Dynamo$query = F4(
 				var res = _v0.b;
 				return dt(res);
 			},
-			A5($author$project$AWS$Dynamo$queryInner, ports, qry.tableName, $elm$core$Maybe$Nothing, qry.match, _List_Nil));
+			A6($author$project$AWS$Dynamo$queryInner, ports, decoder, qry.tableName, $elm$core$Maybe$Nothing, qry.match, _List_Nil));
 	});
-var $author$project$AWS$Dynamo$queryIndex = F4(
-	function (pt, ports, qry, dt) {
+var $author$project$AWS$Dynamo$queryIndex = F5(
+	function (pt, ports, decoder, qry, dt) {
 		return A3(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
@@ -6553,9 +6573,10 @@ var $author$project$AWS$Dynamo$queryIndex = F4(
 				var res = _v0.b;
 				return dt(res);
 			},
-			A5(
+			A6(
 				$author$project$AWS$Dynamo$queryInner,
 				ports,
+				decoder,
 				qry.tableName,
 				$elm$core$Maybe$Just(qry.indexName),
 				qry.match,
@@ -6564,13 +6585,13 @@ var $author$project$AWS$Dynamo$queryIndex = F4(
 var $author$project$AWS$Dynamo$dynamoApi = F2(
 	function (pt, ports) {
 		return {
-			batchGet: A2($author$project$AWS$Dynamo$batchGet, pt, ports),
-			batchPut: A2($author$project$AWS$Dynamo$batchPut, pt, ports),
-			_delete: A2($author$project$AWS$Dynamo$delete, pt, ports),
-			get: A2($author$project$AWS$Dynamo$get, pt, ports),
-			put: A2($author$project$AWS$Dynamo$put, pt, ports),
-			query: A2($author$project$AWS$Dynamo$query, pt, ports),
-			queryIndex: A2($author$project$AWS$Dynamo$queryIndex, pt, ports)
+			batchGet: A4($author$project$AWS$Dynamo$batchGet, pt, ports, $elm$core$Basics$identity, $elm$json$Json$Decode$value),
+			batchPut: A3($author$project$AWS$Dynamo$batchPut, pt, ports, $elm$core$Basics$identity),
+			_delete: A3($author$project$AWS$Dynamo$delete, pt, ports, $elm$core$Basics$identity),
+			get: A4($author$project$AWS$Dynamo$get, pt, ports, $elm$core$Basics$identity, $elm$json$Json$Decode$value),
+			put: A3($author$project$AWS$Dynamo$put, pt, ports, $elm$core$Basics$identity),
+			query: A3($author$project$AWS$Dynamo$query, pt, ports, $elm$json$Json$Decode$value),
+			queryIndex: A3($author$project$AWS$Dynamo$queryIndex, pt, ports, $elm$json$Json$Decode$value)
 		};
 	});
 var $author$project$Ports$dynamoBatchGet = _Platform_outgoingPort(
