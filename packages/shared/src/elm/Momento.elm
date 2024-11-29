@@ -56,7 +56,7 @@ type alias Ports msg =
     , publish : { id : String, session : Value, topic : String, payload : String } -> Cmd msg
     , onMessage : ({ id : String, session : Value, payload : String } -> msg) -> Sub msg
     , pushList : { id : String, session : Value, list : String, payload : String } -> Cmd msg
-    , createWebhook : { id : String, session : Value, topic : String, url : String } -> Cmd msg
+    , createWebhook : { id : String, session : Value, name : String, topic : String, url : String } -> Cmd msg
     , response : ({ id : String, type_ : String, response : Value } -> msg) -> Sub msg
     , asyncError : ({ id : String, error : Value } -> msg) -> Sub msg
     }
@@ -102,7 +102,7 @@ type alias PushListParams =
 
 
 type alias WebhookParams =
-    { topic : String, url : String }
+    { name : String, topic : String, url : String }
 
 
 type Error
@@ -195,8 +195,8 @@ webhook :
     -> WebhookParams
     -> (Result Error MomentoSessionKey -> msg)
     -> Cmd msg
-webhook pt ports (MomentoSessionKey sessionKey) { topic, url } dt =
-    Channel.open (\key -> ports.createWebhook { id = key, session = sessionKey, topic = topic, url = url })
+webhook pt ports (MomentoSessionKey sessionKey) { name, topic, url } dt =
+    Channel.open (\key -> ports.createWebhook { id = key, session = sessionKey, name = name, topic = topic, url = url })
         |> Channel.connect ports.response
         |> Channel.filter (\key { id } -> id == key)
         |> Channel.acceptOne

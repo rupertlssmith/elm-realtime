@@ -12,6 +12,7 @@ module EventLog.Component exposing
 -}
 
 import AWS.Dynamo as Dynamo
+import Codec
 import DB.ChannelTable as ChannelTable
 import DB.EventLogTable as EventLogTable
 import Json.Decode exposing (Value)
@@ -184,6 +185,7 @@ dynamoPorts =
     , delete = Ports.dynamoDelete
     , batchGet = Ports.dynamoBatchGet
     , batchWrite = Ports.dynamoBatchWrite
+    , scan = Ports.dynamoScan
     , query = Ports.dynamoQuery
     , response = Ports.dynamoResponse
     }
@@ -247,7 +249,7 @@ processRoute protocol session apiRequest component =
     case ( Request.method apiRequest.request, apiRequest.route, model ) of
         ( GET, ChannelRoot, ModelReady state ) ->
             U2.pure component
-                |> U2.andMap (createChannel protocol session state)
+                |> U2.andMap (tryGetAvailableChannel protocol session state)
 
         ( POST, ChannelRoot, ModelReady state ) ->
             U2.pure component
@@ -260,6 +262,61 @@ processRoute protocol session apiRequest component =
         _ ->
             U2.pure component
                 |> protocol.onUpdate
+
+
+
+-- Try and get the connection details of an available channel
+
+
+{-| Channel creation:
+
+    * Take the first available channel from the database of channels.
+    * Confirm the cache and webhooks for it exists in momento.
+    * Mark the channel as allocated in the database.
+    * Return a confirmation that everything has been set up.
+
+-}
+tryGetAvailableChannel : Protocol (Component a) msg model -> HttpSessionKey -> ReadyState -> Component a -> ( model, Cmd msg )
+tryGetAvailableChannel protocol session state component =
+    let
+        procedure : Procedure.Procedure Response Response Msg
+        procedure =
+            Procedure.provide ()
+                |> Procedure.andThen (findAvailableChannel component)
+                |> Procedure.mapError (encodeErrorFormat >> Response.err500json)
+                |> Procedure.map
+                    (\maybeChannel ->
+                        case maybeChannel of
+                            Just channel ->
+                                Response.ok200json (channel |> Codec.encoder ChannelTable.recordCodec)
+
+                            Nothing ->
+                                Response.notFound400json Encode.null
+                    )
+    in
+    ( { seed = state.seed
+      , procedure = state.procedure
+      }
+    , Procedure.try ProcedureMsg (HttpResponse session) procedure
+    )
+        |> U2.andMap (ModelReady |> switchState)
+        |> Tuple.mapFirst (setModel component)
+        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+        |> protocol.onUpdate
+
+
+findAvailableChannel :
+    Component a
+    -> ()
+    -> Procedure.Procedure ErrorFormat (Maybe ChannelTable.Record) Msg
+findAvailableChannel component _ =
+    channelTableApi.scan
+        { tableName = component.channelTable
+        , exclusiveStartKey = Nothing
+        }
+        |> Procedure.fetchResult
+        |> Procedure.map List.head
+        |> Procedure.mapError Dynamo.errorToDetails
 
 
 
@@ -335,7 +392,8 @@ setupChannelWebhook :
 setupChannelWebhook component channelName sessionKey =
     momentoApi.webhook
         sessionKey
-        { topic = notifyTopicName channelName
+        { name = webhookName channelName
+        , topic = notifyTopicName channelName
         , url = component.channelApiUrl ++ "/v1/channel/" ++ channelName
         }
         |> Procedure.fetchResult

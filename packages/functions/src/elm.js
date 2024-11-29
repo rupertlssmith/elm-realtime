@@ -5273,6 +5273,9 @@ var $author$project$Ports$mmCreateWebhook = _Platform_outgoingPort(
 					'id',
 					$elm$json$Json$Encode$string($.id)),
 					_Utils_Tuple2(
+					'name',
+					$elm$json$Json$Encode$string($.name)),
+					_Utils_Tuple2(
 					'session',
 					$elm$core$Basics$identity($.session)),
 					_Utils_Tuple2(
@@ -5635,6 +5638,7 @@ var $author$project$Momento$subscribe = F5(
 var $author$project$Momento$webhook = F5(
 	function (pt, ports, _v0, _v1, dt) {
 		var sessionKey = _v0.a;
+		var name = _v1.name;
 		var topic = _v1.topic;
 		var url = _v1.url;
 		return A3(
@@ -5658,7 +5662,7 @@ var $author$project$Momento$webhook = F5(
 						$brian_watkins$elm_procedure$Procedure$Channel$open(
 							function (key) {
 								return ports.createWebhook(
-									{id: key, session: sessionKey, topic: topic, url: url});
+									{id: key, name: name, session: sessionKey, topic: topic, url: url});
 							})))));
 	});
 var $author$project$Momento$momentoApi = F2(
@@ -5785,7 +5789,21 @@ var $author$project$Ports$dynamoResponse = _Platform_incomingPort(
 				A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
 		},
 		A2($elm$json$Json$Decode$field, 'res', $elm$json$Json$Decode$value)));
-var $author$project$EventLog$Component$dynamoPorts = {batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse};
+var $author$project$Ports$dynamoScan = _Platform_outgoingPort(
+	'dynamoScan',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'req',
+					$elm$core$Basics$identity($.req))
+				]));
+	});
+var $author$project$EventLog$Component$dynamoPorts = {batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse, scan: $author$project$Ports$dynamoScan};
 var $miniBill$elm_codec$Codec$decoder = function (_v0) {
 	var m = _v0.a;
 	return m.decoder;
@@ -6692,6 +6710,90 @@ var $author$project$AWS$Dynamo$queryIndex = F5(
 				qry.match,
 				_List_Nil));
 	});
+var $author$project$AWS$Dynamo$scanEncoder = function (scanProps) {
+	return $elm$json$Json$Encode$object(
+		$elm_community$maybe_extra$Maybe$Extra$values(
+			_List_fromArray(
+				[
+					$elm$core$Maybe$Just(
+					_Utils_Tuple2(
+						'TableName',
+						$elm$json$Json$Encode$string(scanProps.tableName))),
+					A2(
+					$elm$core$Maybe$map,
+					function (exclusiveStartKey) {
+						return _Utils_Tuple2('ExclusiveStartKey', exclusiveStartKey);
+					},
+					scanProps.exclusiveStartKey)
+				])));
+};
+var $author$project$AWS$Dynamo$scanInner = F4(
+	function (ports, decoder, scanProps, accum) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (_v1) {
+				var id = _v1.id;
+				var res = _v1.res;
+				var _v2 = A2($author$project$AWS$Dynamo$queryResponseDecoder, decoder, res);
+				if (_v2.$ === 'Ok') {
+					if (_v2.a.a.$ === 'Nothing') {
+						var _v3 = _v2.a;
+						var _v4 = _v3.a;
+						var items = _v3.b;
+						return $brian_watkins$elm_procedure$Procedure$provide(
+							_Utils_Tuple2(
+								id,
+								$elm$core$Result$Ok(items)));
+					} else {
+						var _v5 = _v2.a;
+						var lastEvaluatedKey = _v5.a.a;
+						var items = _v5.b;
+						return A4(
+							$author$project$AWS$Dynamo$scanInner,
+							ports,
+							decoder,
+							A2($author$project$AWS$Dynamo$nextPage, lastEvaluatedKey, scanProps),
+							_Utils_ap(accum, items));
+					}
+				} else {
+					var err = _v2.a;
+					return $brian_watkins$elm_procedure$Procedure$provide(
+						_Utils_Tuple2(
+							id,
+							$elm$core$Result$Err(err)));
+				}
+			},
+			$brian_watkins$elm_procedure$Procedure$Channel$acceptOne(
+				A2(
+					$brian_watkins$elm_procedure$Procedure$Channel$filter,
+					F2(
+						function (key, _v0) {
+							var id = _v0.id;
+							return _Utils_eq(id, key);
+						}),
+					A2(
+						$brian_watkins$elm_procedure$Procedure$Channel$connect,
+						ports.response,
+						$brian_watkins$elm_procedure$Procedure$Channel$open(
+							function (key) {
+								return ports.scan(
+									{
+										id: key,
+										req: $author$project$AWS$Dynamo$scanEncoder(scanProps)
+									});
+							})))));
+	});
+var $author$project$AWS$Dynamo$scan = F5(
+	function (pt, ports, decoder, scanProps, dt) {
+		return A3(
+			$brian_watkins$elm_procedure$Procedure$run,
+			pt,
+			function (_v0) {
+				var res = _v0.b;
+				return dt(res);
+			},
+			A4($author$project$AWS$Dynamo$scanInner, ports, decoder, scanProps, _List_Nil));
+	});
 var $author$project$AWS$Dynamo$dynamoTypedApi = F5(
 	function (keyEncoder, valEncoder, decoder, pt, ports) {
 		return {
@@ -6701,7 +6803,8 @@ var $author$project$AWS$Dynamo$dynamoTypedApi = F5(
 			get: A4($author$project$AWS$Dynamo$get, pt, ports, keyEncoder, decoder),
 			put: A3($author$project$AWS$Dynamo$put, pt, ports, valEncoder),
 			query: A3($author$project$AWS$Dynamo$query, pt, ports, decoder),
-			queryIndex: A3($author$project$AWS$Dynamo$queryIndex, pt, ports, decoder)
+			queryIndex: A3($author$project$AWS$Dynamo$queryIndex, pt, ports, decoder),
+			scan: A3($author$project$AWS$Dynamo$scan, pt, ports, decoder)
 		};
 	});
 var $author$project$DB$ChannelTable$encodeKey = function (key) {
@@ -6910,6 +7013,7 @@ var $author$project$EventLog$Component$setupChannelWebhook = F3(
 					$author$project$EventLog$Component$momentoApi.webhook,
 					sessionKey,
 					{
+						name: $author$project$EventLog$Component$webhookName(channelName),
 						topic: $author$project$EventLog$Component$notifyTopicName(channelName),
 						url: component.channelApiUrl + ('/v1/channel/' + channelName)
 					})));
@@ -7009,6 +7113,80 @@ var $author$project$EventLog$Component$processSaveChannel = F6(
 						$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelReady),
 						$the_sett$elm_update_helper$Update2$pure(state)))));
 	});
+var $elm$core$List$head = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return $elm$core$Maybe$Just(x);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $author$project$EventLog$Component$findAvailableChannel = F2(
+	function (component, _v0) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$mapError,
+			$author$project$AWS$Dynamo$errorToDetails,
+			A2(
+				$brian_watkins$elm_procedure$Procedure$map,
+				$elm$core$List$head,
+				$brian_watkins$elm_procedure$Procedure$fetchResult(
+					$author$project$EventLog$Component$channelTableApi.scan(
+						{exclusiveStartKey: $elm$core$Maybe$Nothing, tableName: component.channelTable}))));
+	});
+var $author$project$Serverless$Response$notFound400json = function (err) {
+	return A2(
+		$author$project$Serverless$Response$setStatus,
+		400,
+		A2(
+			$author$project$Serverless$Response$setBody,
+			$author$project$Serverless$Body$json(err),
+			$author$project$Serverless$Response$init));
+};
+var $author$project$Serverless$Response$ok200json = function (msg) {
+	return A2(
+		$author$project$Serverless$Response$setBody,
+		$author$project$Serverless$Body$json(msg),
+		$author$project$Serverless$Response$init);
+};
+var $author$project$EventLog$Component$tryGetAvailableChannel = F4(
+	function (protocol, session, state, component) {
+		var procedure = A2(
+			$brian_watkins$elm_procedure$Procedure$map,
+			function (maybeChannel) {
+				if (maybeChannel.$ === 'Just') {
+					var channel = maybeChannel.a;
+					return $author$project$Serverless$Response$ok200json(
+						A2($miniBill$elm_codec$Codec$encoder, $author$project$DB$ChannelTable$recordCodec, channel));
+				} else {
+					return $author$project$Serverless$Response$notFound400json($elm$json$Json$Encode$null);
+				}
+			},
+			A2(
+				$brian_watkins$elm_procedure$Procedure$mapError,
+				A2($elm$core$Basics$composeR, $author$project$EventLog$Component$encodeErrorFormat, $author$project$Serverless$Response$err500json),
+				A2(
+					$brian_watkins$elm_procedure$Procedure$andThen,
+					$author$project$EventLog$Component$findAvailableChannel(component),
+					$brian_watkins$elm_procedure$Procedure$provide(_Utils_Tuple0))));
+		return protocol.onUpdate(
+			A2(
+				$elm$core$Tuple$mapSecond,
+				$elm$core$Platform$Cmd$map(protocol.toMsg),
+				A2(
+					$elm$core$Tuple$mapFirst,
+					$author$project$EventLog$Component$setModel(component),
+					A2(
+						$the_sett$elm_update_helper$Update2$andMap,
+						$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelReady),
+						_Utils_Tuple2(
+							{procedure: state.procedure, seed: state.seed},
+							A3(
+								$brian_watkins$elm_procedure$Procedure$try,
+								$author$project$EventLog$Component$ProcedureMsg,
+								$author$project$EventLog$Component$HttpResponse(session),
+								procedure))))));
+	});
 var $author$project$EventLog$Component$processRoute = F4(
 	function (protocol, session, apiRequest, component) {
 		var model = component.eventLog;
@@ -7027,7 +7205,7 @@ var $author$project$EventLog$Component$processRoute = F4(
 							var state = _v0.c.a;
 							return A2(
 								$the_sett$elm_update_helper$Update2$andMap,
-								A3($author$project$EventLog$Component$createChannel, protocol, session, state),
+								A3($author$project$EventLog$Component$tryGetAvailableChannel, protocol, session, state),
 								$the_sett$elm_update_helper$Update2$pure(component));
 						case 'POST':
 							var _v3 = _v0.a;

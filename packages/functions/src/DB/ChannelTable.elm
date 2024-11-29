@@ -2,6 +2,7 @@ module DB.ChannelTable exposing
     ( Key
     , Record
     , operations
+    , recordCodec
     )
 
 import AWS.Dynamo as Dynamo exposing (DynamoApi, DynamoTypedApi, Ports)

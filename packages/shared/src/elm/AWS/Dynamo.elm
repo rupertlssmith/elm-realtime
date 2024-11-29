@@ -65,6 +65,7 @@ type alias Ports msg =
     , delete : { id : String, req : Value } -> Cmd msg
     , batchGet : { id : String, req : Value } -> Cmd msg
     , batchWrite : { id : String, req : Value } -> Cmd msg
+    , scan : { id : String, req : Value } -> Cmd msg
     , query : { id : String, req : Value } -> Cmd msg
     , response : ({ id : String, res : Value } -> msg) -> Sub msg
     }
@@ -76,6 +77,7 @@ type alias DynamoApi msg =
     , delete : Delete Value -> (Result Error () -> msg) -> Cmd msg
     , batchGet : BatchGet Value -> (Result Error (List Value) -> msg) -> Cmd msg
     , batchPut : BatchPut Value -> (Result Error () -> msg) -> Cmd msg
+    , scan : Scan -> (Result Error (List Value) -> msg) -> Cmd msg
     , query : Query -> (Result Error (List Value) -> msg) -> Cmd msg
     , queryIndex : QueryIndex -> (Result Error (List Value) -> msg) -> Cmd msg
     }
@@ -87,6 +89,7 @@ type alias DynamoTypedApi k v msg =
     , delete : Delete k -> (Result Error () -> msg) -> Cmd msg
     , batchGet : BatchGet k -> (Result Error (List v) -> msg) -> Cmd msg
     , batchPut : BatchPut v -> (Result Error () -> msg) -> Cmd msg
+    , scan : Scan -> (Result Error (List v) -> msg) -> Cmd msg
     , query : Query -> (Result Error (List v) -> msg) -> Cmd msg
     , queryIndex : QueryIndex -> (Result Error (List v) -> msg) -> Cmd msg
     }
@@ -99,6 +102,7 @@ dynamoApi pt ports =
     , delete = delete pt ports identity
     , batchGet = batchGet pt ports identity Decode.value
     , batchPut = batchPut pt ports identity
+    , scan = scan pt ports Decode.value
     , query = query pt ports Decode.value
     , queryIndex = queryIndex pt ports Decode.value
     }
@@ -117,6 +121,7 @@ dynamoTypedApi keyEncoder valEncoder decoder pt ports =
     , delete = delete pt ports keyEncoder
     , batchGet = batchGet pt ports keyEncoder decoder
     , batchPut = batchPut pt ports valEncoder
+    , scan = scan pt ports decoder
     , query = query pt ports decoder
     , queryIndex = queryIndex pt ports decoder
     }
@@ -509,6 +514,65 @@ batchGetResponseDecoder valDecoder tableName val =
 
 
 
+---- Scans
+
+
+type alias Scan =
+    { tableName : String
+    , exclusiveStartKey : Maybe Value
+    }
+
+
+scan :
+    (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
+    -> Decoder v
+    -> Scan
+    -> (Result Error (List v) -> msg)
+    -> Cmd msg
+scan pt ports decoder scanProps dt =
+    scanInner ports decoder scanProps []
+        |> Procedure.run pt (\( _, res ) -> dt res)
+
+
+scanInner :
+    Ports msg
+    -> Decoder v
+    -> Scan
+    -> List v
+    -> Procedure.Procedure e ( String, Result Error (List v) ) msg
+scanInner ports decoder scanProps accum =
+    Channel.open (\key -> ports.scan { id = key, req = scanEncoder scanProps })
+        |> Channel.connect ports.response
+        |> Channel.filter (\key { id } -> id == key)
+        |> Channel.acceptOne
+        |> Procedure.andThen
+            (\{ id, res } ->
+                case queryResponseDecoder decoder res of
+                    Ok ( Nothing, items ) ->
+                        Procedure.provide ( id, Ok items )
+
+                    Ok ( Just lastEvaluatedKey, items ) ->
+                        scanInner ports
+                            decoder
+                            (nextPage lastEvaluatedKey scanProps)
+                            (accum ++ items)
+
+                    Err err ->
+                        Procedure.provide ( id, Err err )
+            )
+
+
+scanEncoder : Scan -> Value
+scanEncoder scanProps =
+    [ ( "TableName", Encode.string scanProps.tableName ) |> Just
+    , Maybe.map (\exclusiveStartKey -> ( "ExclusiveStartKey", exclusiveStartKey )) scanProps.exclusiveStartKey
+    ]
+        |> Maybe.Extra.values
+        |> Encode.object
+
+
+
 ---- Queries
 
 
@@ -694,7 +758,7 @@ limitResults limit q =
     { q | limit = Just limit }
 
 
-nextPage : Value -> Match -> Match
+nextPage : Value -> { a | exclusiveStartKey : Maybe Value } -> { a | exclusiveStartKey : Maybe Value }
 nextPage lastEvalKey q =
     { q | exclusiveStartKey = Just lastEvalKey }
 

@@ -2,7 +2,7 @@ module Serverless.Response exposing
     ( Response, Status
     , addHeader, setBody, updateBody, setStatus
     , init, encode
-    , err500, err500json, ok200, ok200json
+    , err500, err500json, ok200, ok200json, notFound400json
     )
 
 {-| DSL for building HTTP responses.
@@ -17,7 +17,7 @@ module Serverless.Response exposing
 
 # Helpers
 
-@docs err500, err500json, ok200, ok200json
+@docs err500, err500json, ok200, ok200json, notFound400json
 
 -}
 
@@ -158,3 +158,10 @@ err500json err =
     init
         |> setBody (Body.json err)
         |> setStatus 500
+
+
+notFound400json : Value -> Response
+notFound400json err =
+    init
+        |> setBody (Body.json err)
+        |> setStatus 400

@@ -46,6 +46,7 @@ type PushListArgs = {
 type CreateWebhookArgs = {
     id: string;
     session: Session;
+    name: string;
     topic: string;
     url: string;
 }
@@ -264,7 +265,7 @@ export class MomentoPorts {
         const webhookResponse =
             await args.session.topicClient.putWebhook(
                 args.session.cache,
-                `${args.topic}-webhook`,
+                args.name,
                 {
                     topicName: args.topic,
                     destination: args.url

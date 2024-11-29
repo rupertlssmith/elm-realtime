@@ -1,12 +1,15 @@
 import {DynamoDB} from "@aws-sdk/client-dynamodb";
-import {DynamoDBDocument} from "@aws-sdk/lib-dynamodb";
+import {
+    BatchGetCommandInput,
+    BatchWriteCommandInput,
+    DeleteCommandInput,
+    DynamoDBDocument,
+    GetCommandInput,
+    PutCommandInput,
+    QueryCommandInput,
+    ScanCommandInput
+} from "@aws-sdk/lib-dynamodb";
 import * as ports from "./ports" ;
-import {GetCommandInput} from "@aws-sdk/lib-dynamodb/dist-types/commands/GetCommand";
-import {PutCommandInput} from "@aws-sdk/lib-dynamodb/dist-types/commands/PutCommand";
-import {DeleteCommandInput} from "@aws-sdk/lib-dynamodb/dist-types/commands/DeleteCommand";
-import {BatchGetCommandInput} from "@aws-sdk/lib-dynamodb/dist-types/commands/BatchGetCommand";
-import {BatchWriteCommandInput} from "@aws-sdk/lib-dynamodb/dist-types/commands/BatchWriteCommand";
-import {QueryCommandInput} from "@aws-sdk/lib-dynamodb/dist-types/commands/QueryCommand";
 
 const client = new DynamoDB();
 const documentClient = DynamoDBDocument.from(client);
@@ -36,6 +39,11 @@ type BatchWriteArgs = {
     req: BatchWriteCommandInput;
 }
 
+type ScanArgs = {
+    id: string;
+    req: ScanCommandInput;
+}
+
 type QueryArgs = {
     id: string;
     req: QueryCommandInput;
@@ -53,6 +61,7 @@ type Ports = {
     dynamoDelete: { subscribe: any };
     dynamoBatchGet: { subscribe: any };
     dynamoBatchWrite: { subscribe: any };
+    dynamoScan: { subscribe: any };
     dynamoQuery: { subscribe: any };
     dynamoResponse: { send: any };
 }
@@ -78,6 +87,7 @@ export class DynamoPorts {
             "dynamoDelete",
             "dynamoBatchGet",
             "dynamoBatchWrite",
+            "dynamoScan",
             "dynamoQuery",
             "dynamoResponse"
         ]);
@@ -87,6 +97,7 @@ export class DynamoPorts {
         app.ports.dynamoDelete.subscribe(this.dynamoDelete);
         app.ports.dynamoBatchGet.subscribe(this.dynamoBatchGet);
         app.ports.dynamoBatchWrite.subscribe(this.dynamoBatchWrite);
+        app.ports.dynamoScan.subscribe(this.dynamoScan);
         app.ports.dynamoQuery.subscribe(this.dynamoQuery);
     }
 
@@ -182,6 +193,33 @@ export class DynamoPorts {
 
             this.app.ports.dynamoResponse.send({id: args.id, res: putResponse});
         });
+    }
+
+    dynamoScan = async (args: ScanArgs) => {
+        documentClient.scan(args.req, (error, result) => {
+            var getResponse;
+
+            if (error) {
+                getResponse = errorResponse(error);
+            } else if (Object.entries(result).length === 0) {
+                getResponse = {
+                    type_: "Items",
+                    items: []
+                }
+            } else {
+                getResponse = {
+                    type_: "Items",
+                    items: result.Items
+                }
+            }
+
+            if (result.LastEvaluatedKey !== undefined) {
+                getResponse.lastEvaluatedKey = result.LastEvaluatedKey;
+            }
+
+            this.app.ports.dynamoResponse.send({id: args.id, res: getResponse});
+        });
+
     }
 
     dynamoQuery = async (args: QueryArgs) => {
