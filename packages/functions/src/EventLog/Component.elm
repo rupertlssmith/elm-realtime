@@ -284,8 +284,8 @@ createChannel protocol session state component =
         procedure =
             Procedure.provide channelName
                 |> Procedure.andThen (openMomentoCache component)
-                |> Procedure.andThen (recordChannelToDB component channelName)
                 |> Procedure.andThen (setupChannelWebhook component channelName)
+                |> Procedure.andThen (recordChannelToDB component channelName)
                 |> Procedure.mapError (encodeErrorFormat >> Response.err500json)
                 |> Procedure.map (Response.ok200 "Created Channel Ok" |> always)
     in
@@ -327,11 +327,26 @@ openMomentoCache component channelName =
         |> Procedure.mapError Momento.errorToDetails
 
 
-recordChannelToDB :
+setupChannelWebhook :
     Component a
     -> String
     -> MomentoSessionKey
     -> Procedure.Procedure ErrorFormat MomentoSessionKey Msg
+setupChannelWebhook component channelName sessionKey =
+    momentoApi.webhook
+        sessionKey
+        { topic = notifyTopicName channelName
+        , url = component.channelApiUrl ++ "/v1/channel/" ++ channelName
+        }
+        |> Procedure.fetchResult
+        |> Procedure.mapError Momento.errorToDetails
+
+
+recordChannelToDB :
+    Component a
+    -> String
+    -> MomentoSessionKey
+    -> Procedure.Procedure ErrorFormat () Msg
 recordChannelToDB component channelName sessionKey =
     Procedure.fromTask Time.now
         |> Procedure.andThen
@@ -348,25 +363,9 @@ recordChannelToDB component channelName sessionKey =
                         }
                     }
                     |> Procedure.fetchResult
-                    |> Procedure.map (always sessionKey)
+                    |> Procedure.map (always ())
                     |> Procedure.mapError Dynamo.errorToDetails
             )
-
-
-setupChannelWebhook :
-    Component a
-    -> String
-    -> MomentoSessionKey
-    -> Procedure.Procedure ErrorFormat () Msg
-setupChannelWebhook component channelName sessionKey =
-    momentoApi.webhook
-        sessionKey
-        { topic = notifyTopicName channelName
-        , url = component.channelApiUrl ++ "/v1/channel/" ++ channelName
-        }
-        |> Procedure.fetchResult
-        |> Procedure.map (always ())
-        |> Procedure.mapError Momento.errorToDetails
 
 
 

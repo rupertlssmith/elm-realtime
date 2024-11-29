@@ -6877,7 +6877,7 @@ var $author$project$EventLog$Component$recordChannelToDB = F3(
 					$author$project$AWS$Dynamo$errorToDetails,
 					A2(
 						$brian_watkins$elm_procedure$Procedure$map,
-						$elm$core$Basics$always(sessionKey),
+						$elm$core$Basics$always(_Utils_Tuple0),
 						$brian_watkins$elm_procedure$Procedure$fetchResult(
 							$author$project$EventLog$Component$channelTableApi.put(
 								{
@@ -6905,17 +6905,14 @@ var $author$project$EventLog$Component$setupChannelWebhook = F3(
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$mapError,
 			$author$project$Momento$errorToDetails,
-			A2(
-				$brian_watkins$elm_procedure$Procedure$map,
-				$elm$core$Basics$always(_Utils_Tuple0),
-				$brian_watkins$elm_procedure$Procedure$fetchResult(
-					A2(
-						$author$project$EventLog$Component$momentoApi.webhook,
-						sessionKey,
-						{
-							topic: $author$project$EventLog$Component$notifyTopicName(channelName),
-							url: component.channelApiUrl + ('/v1/channel/' + channelName)
-						}))));
+			$brian_watkins$elm_procedure$Procedure$fetchResult(
+				A2(
+					$author$project$EventLog$Component$momentoApi.webhook,
+					sessionKey,
+					{
+						topic: $author$project$EventLog$Component$notifyTopicName(channelName),
+						url: component.channelApiUrl + ('/v1/channel/' + channelName)
+					})));
 	});
 var $author$project$EventLog$Component$createChannel = F4(
 	function (protocol, session, state, component) {
@@ -6931,10 +6928,10 @@ var $author$project$EventLog$Component$createChannel = F4(
 				A2($elm$core$Basics$composeR, $author$project$EventLog$Component$encodeErrorFormat, $author$project$Serverless$Response$err500json),
 				A2(
 					$brian_watkins$elm_procedure$Procedure$andThen,
-					A2($author$project$EventLog$Component$setupChannelWebhook, component, channelName),
+					A2($author$project$EventLog$Component$recordChannelToDB, component, channelName),
 					A2(
 						$brian_watkins$elm_procedure$Procedure$andThen,
-						A2($author$project$EventLog$Component$recordChannelToDB, component, channelName),
+						A2($author$project$EventLog$Component$setupChannelWebhook, component, channelName),
 						A2(
 							$brian_watkins$elm_procedure$Procedure$andThen,
 							$author$project$EventLog$Component$openMomentoCache(component),
