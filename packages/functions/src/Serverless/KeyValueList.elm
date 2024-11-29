@@ -1,4 +1,4 @@
-module Serverless.Conn.KeyValueList exposing (decoder, encode)
+module Serverless.KeyValueList exposing (decoder, encode)
 
 import Json.Decode as Decode exposing (Decoder, andThen, map)
 import Json.Encode as Encode

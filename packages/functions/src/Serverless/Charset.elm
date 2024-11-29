@@ -1,4 +1,4 @@
-module Serverless.Conn.Charset exposing
+module Serverless.Charset exposing
     ( Charset
     , default, utf8
     , toString

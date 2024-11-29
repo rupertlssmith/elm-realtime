@@ -1,4 +1,4 @@
-module Serverless.Conn.Body exposing
+module Serverless.Body exposing
     ( Body
     , text, json, binary, empty
     , asJson, asText, isEmpty, contentType

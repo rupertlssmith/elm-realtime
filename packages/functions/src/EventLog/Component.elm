@@ -22,10 +22,10 @@ import Random
 import Random.Char
 import Random.String
 import Result.Extra
-import Serverless.Conn.Body as Body exposing (Body)
-import Serverless.Conn.Request as Request exposing (Method(..))
-import Serverless.Conn.Response as Response exposing (Response)
+import Serverless.Body as Body exposing (Body)
 import Serverless.HttpServer as HttpServer exposing (ApiRequest, Error, HttpSessionKey)
+import Serverless.Request as Request exposing (Method(..))
+import Serverless.Response as Response exposing (Response)
 import Update2 as U2
 import Url exposing (Url)
 import Url.Parser as UP exposing ((</>), (<?>))

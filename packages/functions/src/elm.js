@@ -3229,10 +3229,10 @@ var $elm$core$Result$andThen = F2(
 		}
 	});
 var $elm$json$Json$Decode$decodeValue = _Json_run;
-var $author$project$Serverless$Conn$Request$HeadersOnly = function (headers) {
+var $author$project$Serverless$Request$HeadersOnly = function (headers) {
 	return {headers: headers};
 };
-var $author$project$Serverless$Conn$Request$Request = function (a) {
+var $author$project$Serverless$Request$Request = function (a) {
 	return {$: 'Request', a: a};
 };
 var $elm$core$Basics$composeL = F3(
@@ -3253,7 +3253,7 @@ var $elm$json$Json$Decode$nullable = function (decoder) {
 			]));
 };
 var $elm$json$Json$Decode$succeed = _Json_succeed;
-var $author$project$Serverless$Conn$KeyValueList$decoder = A2(
+var $author$project$Serverless$KeyValueList$decoder = A2(
 	$elm$json$Json$Decode$andThen,
 	function (maybeParams) {
 		if (maybeParams.$ === 'Just') {
@@ -3388,14 +3388,14 @@ var $elm$core$Dict$fromList = function (assocs) {
 		$elm$core$Dict$empty,
 		assocs);
 };
-var $author$project$Serverless$Conn$Body$Empty = {$: 'Empty'};
-var $author$project$Serverless$Conn$Body$Error = function (a) {
+var $author$project$Serverless$Body$Empty = {$: 'Empty'};
+var $author$project$Serverless$Body$Error = function (a) {
 	return {$: 'Error', a: a};
 };
-var $author$project$Serverless$Conn$Body$Json = function (a) {
+var $author$project$Serverless$Body$Json = function (a) {
 	return {$: 'Json', a: a};
 };
-var $author$project$Serverless$Conn$Body$Text = function (a) {
+var $author$project$Serverless$Body$Text = function (a) {
 	return {$: 'Text', a: a};
 };
 var $elm$json$Json$Decode$decodeString = _Json_runOnString;
@@ -3418,7 +3418,7 @@ var $elm$core$Maybe$withDefault = F2(
 			return _default;
 		}
 	});
-var $author$project$Serverless$Conn$Body$decoder = function (maybeType) {
+var $author$project$Serverless$Body$decoder = function (maybeType) {
 	return A2(
 		$elm$json$Json$Decode$andThen,
 		function (maybeString) {
@@ -3432,24 +3432,24 @@ var $author$project$Serverless$Conn$Body$decoder = function (maybeType) {
 					if (_v1.$ === 'Ok') {
 						var val = _v1.a;
 						return $elm$json$Json$Decode$succeed(
-							$author$project$Serverless$Conn$Body$Json(val));
+							$author$project$Serverless$Body$Json(val));
 					} else {
 						var err = _v1.a;
 						return $elm$json$Json$Decode$succeed(
-							$author$project$Serverless$Conn$Body$Error(
+							$author$project$Serverless$Body$Error(
 								$elm$json$Json$Decode$errorToString(err)));
 					}
 				} else {
 					return $elm$json$Json$Decode$succeed(
-						$author$project$Serverless$Conn$Body$Text(w));
+						$author$project$Serverless$Body$Text(w));
 				}
 			} else {
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Body$Empty);
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Body$Empty);
 			}
 		},
 		$elm$json$Json$Decode$maybe($elm$json$Json$Decode$string));
 };
-var $author$project$Serverless$Conn$IpAddress$Ip4 = F4(
+var $author$project$Serverless$IpAddress$Ip4 = F4(
 	function (a, b, c, d) {
 		return {$: 'Ip4', a: a, b: b, c: c, d: d};
 	});
@@ -3525,7 +3525,7 @@ var $elm$core$List$map = F2(
 	});
 var $elm$core$Basics$ge = _Utils_ge;
 var $elm$core$String$toInt = _String_toInt;
-var $author$project$Serverless$Conn$IpAddress$toNonNegativeInt = function (val) {
+var $author$project$Serverless$IpAddress$toNonNegativeInt = function (val) {
 	return A2(
 		$elm$core$Maybe$andThen,
 		function (i) {
@@ -3533,12 +3533,12 @@ var $author$project$Serverless$Conn$IpAddress$toNonNegativeInt = function (val) 
 		},
 		$elm$core$String$toInt(val));
 };
-var $author$project$Serverless$Conn$IpAddress$decoder = A2(
+var $author$project$Serverless$IpAddress$decoder = A2(
 	$elm$json$Json$Decode$andThen,
 	function (w) {
 		var list = A2(
 			$elm$core$List$map,
-			$author$project$Serverless$Conn$IpAddress$toNonNegativeInt,
+			$author$project$Serverless$IpAddress$toNonNegativeInt,
 			A2($elm$core$String$split, '.', w));
 		if ((((((((list.b && (list.a.$ === 'Just')) && list.b.b) && (list.b.a.$ === 'Just')) && list.b.b.b) && (list.b.b.a.$ === 'Just')) && list.b.b.b.b) && (list.b.b.b.a.$ === 'Just')) && (!list.b.b.b.b.b)) {
 			var a = list.a.a;
@@ -3549,7 +3549,7 @@ var $author$project$Serverless$Conn$IpAddress$decoder = A2(
 			var _v3 = _v2.b;
 			var d = _v3.a.a;
 			return $elm$json$Json$Decode$succeed(
-				A4($author$project$Serverless$Conn$IpAddress$Ip4, a, b, c, d));
+				A4($author$project$Serverless$IpAddress$Ip4, a, b, c, d));
 		} else {
 			return $elm$json$Json$Decode$fail('Unsupported IP address: ' + w);
 		}
@@ -3595,39 +3595,39 @@ var $elm$json$Json$Decode$map2 = _Json_map2;
 var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
 var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$hardcoded = A2($elm$core$Basics$composeR, $elm$json$Json$Decode$succeed, $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom);
 var $elm$json$Json$Decode$int = _Json_decodeInt;
-var $author$project$Serverless$Conn$Request$CONNECT = {$: 'CONNECT'};
-var $author$project$Serverless$Conn$Request$DELETE = {$: 'DELETE'};
-var $author$project$Serverless$Conn$Request$GET = {$: 'GET'};
-var $author$project$Serverless$Conn$Request$HEAD = {$: 'HEAD'};
-var $author$project$Serverless$Conn$Request$OPTIONS = {$: 'OPTIONS'};
-var $author$project$Serverless$Conn$Request$PATCH = {$: 'PATCH'};
-var $author$project$Serverless$Conn$Request$POST = {$: 'POST'};
-var $author$project$Serverless$Conn$Request$PUT = {$: 'PUT'};
-var $author$project$Serverless$Conn$Request$TRACE = {$: 'TRACE'};
+var $author$project$Serverless$Request$CONNECT = {$: 'CONNECT'};
+var $author$project$Serverless$Request$DELETE = {$: 'DELETE'};
+var $author$project$Serverless$Request$GET = {$: 'GET'};
+var $author$project$Serverless$Request$HEAD = {$: 'HEAD'};
+var $author$project$Serverless$Request$OPTIONS = {$: 'OPTIONS'};
+var $author$project$Serverless$Request$PATCH = {$: 'PATCH'};
+var $author$project$Serverless$Request$POST = {$: 'POST'};
+var $author$project$Serverless$Request$PUT = {$: 'PUT'};
+var $author$project$Serverless$Request$TRACE = {$: 'TRACE'};
 var $elm$core$String$toLower = _String_toLower;
-var $author$project$Serverless$Conn$Request$methodDecoder = A2(
+var $author$project$Serverless$Request$methodDecoder = A2(
 	$elm$json$Json$Decode$andThen,
 	function (w) {
 		var _v0 = $elm$core$String$toLower(w);
 		switch (_v0) {
 			case 'connect':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$CONNECT);
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Request$CONNECT);
 			case 'delete':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$DELETE);
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Request$DELETE);
 			case 'get':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$GET);
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Request$GET);
 			case 'head':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$HEAD);
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Request$HEAD);
 			case 'options':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$OPTIONS);
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Request$OPTIONS);
 			case 'patch':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$PATCH);
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Request$PATCH);
 			case 'post':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$POST);
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Request$POST);
 			case 'put':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$PUT);
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Request$PUT);
 			case 'trace':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$TRACE);
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Request$TRACE);
 			default:
 				return $elm$json$Json$Decode$fail('Unsupported method: ' + w);
 		}
@@ -3640,30 +3640,30 @@ var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required = F3(
 			A2($elm$json$Json$Decode$field, key, valDecoder),
 			decoder);
 	});
-var $author$project$Serverless$Conn$Request$Http = {$: 'Http'};
-var $author$project$Serverless$Conn$Request$Https = {$: 'Https'};
-var $author$project$Serverless$Conn$Request$schemeDecoder = A2(
+var $author$project$Serverless$Request$Http = {$: 'Http'};
+var $author$project$Serverless$Request$Https = {$: 'Https'};
+var $author$project$Serverless$Request$schemeDecoder = A2(
 	$elm$json$Json$Decode$andThen,
 	function (w) {
 		var _v0 = $elm$core$String$toLower(w);
 		switch (_v0) {
 			case 'http':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$Http);
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Request$Http);
 			case 'https':
-				return $elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$Https);
+				return $elm$json$Json$Decode$succeed($author$project$Serverless$Request$Https);
 			default:
 				return $elm$json$Json$Decode$fail('Unsupported scheme: ' + w);
 		}
 	},
 	$elm$json$Json$Decode$string);
-var $author$project$Serverless$Conn$Request$schemeToString = function (scheme) {
+var $author$project$Serverless$Request$schemeToString = function (scheme) {
 	if (scheme.$ === 'Http') {
 		return 'http:';
 	} else {
 		return 'https:';
 	}
 };
-var $author$project$Serverless$Conn$Request$modelDecoder = function (_v0) {
+var $author$project$Serverless$Request$modelDecoder = function (_v0) {
 	var headers = _v0.headers;
 	return A3(
 		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
@@ -3672,7 +3672,7 @@ var $author$project$Serverless$Conn$Request$modelDecoder = function (_v0) {
 		A3(
 			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 			'queryParams',
-			A2($elm$json$Json$Decode$map, $elm$core$Dict$fromList, $author$project$Serverless$Conn$KeyValueList$decoder),
+			A2($elm$json$Json$Decode$map, $elm$core$Dict$fromList, $author$project$Serverless$KeyValueList$decoder),
 			A3(
 				$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 				'stage',
@@ -3680,11 +3680,11 @@ var $author$project$Serverless$Conn$Request$modelDecoder = function (_v0) {
 				A3(
 					$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 					'scheme',
-					$author$project$Serverless$Conn$Request$schemeDecoder,
+					$author$project$Serverless$Request$schemeDecoder,
 					A3(
 						$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 						'remoteIp',
-						$author$project$Serverless$Conn$IpAddress$decoder,
+						$author$project$Serverless$IpAddress$decoder,
 						A3(
 							$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 							'port',
@@ -3696,7 +3696,7 @@ var $author$project$Serverless$Conn$Request$modelDecoder = function (_v0) {
 								A3(
 									$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 									'method',
-									$author$project$Serverless$Conn$Request$methodDecoder,
+									$author$project$Serverless$Request$methodDecoder,
 									A3(
 										$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 										'host',
@@ -3707,7 +3707,7 @@ var $author$project$Serverless$Conn$Request$modelDecoder = function (_v0) {
 											A3(
 												$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 												'body',
-												$author$project$Serverless$Conn$Body$decoder(
+												$author$project$Serverless$Body$decoder(
 													A2($elm$core$Dict$get, 'content-type', headers)),
 												$elm$json$Json$Decode$succeed(
 													function (bodyVal) {
@@ -3733,7 +3733,7 @@ var $author$project$Serverless$Conn$Request$modelDecoder = function (_v0) {
 																									remoteIp: remoteIpVal,
 																									scheme: schemeVal,
 																									stage: stageVal,
-																									url: $author$project$Serverless$Conn$Request$schemeToString(schemeVal) + ('//' + (hostVal + (':' + ($elm$core$String$fromInt(portVal) + (pathVal + queryStringVal)))))
+																									url: $author$project$Serverless$Request$schemeToString(schemeVal) + ('//' + (hostVal + (':' + ($elm$core$String$fromInt(portVal) + (pathVal + queryStringVal)))))
 																								};
 																							};
 																						};
@@ -3747,17 +3747,17 @@ var $author$project$Serverless$Conn$Request$modelDecoder = function (_v0) {
 														};
 													}))))))))))));
 };
-var $author$project$Serverless$Conn$Request$decoder = A2(
+var $author$project$Serverless$Request$decoder = A2(
 	$elm$json$Json$Decode$andThen,
 	A2(
 		$elm$core$Basics$composeL,
-		$elm$json$Json$Decode$map($author$project$Serverless$Conn$Request$Request),
-		$author$project$Serverless$Conn$Request$modelDecoder),
+		$elm$json$Json$Decode$map($author$project$Serverless$Request$Request),
+		$author$project$Serverless$Request$modelDecoder),
 	A3(
 		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 		'headers',
-		A2($elm$json$Json$Decode$map, $elm$core$Dict$fromList, $author$project$Serverless$Conn$KeyValueList$decoder),
-		$elm$json$Json$Decode$succeed($author$project$Serverless$Conn$Request$HeadersOnly)));
+		A2($elm$json$Json$Decode$map, $elm$core$Dict$fromList, $author$project$Serverless$KeyValueList$decoder),
+		$elm$json$Json$Decode$succeed($author$project$Serverless$Request$HeadersOnly)));
 var $elm$url$Url$Http = {$: 'Http'};
 var $elm$url$Url$Https = {$: 'Https'};
 var $elm$url$Url$Url = F6(
@@ -3896,7 +3896,7 @@ var $elm$core$Result$mapError = F2(
 				f(e));
 		}
 	});
-var $author$project$Serverless$Conn$Request$url = function (_v0) {
+var $author$project$Serverless$Request$url = function (_v0) {
 	var request = _v0.a;
 	return request.url;
 };
@@ -3909,7 +3909,7 @@ var $author$project$Serverless$HttpServer$decodeRequestAndRoute = F2(
 					if (maybeRoute.$ === 'Nothing') {
 						return $elm$core$Result$Err(
 							$author$project$Serverless$HttpServer$NoMatchingRoute(
-								$author$project$Serverless$Conn$Request$url(req)));
+								$author$project$Serverless$Request$url(req)));
 					} else {
 						var route = maybeRoute.a;
 						return $elm$core$Result$Ok(
@@ -3920,12 +3920,12 @@ var $author$project$Serverless$HttpServer$decodeRequestAndRoute = F2(
 						$elm$core$Maybe$andThen,
 						parseRoute,
 						$elm$url$Url$fromString(
-							$author$project$Serverless$Conn$Request$url(req))));
+							$author$project$Serverless$Request$url(req))));
 			},
 			A2(
 				$elm$core$Result$mapError,
 				$author$project$Serverless$HttpServer$InvalidRequestFormat,
-				A2($elm$json$Json$Decode$decodeValue, $author$project$Serverless$Conn$Request$decoder, rawRequest)));
+				A2($elm$json$Json$Decode$decodeValue, $author$project$Serverless$Request$decoder, rawRequest)));
 	});
 var $elm$core$Platform$Sub$map = _Platform_map;
 var $elm$core$Result$map = F2(
@@ -3962,7 +3962,7 @@ var $author$project$Serverless$HttpServer$requestSub = F2(
 			protocol.ports.request(fn));
 	});
 var $elm$json$Json$Encode$bool = _Json_wrap;
-var $author$project$Serverless$Conn$Body$contentType = function (body) {
+var $author$project$Serverless$Body$contentType = function (body) {
 	switch (body.$) {
 		case 'Json':
 			return 'application/json';
@@ -3973,17 +3973,17 @@ var $author$project$Serverless$Conn$Body$contentType = function (body) {
 			return 'text/text';
 	}
 };
-var $author$project$Serverless$Conn$Charset$toString = function (charset) {
+var $author$project$Serverless$Charset$toString = function (charset) {
 	return 'utf-8';
 };
-var $author$project$Serverless$Conn$Response$contentType = function (_v0) {
+var $author$project$Serverless$Response$contentType = function (_v0) {
 	var body = _v0.body;
 	var charset = _v0.charset;
-	return $author$project$Serverless$Conn$Body$contentType(body) + ('; charset=' + $author$project$Serverless$Conn$Charset$toString(charset));
+	return $author$project$Serverless$Body$contentType(body) + ('; charset=' + $author$project$Serverless$Charset$toString(charset));
 };
 var $elm$json$Json$Encode$null = _Json_encodeNull;
 var $elm$json$Json$Encode$string = _Json_wrap;
-var $author$project$Serverless$Conn$Body$encode = function (body) {
+var $author$project$Serverless$Body$encode = function (body) {
 	switch (body.$) {
 		case 'Empty':
 			return $elm$json$Json$Encode$null;
@@ -4014,7 +4014,7 @@ var $elm$json$Json$Encode$object = function (pairs) {
 			_Json_emptyObject(_Utils_Tuple0),
 			pairs));
 };
-var $author$project$Serverless$Conn$KeyValueList$encode = function (params) {
+var $author$project$Serverless$KeyValueList$encode = function (params) {
 	return $elm$json$Json$Encode$object(
 		A2(
 			$elm$core$List$map,
@@ -4028,31 +4028,31 @@ var $author$project$Serverless$Conn$KeyValueList$encode = function (params) {
 			$elm$core$List$reverse(params)));
 };
 var $elm$json$Json$Encode$int = _Json_wrap;
-var $author$project$Serverless$Conn$Body$isBase64Encoded = function (body) {
+var $author$project$Serverless$Body$isBase64Encoded = function (body) {
 	if (body.$ === 'Binary') {
 		return true;
 	} else {
 		return false;
 	}
 };
-var $author$project$Serverless$Conn$Response$encode = function (_v0) {
+var $author$project$Serverless$Response$encode = function (_v0) {
 	var res = _v0.a;
 	return $elm$json$Json$Encode$object(
 		_List_fromArray(
 			[
 				_Utils_Tuple2(
 				'body',
-				$author$project$Serverless$Conn$Body$encode(res.body)),
+				$author$project$Serverless$Body$encode(res.body)),
 				_Utils_Tuple2(
 				'headers',
-				$author$project$Serverless$Conn$KeyValueList$encode(
+				$author$project$Serverless$KeyValueList$encode(
 					_Utils_ap(
 						res.headers,
 						_List_fromArray(
 							[
 								_Utils_Tuple2(
 								'content-type',
-								$author$project$Serverless$Conn$Response$contentType(res))
+								$author$project$Serverless$Response$contentType(res))
 							])))),
 				_Utils_Tuple2(
 				'statusCode',
@@ -4060,7 +4060,7 @@ var $author$project$Serverless$Conn$Response$encode = function (_v0) {
 				_Utils_Tuple2(
 				'isBase64Encoded',
 				$elm$json$Json$Encode$bool(
-					$author$project$Serverless$Conn$Body$isBase64Encoded(res.body)))
+					$author$project$Serverless$Body$isBase64Encoded(res.body)))
 			]));
 };
 var $author$project$Serverless$HttpServer$responseCmd = F3(
@@ -4068,7 +4068,7 @@ var $author$project$Serverless$HttpServer$responseCmd = F3(
 		var session = _v0.a;
 		return protocol.ports.response(
 			{
-				res: $author$project$Serverless$Conn$Response$encode(response),
+				res: $author$project$Serverless$Response$encode(response),
 				session: session
 			});
 	});
@@ -4802,51 +4802,51 @@ var $author$project$API$subscriptions = function (model) {
 var $author$project$EventLog$Component$ModelReady = function (a) {
 	return {$: 'ModelReady', a: a};
 };
-var $author$project$Serverless$Conn$Response$Model = F4(
+var $author$project$Serverless$Response$Model = F4(
 	function (body, charset, headers, status) {
 		return {body: body, charset: charset, headers: headers, status: status};
 	});
-var $author$project$Serverless$Conn$Response$Response = function (a) {
+var $author$project$Serverless$Response$Response = function (a) {
 	return {$: 'Response', a: a};
 };
-var $author$project$Serverless$Conn$Body$empty = $author$project$Serverless$Conn$Body$Empty;
-var $author$project$Serverless$Conn$Charset$Utf8 = {$: 'Utf8'};
-var $author$project$Serverless$Conn$Charset$utf8 = $author$project$Serverless$Conn$Charset$Utf8;
-var $author$project$Serverless$Conn$Response$init = $author$project$Serverless$Conn$Response$Response(
+var $author$project$Serverless$Body$empty = $author$project$Serverless$Body$Empty;
+var $author$project$Serverless$Charset$Utf8 = {$: 'Utf8'};
+var $author$project$Serverless$Charset$utf8 = $author$project$Serverless$Charset$Utf8;
+var $author$project$Serverless$Response$init = $author$project$Serverless$Response$Response(
 	A4(
-		$author$project$Serverless$Conn$Response$Model,
-		$author$project$Serverless$Conn$Body$empty,
-		$author$project$Serverless$Conn$Charset$utf8,
+		$author$project$Serverless$Response$Model,
+		$author$project$Serverless$Body$empty,
+		$author$project$Serverless$Charset$utf8,
 		_List_fromArray(
 			[
 				_Utils_Tuple2('cache-control', 'max-age=0, private, must-revalidate')
 			]),
 		200));
-var $author$project$Serverless$Conn$Response$setBody = F2(
+var $author$project$Serverless$Response$setBody = F2(
 	function (body, _v0) {
 		var res = _v0.a;
-		return $author$project$Serverless$Conn$Response$Response(
+		return $author$project$Serverless$Response$Response(
 			_Utils_update(
 				res,
 				{body: body}));
 	});
-var $author$project$Serverless$Conn$Response$setStatus = F2(
+var $author$project$Serverless$Response$setStatus = F2(
 	function (value, _v0) {
 		var res = _v0.a;
-		return $author$project$Serverless$Conn$Response$Response(
+		return $author$project$Serverless$Response$Response(
 			_Utils_update(
 				res,
 				{status: value}));
 	});
-var $author$project$Serverless$Conn$Body$text = $author$project$Serverless$Conn$Body$Text;
-var $author$project$Serverless$Conn$Response$err500 = function (err) {
+var $author$project$Serverless$Body$text = $author$project$Serverless$Body$Text;
+var $author$project$Serverless$Response$err500 = function (err) {
 	return A2(
-		$author$project$Serverless$Conn$Response$setStatus,
+		$author$project$Serverless$Response$setStatus,
 		500,
 		A2(
-			$author$project$Serverless$Conn$Response$setBody,
-			$author$project$Serverless$Conn$Body$text(err),
-			$author$project$Serverless$Conn$Response$init));
+			$author$project$Serverless$Response$setBody,
+			$author$project$Serverless$Body$text(err),
+			$author$project$Serverless$Response$init));
 };
 var $author$project$Serverless$HttpServer$errorToString = function (error) {
 	if (error.$ === 'NoMatchingRoute') {
@@ -5041,15 +5041,15 @@ var $author$project$EventLog$Component$encodeErrorFormat = function (error) {
 				_Utils_Tuple2('details', error.details)
 			]));
 };
-var $author$project$Serverless$Conn$Body$json = $author$project$Serverless$Conn$Body$Json;
-var $author$project$Serverless$Conn$Response$err500json = function (err) {
+var $author$project$Serverless$Body$json = $author$project$Serverless$Body$Json;
+var $author$project$Serverless$Response$err500json = function (err) {
 	return A2(
-		$author$project$Serverless$Conn$Response$setStatus,
+		$author$project$Serverless$Response$setStatus,
 		500,
 		A2(
-			$author$project$Serverless$Conn$Response$setBody,
-			$author$project$Serverless$Conn$Body$json(err),
-			$author$project$Serverless$Conn$Response$init));
+			$author$project$Serverless$Response$setBody,
+			$author$project$Serverless$Body$json(err),
+			$author$project$Serverless$Response$init));
 };
 var $brian_watkins$elm_procedure$Procedure$provide = A2($elm$core$Basics$composeL, $brian_watkins$elm_procedure$Procedure$fromTask, $elm$core$Task$succeed);
 var $brian_watkins$elm_procedure$Procedure$map = function (mapper) {
@@ -5215,11 +5215,11 @@ var $elm_community$random_extra$Random$String$string = F2(
 			A2($elm$random$Random$list, stringLength, charGenerator));
 	});
 var $author$project$EventLog$Component$nameGenerator = A2($elm_community$random_extra$Random$String$string, 10, $elm_community$random_extra$Random$Char$english);
-var $author$project$Serverless$Conn$Response$ok200 = function (msg) {
+var $author$project$Serverless$Response$ok200 = function (msg) {
 	return A2(
-		$author$project$Serverless$Conn$Response$setBody,
-		$author$project$Serverless$Conn$Body$text(msg),
-		$author$project$Serverless$Conn$Response$init);
+		$author$project$Serverless$Response$setBody,
+		$author$project$Serverless$Body$text(msg),
+		$author$project$Serverless$Response$init);
 };
 var $author$project$EventLog$Component$cacheName = function (channel) {
 	return 'elm-realtime' + '-cache';
@@ -6763,10 +6763,10 @@ var $author$project$EventLog$Component$createChannel = F4(
 		var procedure = A2(
 			$brian_watkins$elm_procedure$Procedure$map,
 			$elm$core$Basics$always(
-				$author$project$Serverless$Conn$Response$ok200('Created Channel Ok')),
+				$author$project$Serverless$Response$ok200('Created Channel Ok')),
 			A2(
 				$brian_watkins$elm_procedure$Procedure$mapError,
-				A2($elm$core$Basics$composeR, $author$project$EventLog$Component$encodeErrorFormat, $author$project$Serverless$Conn$Response$err500json),
+				A2($elm$core$Basics$composeR, $author$project$EventLog$Component$encodeErrorFormat, $author$project$Serverless$Response$err500json),
 				A2(
 					$brian_watkins$elm_procedure$Procedure$andThen,
 					A2($author$project$EventLog$Component$setupChannelWebhook, component, channelName),
@@ -6795,11 +6795,11 @@ var $author$project$EventLog$Component$createChannel = F4(
 								$author$project$EventLog$Component$HttpResponse(session),
 								procedure))))));
 	});
-var $author$project$Serverless$Conn$Request$method = function (_v0) {
+var $author$project$Serverless$Request$method = function (_v0) {
 	var request = _v0.a;
 	return request.method;
 };
-var $author$project$Serverless$Conn$Body$asJson = function (body) {
+var $author$project$Serverless$Body$asJson = function (body) {
 	switch (body.$) {
 		case 'Empty':
 			return $elm$core$Result$Ok($elm$json$Json$Encode$null);
@@ -6823,7 +6823,7 @@ var $author$project$Serverless$Conn$Body$asJson = function (body) {
 				A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, val));
 	}
 };
-var $author$project$Serverless$Conn$Request$body = function (_v0) {
+var $author$project$Serverless$Request$body = function (_v0) {
 	var request = _v0.a;
 	return request.body;
 };
@@ -6836,8 +6836,8 @@ var $author$project$EventLog$Component$processSaveChannel = F6(
 			A2(
 				$elm$core$Result$map,
 				$elm$json$Json$Encode$encode(4),
-				$author$project$Serverless$Conn$Body$asJson(
-					$author$project$Serverless$Conn$Request$body(apiRequest.request))));
+				$author$project$Serverless$Body$asJson(
+					$author$project$Serverless$Request$body(apiRequest.request))));
 		return protocol.onUpdate(
 			A2(
 				$elm$core$Tuple$mapSecond,
@@ -6854,7 +6854,7 @@ var $author$project$EventLog$Component$processRoute = F4(
 	function (protocol, session, apiRequest, component) {
 		var model = component.eventLog;
 		var _v0 = _Utils_Tuple3(
-			$author$project$Serverless$Conn$Request$method(apiRequest.request),
+			$author$project$Serverless$Request$method(apiRequest.request),
 			apiRequest.route,
 			model);
 		_v0$3:
@@ -7039,7 +7039,7 @@ var $author$project$EventLog$Component$update = F3(
 											A2(
 												$author$project$EventLog$Component$httpServerApi.response,
 												session,
-												$author$project$Serverless$Conn$Response$err500(
+												$author$project$Serverless$Response$err500(
 													$author$project$Serverless$HttpServer$errorToString(httpError)))))));
 						}
 					} else {

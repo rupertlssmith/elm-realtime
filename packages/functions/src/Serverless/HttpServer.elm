@@ -27,8 +27,8 @@ module Serverless.HttpServer exposing
 
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
-import Serverless.Conn.Request as Request
-import Serverless.Conn.Response as Response exposing (Response)
+import Serverless.Request as Request
+import Serverless.Response as Response exposing (Response)
 import Url exposing (Url)
 
 

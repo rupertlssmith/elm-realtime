@@ -1,4 +1,4 @@
-module Serverless.Conn.IpAddress exposing
+module Serverless.IpAddress exposing
     ( IpAddress
     , ip4, loopback
     , decoder

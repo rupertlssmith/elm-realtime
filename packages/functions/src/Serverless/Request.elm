@@ -1,4 +1,4 @@
-module Serverless.Conn.Request exposing
+module Serverless.Request exposing
     ( Request, Method(..), Scheme(..)
     , url, method, path, queryString
     , body
@@ -50,9 +50,9 @@ unit tests.
 import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder, andThen)
 import Json.Decode.Pipeline exposing (hardcoded, required)
-import Serverless.Conn.Body as Body exposing (Body)
-import Serverless.Conn.IpAddress as IpAddress exposing (IpAddress)
-import Serverless.Conn.KeyValueList as KeyValueList
+import Serverless.Body as Body exposing (Body)
+import Serverless.IpAddress as IpAddress exposing (IpAddress)
+import Serverless.KeyValueList as KeyValueList
 
 
 {-| An HTTP request.
