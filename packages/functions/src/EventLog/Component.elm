@@ -12,6 +12,8 @@ module EventLog.Component exposing
 -}
 
 import AWS.Dynamo as Dynamo
+import DB.ChannelTable as ChannelTable
+import DB.EventLogTable as EventLogTable
 import Json.Decode exposing (Value)
 import Json.Encode as Encode
 import Momento exposing (Error, MomentoSessionKey)
@@ -26,6 +28,7 @@ import Serverless.Body as Body exposing (Body)
 import Serverless.HttpServer as HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Serverless.Request as Request exposing (Method(..))
 import Serverless.Response as Response exposing (Response)
+import Time
 import Update2 as U2
 import Url exposing (Url)
 import Url.Parser as UP exposing ((</>), (<?>))
@@ -172,8 +175,8 @@ randomize model =
 -- Connect Stateless APIs to their Ports
 
 
-dynamoApi : Dynamo.DynamoApi Msg
-dynamoApi =
+dynamoPorts : Dynamo.Ports Msg
+dynamoPorts =
     { get = Ports.dynamoGet
     , put = Ports.dynamoPut
     , delete = Ports.dynamoDelete
@@ -182,7 +185,11 @@ dynamoApi =
     , query = Ports.dynamoQuery
     , response = Ports.dynamoResponse
     }
-        |> Dynamo.dynamoApi ProcedureMsg
+
+
+channelTableApi : Dynamo.DynamoTypedApi ChannelTable.Key ChannelTable.Record Msg
+channelTableApi =
+    ChannelTable.operations ProcedureMsg dynamoPorts
 
 
 momentoApi : Momento.MomentoApi Msg
@@ -275,7 +282,7 @@ createChannel protocol session state component =
         procedure =
             Procedure.provide channelName
                 |> Procedure.andThen (openMomentoCache component)
-                |> Procedure.andThen recordChannelToDB
+                |> Procedure.andThen (recordChannelToDB channelName)
                 |> Procedure.andThen (setupChannelWebhook component channelName)
                 |> Procedure.mapError (encodeErrorFormat >> Response.err500json)
                 |> Procedure.map (Response.ok200 "Created Channel Ok" |> always)
@@ -318,15 +325,26 @@ openMomentoCache component channelName =
         |> Procedure.mapError Momento.errorToDetails
 
 
-recordChannelToDB : MomentoSessionKey -> Procedure.Procedure ErrorFormat MomentoSessionKey Msg
-recordChannelToDB sessionKey =
-    dynamoApi.put
-        { tableName = "someTable"
-        , item = Encode.object [ ( "test", Encode.string "val" ) ]
-        }
-        |> Procedure.fetchResult
-        |> Procedure.map (always sessionKey)
-        |> Procedure.mapError Dynamo.errorToDetails
+recordChannelToDB : String -> MomentoSessionKey -> Procedure.Procedure ErrorFormat MomentoSessionKey Msg
+recordChannelToDB channelName sessionKey =
+    Procedure.fromTask Time.now
+        |> Procedure.andThen
+            (\timestamp ->
+                channelTableApi.put
+                    { tableName = "ChannelTable"
+                    , item =
+                        { id = channelName
+                        , updatedAt = timestamp
+                        , modelTopic = modelTopicName channelName
+                        , saveTopic = notifyTopicName channelName
+                        , saveList = saveListName channelName
+                        , webhook = webhookName channelName
+                        }
+                    }
+                    |> Procedure.fetchResult
+                    |> Procedure.map (always sessionKey)
+                    |> Procedure.mapError Dynamo.errorToDetails
+            )
 
 
 setupChannelWebhook :
@@ -406,3 +424,8 @@ cacheName channel =
 saveListName : String -> String
 saveListName channel =
     channel ++ "-savelist"
+
+
+webhookName : String -> String
+webhookName channel =
+    channel ++ "-webhook"

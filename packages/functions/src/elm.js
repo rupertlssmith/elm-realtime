@@ -5680,6 +5680,109 @@ var $author$project$EventLog$Component$openMomentoCache = F2(
 						cache: $author$project$EventLog$Component$cacheName(channelName)
 					})));
 	});
+var $author$project$Ports$dynamoBatchGet = _Platform_outgoingPort(
+	'dynamoBatchGet',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'req',
+					$elm$core$Basics$identity($.req))
+				]));
+	});
+var $author$project$Ports$dynamoBatchWrite = _Platform_outgoingPort(
+	'dynamoBatchWrite',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'req',
+					$elm$core$Basics$identity($.req))
+				]));
+	});
+var $author$project$Ports$dynamoDelete = _Platform_outgoingPort(
+	'dynamoDelete',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'req',
+					$elm$core$Basics$identity($.req))
+				]));
+	});
+var $author$project$Ports$dynamoGet = _Platform_outgoingPort(
+	'dynamoGet',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'req',
+					$elm$core$Basics$identity($.req))
+				]));
+	});
+var $author$project$Ports$dynamoPut = _Platform_outgoingPort(
+	'dynamoPut',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'req',
+					$elm$core$Basics$identity($.req))
+				]));
+	});
+var $author$project$Ports$dynamoQuery = _Platform_outgoingPort(
+	'dynamoQuery',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'req',
+					$elm$core$Basics$identity($.req))
+				]));
+	});
+var $author$project$Ports$dynamoResponse = _Platform_incomingPort(
+	'dynamoResponse',
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (res) {
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (id) {
+					return $elm$json$Json$Decode$succeed(
+						{id: id, res: res});
+				},
+				A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
+		},
+		A2($elm$json$Json$Decode$field, 'res', $elm$json$Json$Decode$value)));
+var $author$project$EventLog$Component$dynamoPorts = {batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse};
+var $miniBill$elm_codec$Codec$decoder = function (_v0) {
+	var m = _v0.a;
+	return m.decoder;
+};
 var $elm$json$Json$Encode$list = F2(
 	function (func, entries) {
 		return _Json_wrap(
@@ -6582,120 +6685,156 @@ var $author$project$AWS$Dynamo$queryIndex = F5(
 				qry.match,
 				_List_Nil));
 	});
-var $author$project$AWS$Dynamo$dynamoApi = F2(
-	function (pt, ports) {
+var $author$project$AWS$Dynamo$dynamoTypedApi = F5(
+	function (keyEncoder, valEncoder, decoder, pt, ports) {
 		return {
-			batchGet: A4($author$project$AWS$Dynamo$batchGet, pt, ports, $elm$core$Basics$identity, $elm$json$Json$Decode$value),
-			batchPut: A3($author$project$AWS$Dynamo$batchPut, pt, ports, $elm$core$Basics$identity),
-			_delete: A3($author$project$AWS$Dynamo$delete, pt, ports, $elm$core$Basics$identity),
-			get: A4($author$project$AWS$Dynamo$get, pt, ports, $elm$core$Basics$identity, $elm$json$Json$Decode$value),
-			put: A3($author$project$AWS$Dynamo$put, pt, ports, $elm$core$Basics$identity),
-			query: A3($author$project$AWS$Dynamo$query, pt, ports, $elm$json$Json$Decode$value),
-			queryIndex: A3($author$project$AWS$Dynamo$queryIndex, pt, ports, $elm$json$Json$Decode$value)
+			batchGet: A4($author$project$AWS$Dynamo$batchGet, pt, ports, keyEncoder, decoder),
+			batchPut: A3($author$project$AWS$Dynamo$batchPut, pt, ports, valEncoder),
+			_delete: A3($author$project$AWS$Dynamo$delete, pt, ports, keyEncoder),
+			get: A4($author$project$AWS$Dynamo$get, pt, ports, keyEncoder, decoder),
+			put: A3($author$project$AWS$Dynamo$put, pt, ports, valEncoder),
+			query: A3($author$project$AWS$Dynamo$query, pt, ports, decoder),
+			queryIndex: A3($author$project$AWS$Dynamo$queryIndex, pt, ports, decoder)
 		};
 	});
-var $author$project$Ports$dynamoBatchGet = _Platform_outgoingPort(
-	'dynamoBatchGet',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id)),
-					_Utils_Tuple2(
-					'req',
-					$elm$core$Basics$identity($.req))
-				]));
+var $author$project$DB$ChannelTable$encodeKey = function (key) {
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'id',
+				$elm$json$Json$Encode$string(key.id))
+			]));
+};
+var $miniBill$elm_codec$Codec$encoder = function (_v0) {
+	var m = _v0.a;
+	return m.encoder;
+};
+var $author$project$DB$ChannelTable$Record = F6(
+	function (id, updatedAt, modelTopic, saveTopic, saveList, webhook) {
+		return {id: id, modelTopic: modelTopic, saveList: saveList, saveTopic: saveTopic, updatedAt: updatedAt, webhook: webhook};
 	});
-var $author$project$Ports$dynamoBatchWrite = _Platform_outgoingPort(
-	'dynamoBatchWrite',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id)),
-					_Utils_Tuple2(
-					'req',
-					$elm$core$Basics$identity($.req))
-				]));
-	});
-var $author$project$Ports$dynamoDelete = _Platform_outgoingPort(
-	'dynamoDelete',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id)),
-					_Utils_Tuple2(
-					'req',
-					$elm$core$Basics$identity($.req))
-				]));
-	});
-var $author$project$Ports$dynamoGet = _Platform_outgoingPort(
-	'dynamoGet',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id)),
-					_Utils_Tuple2(
-					'req',
-					$elm$core$Basics$identity($.req))
-				]));
-	});
-var $author$project$Ports$dynamoPut = _Platform_outgoingPort(
-	'dynamoPut',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id)),
-					_Utils_Tuple2(
-					'req',
-					$elm$core$Basics$identity($.req))
-				]));
-	});
-var $author$project$Ports$dynamoQuery = _Platform_outgoingPort(
-	'dynamoQuery',
-	function ($) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'id',
-					$elm$json$Json$Encode$string($.id)),
-					_Utils_Tuple2(
-					'req',
-					$elm$core$Basics$identity($.req))
-				]));
-	});
-var $author$project$Ports$dynamoResponse = _Platform_incomingPort(
-	'dynamoResponse',
-	A2(
-		$elm$json$Json$Decode$andThen,
-		function (res) {
-			return A2(
-				$elm$json$Json$Decode$andThen,
-				function (id) {
-					return $elm$json$Json$Decode$succeed(
-						{id: id, res: res});
+var $miniBill$elm_codec$Codec$Codec = function (a) {
+	return {$: 'Codec', a: a};
+};
+var $miniBill$elm_codec$Codec$buildObject = function (_v0) {
+	var om = _v0.a;
+	return $miniBill$elm_codec$Codec$Codec(
+		{
+			decoder: om.decoder,
+			encoder: function (v) {
+				return $elm$json$Json$Encode$object(
+					$elm$core$List$reverse(
+						om.encoder(v)));
+			}
+		});
+};
+var $miniBill$elm_codec$Codec$ObjectCodec = function (a) {
+	return {$: 'ObjectCodec', a: a};
+};
+var $miniBill$elm_codec$Codec$field = F4(
+	function (name, getter, codec, _v0) {
+		var ocodec = _v0.a;
+		return $miniBill$elm_codec$Codec$ObjectCodec(
+			{
+				decoder: A3(
+					$elm$json$Json$Decode$map2,
+					F2(
+						function (f, x) {
+							return f(x);
+						}),
+					ocodec.decoder,
+					A2(
+						$elm$json$Json$Decode$field,
+						name,
+						$miniBill$elm_codec$Codec$decoder(codec))),
+				encoder: function (v) {
+					return A2(
+						$elm$core$List$cons,
+						_Utils_Tuple2(
+							name,
+							A2(
+								$miniBill$elm_codec$Codec$encoder,
+								codec,
+								getter(v))),
+						ocodec.encoder(v));
 				},
-				A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
+				fields: A2($elm$core$List$cons, name, ocodec.fields)
+			});
+	});
+var $miniBill$elm_codec$Codec$object = function (ctor) {
+	return $miniBill$elm_codec$Codec$ObjectCodec(
+		{
+			decoder: $elm$json$Json$Decode$succeed(ctor),
+			encoder: function (_v0) {
+				return _List_Nil;
+			},
+			fields: _List_Nil
+		});
+};
+var $miniBill$elm_codec$Codec$build = F2(
+	function (encoder_, decoder_) {
+		return $miniBill$elm_codec$Codec$Codec(
+			{decoder: decoder_, encoder: encoder_});
+	});
+var $author$project$DB$ChannelTable$posixCodec = A2(
+	$miniBill$elm_codec$Codec$build,
+	function (timestamp) {
+		return $elm$json$Json$Encode$int(
+			$elm$time$Time$posixToMillis(timestamp));
+	},
+	A2($elm$json$Json$Decode$map, $elm$time$Time$millisToPosix, $elm$json$Json$Decode$int));
+var $miniBill$elm_codec$Codec$string = A2($miniBill$elm_codec$Codec$build, $elm$json$Json$Encode$string, $elm$json$Json$Decode$string);
+var $author$project$DB$ChannelTable$recordCodec = $miniBill$elm_codec$Codec$buildObject(
+	A4(
+		$miniBill$elm_codec$Codec$field,
+		'webhook',
+		function ($) {
+			return $.webhook;
 		},
-		A2($elm$json$Json$Decode$field, 'res', $elm$json$Json$Decode$value)));
-var $author$project$EventLog$Component$dynamoApi = A2(
-	$author$project$AWS$Dynamo$dynamoApi,
-	$author$project$EventLog$Component$ProcedureMsg,
-	{batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse});
+		$miniBill$elm_codec$Codec$string,
+		A4(
+			$miniBill$elm_codec$Codec$field,
+			'saveList',
+			function ($) {
+				return $.saveList;
+			},
+			$miniBill$elm_codec$Codec$string,
+			A4(
+				$miniBill$elm_codec$Codec$field,
+				'saveTopic',
+				function ($) {
+					return $.saveTopic;
+				},
+				$miniBill$elm_codec$Codec$string,
+				A4(
+					$miniBill$elm_codec$Codec$field,
+					'modelTopic',
+					function ($) {
+						return $.modelTopic;
+					},
+					$miniBill$elm_codec$Codec$string,
+					A4(
+						$miniBill$elm_codec$Codec$field,
+						'updatedAt',
+						function ($) {
+							return $.updatedAt;
+						},
+						$author$project$DB$ChannelTable$posixCodec,
+						A4(
+							$miniBill$elm_codec$Codec$field,
+							'id',
+							function ($) {
+								return $.id;
+							},
+							$miniBill$elm_codec$Codec$string,
+							$miniBill$elm_codec$Codec$object($author$project$DB$ChannelTable$Record))))))));
+var $author$project$DB$ChannelTable$operations = A3(
+	$author$project$AWS$Dynamo$dynamoTypedApi,
+	$author$project$DB$ChannelTable$encodeKey,
+	$miniBill$elm_codec$Codec$encoder($author$project$DB$ChannelTable$recordCodec),
+	$miniBill$elm_codec$Codec$decoder($author$project$DB$ChannelTable$recordCodec));
+var $author$project$EventLog$Component$channelTableApi = A2($author$project$DB$ChannelTable$operations, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$dynamoPorts);
 var $author$project$AWS$Dynamo$errorToDetails = function (error) {
 	if (error.$ === 'Error') {
 		var message = error.a.message;
@@ -6709,35 +6848,51 @@ var $author$project$AWS$Dynamo$errorToDetails = function (error) {
 		};
 	}
 };
-var $author$project$EventLog$Component$recordChannelToDB = function (sessionKey) {
-	return A2(
-		$brian_watkins$elm_procedure$Procedure$mapError,
-		$author$project$AWS$Dynamo$errorToDetails,
-		A2(
-			$brian_watkins$elm_procedure$Procedure$map,
-			$elm$core$Basics$always(sessionKey),
-			$brian_watkins$elm_procedure$Procedure$fetchResult(
-				$author$project$EventLog$Component$dynamoApi.put(
-					{
-						item: $elm$json$Json$Encode$object(
-							_List_fromArray(
-								[
-									_Utils_Tuple2(
-									'test',
-									$elm$json$Json$Encode$string('val'))
-								])),
-						tableName: 'someTable'
-					}))));
+var $author$project$EventLog$Component$modelTopicName = function (channel) {
+	return channel + '-modeltopic';
 };
+var $author$project$EventLog$Component$notifyTopicName = function (channel) {
+	return channel + '-savetopic';
+};
+var $author$project$EventLog$Component$saveListName = function (channel) {
+	return channel + '-savelist';
+};
+var $author$project$EventLog$Component$webhookName = function (channel) {
+	return channel + '-webhook';
+};
+var $author$project$EventLog$Component$recordChannelToDB = F2(
+	function (channelName, sessionKey) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (timestamp) {
+				return A2(
+					$brian_watkins$elm_procedure$Procedure$mapError,
+					$author$project$AWS$Dynamo$errorToDetails,
+					A2(
+						$brian_watkins$elm_procedure$Procedure$map,
+						$elm$core$Basics$always(sessionKey),
+						$brian_watkins$elm_procedure$Procedure$fetchResult(
+							$author$project$EventLog$Component$channelTableApi.put(
+								{
+									item: {
+										id: channelName,
+										modelTopic: $author$project$EventLog$Component$modelTopicName(channelName),
+										saveList: $author$project$EventLog$Component$saveListName(channelName),
+										saveTopic: $author$project$EventLog$Component$notifyTopicName(channelName),
+										updatedAt: timestamp,
+										webhook: $author$project$EventLog$Component$webhookName(channelName)
+									},
+									tableName: 'ChannelTable'
+								}))));
+			},
+			$brian_watkins$elm_procedure$Procedure$fromTask($elm$time$Time$now));
+	});
 var $author$project$EventLog$Component$setModel = F2(
 	function (m, x) {
 		return _Utils_update(
 			m,
 			{eventLog: x});
 	});
-var $author$project$EventLog$Component$notifyTopicName = function (channel) {
-	return channel + '-savetopic';
-};
 var $author$project$EventLog$Component$setupChannelWebhook = F3(
 	function (component, channelName, sessionKey) {
 		return A2(
@@ -6772,7 +6927,7 @@ var $author$project$EventLog$Component$createChannel = F4(
 					A2($author$project$EventLog$Component$setupChannelWebhook, component, channelName),
 					A2(
 						$brian_watkins$elm_procedure$Procedure$andThen,
-						$author$project$EventLog$Component$recordChannelToDB,
+						$author$project$EventLog$Component$recordChannelToDB(channelName),
 						A2(
 							$brian_watkins$elm_procedure$Procedure$andThen,
 							$author$project$EventLog$Component$openMomentoCache(component),
