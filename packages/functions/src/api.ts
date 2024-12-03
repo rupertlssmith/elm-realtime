@@ -27,7 +27,9 @@ export async function main(event, context) {
         responsePort: 'responsePort',
     });
 
-    return await handler(event, context);
+    const res = await handler(event, context);
+    //console.log(res);
+    return res;
 }
 
 const silent = {

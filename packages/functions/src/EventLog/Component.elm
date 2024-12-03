@@ -17,7 +17,7 @@ import DB.ChannelTable as ChannelTable
 import DB.EventLogTable as EventLogTable
 import Json.Decode exposing (Value)
 import Json.Encode as Encode
-import Momento exposing (Error, MomentoSessionKey)
+import Momento exposing (CacheItem, Error, MomentoSessionKey)
 import Ports
 import Procedure
 import Procedure.Program
@@ -194,6 +194,11 @@ dynamoPorts =
 channelTableApi : Dynamo.DynamoTypedApi ChannelTable.Key ChannelTable.Record Msg
 channelTableApi =
     ChannelTable.operations ProcedureMsg dynamoPorts
+
+
+eventLogTableApi : Dynamo.DynamoTypedApi EventLogTable.Key EventLogTable.Record Msg
+eventLogTableApi =
+    EventLogTable.operations ProcedureMsg dynamoPorts
 
 
 momentoApi : Momento.MomentoApi Msg
@@ -439,107 +444,81 @@ processSaveChannel :
     -> Component a
     -> ( model, Cmd msg )
 processSaveChannel protocol session state apiRequest channelName component =
-    --let
-    --    _ =
-    --        Debug.log "EventLog.processRoute"
-    --            (Request.body apiRequest.request |> Body.asJson |> Result.map (Encode.encode 4))
-    --
-    --    procedure : Procedure.Procedure Response Response Msg
-    --    procedure =
-    --        Procedure.provide channelName
-    --            |> Procedure.andThen (openMomentoCache component)
-    --            |> Procedure.andThen (readEvents component channelName)
-    --            |> Procedure.andThen (recordEventsToDB component channelName)
-    --            |> Procedure.andThen (removeEvents component channelName)
-    --            |> Procedure.andThen (publishEvents component channelName)
-    --            |> Procedure.mapError (encodeErrorFormat >> Response.err500json)
-    --            |> Procedure.map (Codec.encoder ChannelTable.recordCodec >> Response.ok200json)
-    --in
-    --( state
-    --, Procedure.try ProcedureMsg (HttpResponse session) procedure
-    --)
-    --    |> U2.andMap (ModelReady |> switchState)
-    --    |> Tuple.mapFirst (setModel component)
-    --    |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-    --    |> protocol.onUpdate
-    Debug.todo ""
+    let
+        procedure : Procedure.Procedure Response Response Msg
+        procedure =
+            Procedure.provide channelName
+                |> Procedure.andThen (openMomentoCache component)
+                |> Procedure.andThen (readEvents component channelName)
+                |> Procedure.andThen (recordEventsToDB component channelName)
+                |> Procedure.andThen (publishEvents component channelName)
+                |> Procedure.mapError (encodeErrorFormat >> Response.err500json)
+                |> Procedure.map (Response.ok200json Encode.null |> always)
+    in
+    ( state
+    , Procedure.try ProcedureMsg (HttpResponse session) procedure
+    )
+        |> U2.andMap (ModelReady |> switchState)
+        |> Tuple.mapFirst (setModel component)
+        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+        |> protocol.onUpdate
 
 
 readEvents :
     Component a
     -> String
     -> MomentoSessionKey
-    -> Procedure.Procedure ErrorFormat MomentoSessionKey Msg
+    -> Procedure.Procedure ErrorFormat ( MomentoSessionKey, CacheItem ) Msg
 readEvents component channelName sessionKey =
-    momentoApi.webhook
+    momentoApi.popList
         sessionKey
-        { name = webhookName channelName
-        , topic = notifyTopicName channelName
-        , url = component.channelApiUrl ++ "/v1/channel/" ++ channelName
+        { list = saveListName channelName
         }
         |> Procedure.fetchResult
+        |> Procedure.map (Tuple.pair sessionKey)
         |> Procedure.mapError Momento.errorToDetails
 
 
 recordEventsToDB :
     Component a
     -> String
-    -> MomentoSessionKey
-    -> Procedure.Procedure ErrorFormat ChannelTable.Record Msg
-recordEventsToDB component channelName sessionKey =
+    -> ( MomentoSessionKey, CacheItem )
+    -> Procedure.Procedure ErrorFormat ( MomentoSessionKey, CacheItem ) Msg
+recordEventsToDB component channelName ( sessionKey, cacheItem ) =
     Procedure.fromTask Time.now
         |> Procedure.andThen
             (\timestamp ->
                 let
-                    channelRecord =
+                    eventRecord =
                         { id = channelName
+                        , seq = 0
                         , updatedAt = timestamp
-                        , modelTopic = modelTopicName channelName
-                        , saveTopic = notifyTopicName channelName
-                        , saveList = saveListName channelName
-                        , webhook = webhookName channelName
+                        , event = cacheItem.payload
                         }
                 in
-                channelTableApi.put
-                    { tableName = component.channelTable
-                    , item = channelRecord
+                eventLogTableApi.put
+                    { tableName = component.eventLogTable
+                    , item = eventRecord
                     }
                     |> Procedure.fetchResult
-                    |> Procedure.map (always channelRecord)
+                    |> Procedure.map (always ( sessionKey, cacheItem ))
                     |> Procedure.mapError Dynamo.errorToDetails
             )
-
-
-removeEvents :
-    Component a
-    -> String
-    -> MomentoSessionKey
-    -> Procedure.Procedure ErrorFormat MomentoSessionKey Msg
-removeEvents component channelName sessionKey =
-    momentoApi.webhook
-        sessionKey
-        { name = webhookName channelName
-        , topic = notifyTopicName channelName
-        , url = component.channelApiUrl ++ "/v1/channel/" ++ channelName
-        }
-        |> Procedure.fetchResult
-        |> Procedure.mapError Momento.errorToDetails
 
 
 publishEvents :
     Component a
     -> String
-    -> MomentoSessionKey
-    -> Procedure.Procedure ErrorFormat MomentoSessionKey Msg
-publishEvents component channelName sessionKey =
-    momentoApi.webhook
+    -> ( MomentoSessionKey, CacheItem )
+    -> Procedure.Procedure ErrorFormat () Msg
+publishEvents component channelName ( sessionKey, cacheItem ) =
+    momentoApi.publish
         sessionKey
-        { name = webhookName channelName
-        , topic = notifyTopicName channelName
-        , url = component.channelApiUrl ++ "/v1/channel/" ++ channelName
+        { topic = modelTopicName channelName
+        , payload = cacheItem.payload
         }
-        |> Procedure.fetchResult
-        |> Procedure.mapError Momento.errorToDetails
+        |> Procedure.do
+        |> Procedure.mapError (always { message = "Never", details = Encode.null })
 
 
 

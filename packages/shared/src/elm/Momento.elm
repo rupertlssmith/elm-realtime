@@ -6,6 +6,7 @@ module Momento exposing
     , WebhookParams
     , SubscribeParams, PublishParams
     , Error, errorToDetails, errorToString
+    , CacheItem
     )
 
 {-| A wrapper around the GoMomento serverless cache API.
@@ -107,7 +108,7 @@ type alias PushListParams =
 
 
 type alias PopListParams =
-    { list : String, payload : Value }
+    { list : String }
 
 
 type alias CacheItem =
@@ -230,10 +231,10 @@ popList :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
     -> MomentoSessionKey
-    -> PushListParams
+    -> PopListParams
     -> (Result Error CacheItem -> msg)
     -> Cmd msg
-popList pt ports (MomentoSessionKey sessionKey) { list, payload } dt =
+popList pt ports (MomentoSessionKey sessionKey) { list } dt =
     Channel.open (\key -> ports.popList { id = key, session = sessionKey, list = list })
         |> Channel.connect ports.response
         |> Channel.filter (\key { id } -> id == key)
@@ -261,6 +262,7 @@ but may report errors on the asyncError subscription.
 -}
 publish : Ports msg -> MomentoSessionKey -> PublishParams -> Cmd msg
 publish ports (MomentoSessionKey sessionKey) { topic, payload } =
+    --ports.publish { id = "", session = sessionKey, topic = topic, payload = Encode.encode 0 payload |> Encode.string }
     ports.publish { id = "", session = sessionKey, topic = topic, payload = payload }
 
 

@@ -5,7 +5,7 @@ import {
     CredentialProvider,
     TopicClient,
     TopicSubscribeResponse,
-    TopicPublishResponse, PutWebhookResponse,
+    TopicPublishResponse, PutWebhookResponse, CacheListPopFrontResponse,
 } from "@gomomento/sdk";
 import * as ports from "./ports" ;
 
@@ -33,14 +33,20 @@ type SendArgs = {
     id: string;
     session: Session;
     topic: string;
-    payload: string
+    payload: any
 }
 
 type PushListArgs = {
     id: string;
     session: Session;
     list: string;
-    payload: string;
+    payload: any;
+}
+
+type PopListArgs = {
+    id: string;
+    session: Session;
+    list: string;
 }
 
 type CreateWebhookArgs = {
@@ -58,6 +64,7 @@ type Ports = {
     mmPublish: { subscribe: any };
     mmOnMessage: { send: any };
     mmPushList: { subscribe: any };
+    mmPopList: { subscribe: any };
     mmCreateWebhook: { subscribe: any };
     mmResponse: { send: any };
     mmAsyncError: { send: any };
@@ -77,6 +84,7 @@ export class MomentoPorts {
             "mmPublish",
             "mmOnMessage",
             "mmPushList",
+            "mmPopList",
             "mmCreateWebhook",
             "mmResponse",
             "mmAsyncError"
@@ -87,6 +95,7 @@ export class MomentoPorts {
         app.ports.mmSubscribe.subscribe(this.subscribe);
         app.ports.mmPublish.subscribe(this.publish);
         app.ports.mmPushList.subscribe(this.pushList);
+        app.ports.mmPopList.subscribe(this.popList);
         app.ports.mmCreateWebhook.subscribe(this.createWebhook);
     }
 
@@ -169,7 +178,8 @@ export class MomentoPorts {
                 },
                 onItem: (item) => {
                     //console.log(`Received an item on subscription for '${args.topic}': ${item.value().toString()}`);
-                    this.onMessage(args.id, args.session, JSON.stringify(item));
+                    //this.onMessage(args.id, args.session, JSON.stringify(item));
+                    this.onMessage(args.id, args.session, item);
 
                     return;
                 },
@@ -200,7 +210,10 @@ export class MomentoPorts {
         // console.log(args);
 
         const publishResponse =
-            await args.session.topicClient.publish(args.session.cache, args.topic, args.payload);
+            await args.session.topicClient.publish(
+                args.session.cache,
+                args.topic,
+                JSON.stringify(args.payload));
 
         switch (publishResponse.type) {
             case TopicPublishResponse.Success:
@@ -218,7 +231,7 @@ export class MomentoPorts {
         }
     }
 
-    onMessage = (id: string, session: Session, payload: string) => {
+    onMessage = (id: string, session: Session, payload: any) => {
         // console.log("Momento.onMessage");
         // console.log(payload);
 
@@ -234,7 +247,10 @@ export class MomentoPorts {
         //console.log("Momento.pushList");
 
         const pushResponse =
-            await args.session.cacheClient.listPushBack(args.session.cache, args.list, args.payload);
+            await args.session.cacheClient.listPushBack(
+                args.session.cache,
+                args.list,
+                JSON.stringify(args.payload));
 
         switch (pushResponse.type) {
             case CacheListPushBackResponse.Success:
@@ -255,6 +271,48 @@ export class MomentoPorts {
             type_: "Ok",
             response: args.session
         });
+    }
+
+    popList = async (args: PopListArgs) => {
+        //console.log("Momento.popList");
+
+        const popResponse =
+            await args.session.cacheClient.listPopFront(
+                args.session.cache,
+                args.list);
+
+        switch (popResponse.type) {
+            case CacheListPopFrontResponse.Hit:
+                //console.log(`Value '${popResponse.value()}' popped from list '${args.list}'`);
+
+                this.app.ports.mmResponse.send({
+                    id: args.id,
+                    type_: "Item",
+                    response: JSON.parse(popResponse.value())
+                });
+
+                break;
+
+            case CacheListPopFrontResponse.Miss:
+                //console.log(`No value  popped from list '${args.list}'`);
+
+                this.app.ports.mmResponse.send({
+                    id: args.id,
+                    type_: "ItemNotFound",
+                    response: args.session
+                });
+
+                break;
+            case CacheListPopFrontResponse.Error:
+                //console.log("Momento.popList.Error");
+
+                this.app.ports.mmResponse.send({
+                    id: args.id,
+                    type_: "Error",
+                    response: popResponse.innerException()
+                });
+        }
+
     }
 
     // == Webhooks

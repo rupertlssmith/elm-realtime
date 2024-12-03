@@ -5624,7 +5624,6 @@ var $author$project$Momento$popList = F5(
 	function (pt, ports, _v0, _v1, dt) {
 		var sessionKey = _v0.a;
 		var list = _v1.list;
-		var payload = _v1.payload;
 		return A3(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
@@ -7138,15 +7137,183 @@ var $author$project$Serverless$Request$method = function (_v0) {
 	var request = _v0.a;
 	return request.method;
 };
-var $elm$core$Debug$todo = _Debug_todo;
+var $brian_watkins$elm_procedure$Procedure$do = function (command) {
+	return $brian_watkins$elm_procedure$Procedure$Internal$Procedure(
+		F3(
+			function (procId, msgTagger, resultTagger) {
+				return A2(
+					$elm$core$Task$perform,
+					function (_v0) {
+						var nextCommand = A2(
+							$elm$core$Task$perform,
+							A2($elm$core$Basics$composeL, resultTagger, $elm$core$Result$Ok),
+							$elm$core$Task$succeed(_Utils_Tuple0));
+						return msgTagger(
+							A2(
+								$brian_watkins$elm_procedure$Procedure$Internal$Execute,
+								procId,
+								$elm$core$Platform$Cmd$batch(
+									_List_fromArray(
+										[command, nextCommand]))));
+					},
+					$elm$core$Task$succeed(_Utils_Tuple0));
+			}));
+};
+var $author$project$EventLog$Component$publishEvents = F3(
+	function (component, channelName, _v0) {
+		var sessionKey = _v0.a;
+		var cacheItem = _v0.b;
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$mapError,
+			$elm$core$Basics$always(
+				{details: $elm$json$Json$Encode$null, message: 'Never'}),
+			$brian_watkins$elm_procedure$Procedure$do(
+				A2(
+					$author$project$EventLog$Component$momentoApi.publish,
+					sessionKey,
+					{
+						payload: cacheItem.payload,
+						topic: $author$project$EventLog$Component$modelTopicName(channelName)
+					})));
+	});
+var $author$project$EventLog$Component$readEvents = F3(
+	function (component, channelName, sessionKey) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$mapError,
+			$author$project$Momento$errorToDetails,
+			A2(
+				$brian_watkins$elm_procedure$Procedure$map,
+				$elm$core$Tuple$pair(sessionKey),
+				$brian_watkins$elm_procedure$Procedure$fetchResult(
+					A2(
+						$author$project$EventLog$Component$momentoApi.popList,
+						sessionKey,
+						{
+							list: $author$project$EventLog$Component$saveListName(channelName)
+						}))));
+	});
+var $author$project$DB$EventLogTable$encodeKey = function (key) {
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'id',
+				$elm$json$Json$Encode$string(key.id)),
+				_Utils_Tuple2(
+				'seq',
+				$elm$json$Json$Encode$int(key.seq))
+			]));
+};
+var $author$project$DB$EventLogTable$Record = F4(
+	function (id, seq, updatedAt, event) {
+		return {event: event, id: id, seq: seq, updatedAt: updatedAt};
+	});
+var $miniBill$elm_codec$Codec$int = A2($miniBill$elm_codec$Codec$build, $elm$json$Json$Encode$int, $elm$json$Json$Decode$int);
+var $author$project$DB$EventLogTable$posixCodec = A2(
+	$miniBill$elm_codec$Codec$build,
+	function (timestamp) {
+		return $elm$json$Json$Encode$int(
+			$elm$time$Time$posixToMillis(timestamp));
+	},
+	A2($elm$json$Json$Decode$map, $elm$time$Time$millisToPosix, $elm$json$Json$Decode$int));
+var $miniBill$elm_codec$Codec$value = $miniBill$elm_codec$Codec$Codec(
+	{decoder: $elm$json$Json$Decode$value, encoder: $elm$core$Basics$identity});
+var $author$project$DB$EventLogTable$recordCodec = $miniBill$elm_codec$Codec$buildObject(
+	A4(
+		$miniBill$elm_codec$Codec$field,
+		'event',
+		function ($) {
+			return $.event;
+		},
+		$miniBill$elm_codec$Codec$value,
+		A4(
+			$miniBill$elm_codec$Codec$field,
+			'updatedAt',
+			function ($) {
+				return $.updatedAt;
+			},
+			$author$project$DB$EventLogTable$posixCodec,
+			A4(
+				$miniBill$elm_codec$Codec$field,
+				'seq',
+				function ($) {
+					return $.seq;
+				},
+				$miniBill$elm_codec$Codec$int,
+				A4(
+					$miniBill$elm_codec$Codec$field,
+					'id',
+					function ($) {
+						return $.id;
+					},
+					$miniBill$elm_codec$Codec$string,
+					$miniBill$elm_codec$Codec$object($author$project$DB$EventLogTable$Record))))));
+var $author$project$DB$EventLogTable$operations = A3(
+	$author$project$AWS$Dynamo$dynamoTypedApi,
+	$author$project$DB$EventLogTable$encodeKey,
+	$miniBill$elm_codec$Codec$encoder($author$project$DB$EventLogTable$recordCodec),
+	$miniBill$elm_codec$Codec$decoder($author$project$DB$EventLogTable$recordCodec));
+var $author$project$EventLog$Component$eventLogTableApi = A2($author$project$DB$EventLogTable$operations, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$dynamoPorts);
+var $author$project$EventLog$Component$recordEventsToDB = F3(
+	function (component, channelName, _v0) {
+		var sessionKey = _v0.a;
+		var cacheItem = _v0.b;
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (timestamp) {
+				var eventRecord = {event: cacheItem.payload, id: channelName, seq: 0, updatedAt: timestamp};
+				return A2(
+					$brian_watkins$elm_procedure$Procedure$mapError,
+					$author$project$AWS$Dynamo$errorToDetails,
+					A2(
+						$brian_watkins$elm_procedure$Procedure$map,
+						$elm$core$Basics$always(
+							_Utils_Tuple2(sessionKey, cacheItem)),
+						$brian_watkins$elm_procedure$Procedure$fetchResult(
+							$author$project$EventLog$Component$eventLogTableApi.put(
+								{item: eventRecord, tableName: component.eventLogTable}))));
+			},
+			$brian_watkins$elm_procedure$Procedure$fromTask($elm$time$Time$now));
+	});
 var $author$project$EventLog$Component$processSaveChannel = F6(
 	function (protocol, session, state, apiRequest, channelName, component) {
-		return _Debug_todo(
-			'EventLog.Component',
-			{
-				start: {line: 465, column: 5},
-				end: {line: 465, column: 15}
-			})('');
+		var procedure = A2(
+			$brian_watkins$elm_procedure$Procedure$map,
+			$elm$core$Basics$always(
+				$author$project$Serverless$Response$ok200json($elm$json$Json$Encode$null)),
+			A2(
+				$brian_watkins$elm_procedure$Procedure$mapError,
+				A2($elm$core$Basics$composeR, $author$project$EventLog$Component$encodeErrorFormat, $author$project$Serverless$Response$err500json),
+				A2(
+					$brian_watkins$elm_procedure$Procedure$andThen,
+					A2($author$project$EventLog$Component$publishEvents, component, channelName),
+					A2(
+						$brian_watkins$elm_procedure$Procedure$andThen,
+						A2($author$project$EventLog$Component$recordEventsToDB, component, channelName),
+						A2(
+							$brian_watkins$elm_procedure$Procedure$andThen,
+							A2($author$project$EventLog$Component$readEvents, component, channelName),
+							A2(
+								$brian_watkins$elm_procedure$Procedure$andThen,
+								$author$project$EventLog$Component$openMomentoCache(component),
+								$brian_watkins$elm_procedure$Procedure$provide(channelName)))))));
+		return protocol.onUpdate(
+			A2(
+				$elm$core$Tuple$mapSecond,
+				$elm$core$Platform$Cmd$map(protocol.toMsg),
+				A2(
+					$elm$core$Tuple$mapFirst,
+					$author$project$EventLog$Component$setModel(component),
+					A2(
+						$the_sett$elm_update_helper$Update2$andMap,
+						$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelReady),
+						_Utils_Tuple2(
+							state,
+							A3(
+								$brian_watkins$elm_procedure$Procedure$try,
+								$author$project$EventLog$Component$ProcedureMsg,
+								$author$project$EventLog$Component$HttpResponse(session),
+								procedure))))));
 	});
 var $elm$core$List$head = function (list) {
 	if (list.b) {

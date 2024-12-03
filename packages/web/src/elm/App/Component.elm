@@ -229,8 +229,9 @@ update protocol msg component =
                 , momentoApi.pushList sessionKey
                     { list = saveListName state.realtimeChannel, payload = payload }
                     MMNotified
-                , momentoApi.publish sessionKey
-                    { topic = modelTopicName state.realtimeChannel, payload = payload }
+
+                --, momentoApi.publish sessionKey
+                --    { topic = modelTopicName state.realtimeChannel, payload = payload }
                 ]
             )
                 |> U2.andMap (switchState ModelRunning)
