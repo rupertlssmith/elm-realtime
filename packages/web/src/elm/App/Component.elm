@@ -135,7 +135,10 @@ subscriptions protocol component =
         model =
             component.app
     in
-    Procedure.Program.subscriptions model.procedure
+    [ Procedure.Program.subscriptions model.procedure
+    , momentoApi.onMessage MMOnMessage
+    ]
+        |> Sub.batch
         |> Sub.map protocol.toMsg
 
 
