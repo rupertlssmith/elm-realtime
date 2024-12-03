@@ -5,7 +5,7 @@ import {
     CredentialProvider,
     TopicClient,
     TopicSubscribeResponse,
-    TopicPublishResponse,
+    TopicPublishResponse, PutWebhookResponse,
 } from "@gomomento/sdk-web";
 import * as ports from "./ports" ;
 
@@ -25,65 +25,75 @@ type OpenArgs = {
 
 type SubscribeArgs = {
     id: string;
+    session: Session;
     topic: string;
 }
 
 type SendArgs = {
     id: string;
+    session: Session;
     topic: string;
     payload: string
 }
 
+type PushListArgs = {
+    id: string;
+    session: Session;
+    list: string;
+    payload: string;
+}
+
+type CreateWebhookArgs = {
+    id: string;
+    session: Session;
+    name: string;
+    topic: string;
+    url: string;
+}
+
 type Ports = {
     mmOpen: { subscribe: any };
-    mmOnOpen: { send: any };
     mmClose: { subscribe: any };
     mmSubscribe: { subscribe: any };
-    mmOnSubscribe: { send: any };
-    mmSend: { subscribe: any };
+    mmPublish: { subscribe: any };
     mmOnMessage: { send: any };
     mmPushList: { subscribe: any };
-    mmOnError: { send: any };
+    mmCreateWebhook: { subscribe: any };
+    mmResponse: { send: any };
+    mmAsyncError: { send: any };
 }
 
 export class MomentoPorts {
-    sessions: { [id: string]: Session; } = {};
     app: { ports: Ports };
 
     constructor(app: any) {
-        console.log("Momento.constructor");
+        console.info("Momento.constructor");
         this.app = app;
-
-        this.onMessage = this.onMessage.bind(this);
-        this.open = this.open.bind(this);
-        this.subscribe = this.subscribe.bind(this);
-        this.send = this.send.bind(this);
-        this.close = this.close.bind(this);
-        this.pushList = this.pushList.bind(this);
 
         ports.checkPortsExist(app, [
             "mmOpen",
             "mmClose",
             "mmSubscribe",
-            "mmSend",
-            "mmPushList",
-            "mmOnOpen",
-            "mmOnSubscribe",
+            "mmPublish",
             "mmOnMessage",
-            "mmOnError"
+            "mmPushList",
+            "mmCreateWebhook",
+            "mmResponse",
+            "mmAsyncError"
         ]);
 
         app.ports.mmOpen.subscribe(this.open);
         app.ports.mmClose.subscribe(this.close);
         app.ports.mmSubscribe.subscribe(this.subscribe);
-        app.ports.mmSend.subscribe(this.send);
+        app.ports.mmPublish.subscribe(this.publish);
         app.ports.mmPushList.subscribe(this.pushList);
+        app.ports.mmCreateWebhook.subscribe(this.createWebhook);
     }
 
     // === Cache session lifecycle.
-    async open(args: OpenArgs) {
-        console.log("Momento.open");
-        console.log(args);
+    open = async (args: OpenArgs) => {
+        // console.log("Momento.open");
+        // console.log(args);
 
         // Connect to the Momento Cache.
         const cacheClient = new CacheClient({
@@ -96,17 +106,18 @@ export class MomentoPorts {
 
         switch (createCacheResponse.type) {
             case CreateCacheResponse.AlreadyExists:
-                console.log('cache already exists');
+                //console.log('cache already exists');
                 break;
             case CreateCacheResponse.Success:
-                console.log('cache created');
+                //console.log('cache created');
                 break;
             case CreateCacheResponse.Error:
-                console.log("Momento.open.onError");
+                //console.log("Momento.open.onError");
 
-                this.app.ports.mmOnError.send({
+                this.app.ports.mmResponse.send({
                     id: args.id,
-                    error: createCacheResponse.innerException()
+                    type_: "Error",
+                    response: createCacheResponse.innerException()
                 });
         }
 
@@ -115,115 +126,171 @@ export class MomentoPorts {
             credentialProvider: CredentialProvider.fromString({apiKey: args.apiKey}),
         });
 
-        console.log("topClient created");
-
-        // Keep hold of a reference to the topic client and let the application know it is open.
-        this.sessions[args.id] = {
+        // Provide of a reference to the topic client and let the application know it is open.
+        const session = {
             apiKey: args.apiKey,
             cache: args.cache,
             cacheClient: cacheClient,
             topicClient: topicClient
         };
 
-        console.log("Momento.open: Sent to port.");
-        this.app.ports.mmOnOpen.send(args.id);
+        this.app.ports.mmResponse.send({
+            id: args.id,
+            type_: "Ok",
+            response: session
+        });
     }
 
-    close(id: string) {
-        console.log("Momento.close");
-        console.log(id);
+    close = async (args: any) => {
+        // console.log("Momento.close");
+        // console.log(args.id);
 
-        const session = this.sessions[id];
+        args.session.cacheClient.close();
 
-        if (session) {
-            session.cacheClient.close();
-            delete this.sessions[id];
-        }
+        this.app.ports.mmResponse.send({
+            id: args.id,
+            type_: "Ok",
+            response: args.session
+        });
     }
 
     // === Topics
-    async subscribe(args: SubscribeArgs) {
-        const session = this.sessions[args.id];
+    subscribe = async (args: SubscribeArgs) => {
+        // Set up the topic.
+        const topicSubscribeResponse =
+            await args.session.topicClient.subscribe(args.session.cache, args.topic, {
+                onError: (err) => {
+                    this.app.ports.mmAsyncError.send({
+                        id: args.id,
+                        response: err.toString()
+                    });
 
-        if (session) {
-            // Set up the topic.
-            const topicSubscribeResponse = await session.topicClient.subscribe(session.cache, args.topic, {
-                onError: () => {
                     return;
                 },
                 onItem: (item) => {
-                    console.log(`Received an item on subscription for '${args.topic}': ${item.value().toString()}`);
-                    this.onMessage(args.id, JSON.stringify(item));
+                    //console.log(`Received an item on subscription for '${args.topic}': ${item.value().toString()}`);
+                    this.onMessage(args.id, args.session, JSON.stringify(item));
 
                     return;
                 },
             });
 
-            switch (topicSubscribeResponse.type) {
-                case TopicSubscribeResponse.Subscription:
-                    console.log(`Successfully subscribed to topic '${args.topic}'`);
-                    break;
-                case TopicSubscribeResponse.Error:
-            }
+        switch (topicSubscribeResponse.type) {
+            case TopicSubscribeResponse.Subscription:
+                //console.log(`Successfully subscribed to topic '${args.topic}'`);
+                break;
 
-            console.log("Momento.mmOnSubscribe: Sent to port.");
-            this.app.ports.mmOnSubscribe.send({
-                id: args.id,
-                topic: args.topic
-            });
+            case TopicSubscribeResponse.Error:
+                this.app.ports.mmResponse.send({
+                    id: args.id,
+                    type_: "Error",
+                    response: topicSubscribeResponse.innerException()
+                });
+        }
+
+        this.app.ports.mmResponse.send({
+            id: args.id,
+            type_: "Ok",
+            response: args.session
+        });
+    }
+
+    publish = async (args: SendArgs) => {
+        // console.log("Momento.send");
+        // console.log(args);
+
+        const publishResponse =
+            await args.session.topicClient.publish(args.session.cache, args.topic, args.payload);
+
+        switch (publishResponse.type) {
+            case TopicPublishResponse.Success:
+                //console.log('Value published successfully!');
+                break;
+            case TopicPublishResponse.Error:
+                //console.log(`Error publishing value: ${publishResponse.toString()}`);
+
+                this.app.ports.mmAsyncError.send({
+                    id: args.id,
+                    response: publishResponse.innerException()
+                });
+
+                break;
         }
     }
 
-    async send(args: SendArgs) {
-        console.log("Momento.send");
-        console.log(args);
+    onMessage = (id: string, session: Session, payload: string) => {
+        // console.log("Momento.onMessage");
+        // console.log(payload);
 
-        const session = this.sessions[args.id];
-
-        if (session) {
-            const publishResponse = await session.topicClient.publish(session.cache, args.topic, args.payload);
-
-            switch (publishResponse.type) {
-                case TopicPublishResponse.Success:
-                    console.log('Value published successfully!');
-                    break;
-                case TopicPublishResponse.Error:
-                    console.log(`Error publishing value: ${publishResponse.toString()}`);
-                    break;
-            }
-        }
-    }
-
-    onMessage(id: string, payload: string) {
-        console.log("Momento.onMessage");
-        console.log(payload);
-
-        console.log(payload);
         this.app.ports.mmOnMessage.send({
             id: id,
+            session: session,
             payload: payload
         });
     }
 
     // === Lists
-    async pushList(args: any) {
-        const session = this.sessions[args.id];
+    pushList = async (args: PushListArgs) => {
+        //console.log("Momento.pushList");
 
-        if (session) {
-            const pushResponse = await session.cacheClient.listPushBack(session.cache, args.list, args.payload);
+        const pushResponse =
+            await args.session.cacheClient.listPushBack(args.session.cache, args.list, args.payload);
 
-            switch (pushResponse.type) {
-                case CacheListPushBackResponse.Success:
-                    console.log(`Value '${args.payload}' added successfully to back of list '${args.list}'`);
-                    break;
-                case CacheListPushBackResponse.Error:
-                    console.log("Momento.pusList.Error");
+        switch (pushResponse.type) {
+            case CacheListPushBackResponse.Success:
+                //console.log(`Value '${args.payload}' added successfully to back of list '${args.list}'`);
+                break;
+            case CacheListPushBackResponse.Error:
+                //console.log("Momento.pusList.Error");
 
-                    this.app.ports.mmOnError.send({
-                        id: args.id,
-                        error: pushResponse.innerException()
-                    });
-            }
+                this.app.ports.mmResponse.send({
+                    id: args.id,
+                    type_: "Error",
+                    response: pushResponse.innerException()
+                });
         }
+
+        this.app.ports.mmResponse.send({
+            id: args.id,
+            type_: "Ok",
+            response: args.session
+        });
+    }
+
+    // == Webhooks
+    createWebhook = async (args: CreateWebhookArgs) => {
+        // console.log("Momento.createWebhook");
+        // console.log(args);
+
+        const webhookResponse =
+            await args.session.topicClient.putWebhook(
+                args.session.cache,
+                args.name,
+                {
+                    topicName: args.topic,
+                    destination: args.url
+                });
+
+        switch (webhookResponse.type) {
+            case PutWebhookResponse.Success:
+                //console.log('Successfully put webhook');
+                break;
+
+            case PutWebhookResponse.Error:
+                // console.log("Momento.createWebhook.Error");
+                // console.error(webhookResponse.innerException());
+
+                this.app.ports.mmResponse.send({
+                    id: args.id,
+                    type_: "Error",
+                    response: webhookResponse.innerException()
+                });
+        }
+
+        this.app.ports.mmResponse.send({
+            id: args.id,
+            type_: "Ok",
+            response: args.session
+        });
     }
 }

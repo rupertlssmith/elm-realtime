@@ -3,12 +3,14 @@ export function checkPortsExist(app: any, portNames: string[]) {
         throw "The Elm application has no ports.";
     }
 
+    const allPorts = `[${Object.keys(app.ports).sort().join(', ')}]`;
+
     for (let i = 0; i < portNames.length; i++) {
         const portName = portNames[i];
 
         // eslint-disable-next-line no-prototype-builtins
         if (!app.ports.hasOwnProperty(portName)) {
-            throw "Could not find a port named: " + portName;
+            throw new Error(`Could not find a port named ${portName} among: ${allPorts}`);
         }
     }
 }
