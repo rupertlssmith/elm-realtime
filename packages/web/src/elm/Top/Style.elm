@@ -39,7 +39,7 @@ style config =
         , Css.fontFamilies [ "Open Sans", "sans-serif" ]
 
         -- Required for Chrome or you get pointercancel when drags start and end on different divs.
-        , Css.property "user-select" "none"
+        --, Css.property "user-select" "none"
         , Css.property "-webkit-font-smoothing" "antialiased"
         ]
     , Css.Global.id "top-container"

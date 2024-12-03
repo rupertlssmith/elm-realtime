@@ -5,7 +5,7 @@ import {
     CredentialProvider,
     TopicClient,
     TopicSubscribeResponse,
-    TopicPublishResponse, PutWebhookResponse, CacheListPopFrontResponse,
+    TopicPublishResponse, PutWebhookResponse, CacheListPopFrontResponse, Configurations, TopicConfigurations,
 } from "@gomomento/sdk-web";
 import * as ports from "./ports" ;
 
@@ -74,7 +74,7 @@ export class MomentoPorts {
     app: { ports: Ports };
 
     constructor(app: any) {
-        console.info("Momento.constructor");
+        //console.info("Momento.constructor");
         this.app = app;
 
         ports.checkPortsExist(app, [
@@ -101,12 +101,12 @@ export class MomentoPorts {
 
     // === Cache session lifecycle.
     open = async (args: OpenArgs) => {
-        console.info("Momento.open");
-        console.info(args);
+        //console.info("Momento.open");
+        //console.info(args);
 
         // Connect to the Momento Cache.
         const cacheClient = new CacheClient({
-            //configuration: Configurations.Laptop.v1(loggerFactory).withClientTimeoutMillis(requestTimeoutMs),
+            configuration: Configurations.Browser.latest(),
             credentialProvider: CredentialProvider.fromString({apiKey: args.apiKey}),
             defaultTtlSeconds: 60,
         });
@@ -115,13 +115,13 @@ export class MomentoPorts {
 
         switch (createCacheResponse.type) {
             case CreateCacheResponse.AlreadyExists:
-                console.info('cache already exists');
+                //console.info('cache already exists');
                 break;
             case CreateCacheResponse.Success:
-                console.info('cache created');
+                //console.info('cache created');
                 break;
             case CreateCacheResponse.Error:
-                console.info("Momento.open.onError");
+                //console.info("Momento.open.onError");
 
                 this.app.ports.mmResponse.send({
                     id: args.id,
@@ -132,6 +132,7 @@ export class MomentoPorts {
 
         // Set up the topic client.
         const topicClient = new TopicClient({
+            configuration: TopicConfigurations.Browser.latest(),
             credentialProvider: CredentialProvider.fromString({apiKey: args.apiKey}),
         });
 
@@ -151,8 +152,8 @@ export class MomentoPorts {
     }
 
     close = async (args: any) => {
-        console.info("Momento.close");
-        console.info(args.id);
+        //console.info("Momento.close");
+        //console.info(args.id);
 
         args.session.cacheClient.close();
 
@@ -165,23 +166,19 @@ export class MomentoPorts {
 
     // === Topics
     subscribe = async (args: SubscribeArgs) => {
-        console.info("Momento.subscribe");
-
         // Set up the topic.
         const topicSubscribeResponse =
             await args.session.topicClient.subscribe(args.session.cache, args.topic, {
-
                 onError: (err) => {
-                    console.info(`Error on subscription for '${args.topic}': ${err.toString()}`);
                     this.app.ports.mmAsyncError.send({
                         id: args.id,
-                        response: err.toString()
+                        error: err
                     });
 
                     return;
                 },
                 onItem: (item) => {
-                    console.info(`Received an item on subscription for '${args.topic}': ${item.value().toString()}`);
+                    //console.info(`Received an item on subscription for '${args.topic}': ${item.value().toString()}`);
                     //this.onMessage(args.id, args.session, JSON.stringify(item));
                     this.onMessage(args.id, args.session, JSON.parse(item.value().toString()));
 
@@ -191,13 +188,10 @@ export class MomentoPorts {
 
         switch (topicSubscribeResponse.type) {
             case TopicSubscribeResponse.Subscription:
-                console.info(`Successfully subscribed to topic '${args.topic}'`);
-
+                //console.info(`Successfully subscribed to topic '${args.topic}'`);
                 break;
 
             case TopicSubscribeResponse.Error:
-                console.info(`Error creating subscription for '${args.topic}': ${topicSubscribeResponse.innerException()}`);
-
                 this.app.ports.mmResponse.send({
                     id: args.id,
                     type_: "Error",
@@ -213,8 +207,8 @@ export class MomentoPorts {
     }
 
     publish = async (args: SendArgs) => {
-        console.info("Momento.send");
-        console.info(args);
+        //console.info("Momento.send");
+        //console.info(args);
 
         const publishResponse =
             await args.session.topicClient.publish(
@@ -224,23 +218,31 @@ export class MomentoPorts {
 
         switch (publishResponse.type) {
             case TopicPublishResponse.Success:
-                console.info('Value published successfully!');
+                //console.info('Value published successfully!');
                 break;
             case TopicPublishResponse.Error:
-                console.info(`Error publishing value: ${publishResponse.toString()}`);
+                //console.info(`Error publishing value: ${publishResponse.toString()}`);
 
-                this.app.ports.mmAsyncError.send({
+                this.app.ports.mmResponse.send({
                     id: args.id,
+                    type_: "Error",
                     response: publishResponse.innerException()
                 });
 
                 break;
         }
+
+        this.app.ports.mmResponse.send({
+            id: args.id,
+            type_: "Ok",
+            response: args.session
+        });
+
     }
 
     onMessage = (id: string, session: Session, payload: any) => {
-        console.info("Momento.onMessage");
-        console.info(payload);
+        //console.info("Momento.onMessage");
+        //console.info(payload);
 
         this.app.ports.mmOnMessage.send({
             id: id,
@@ -251,7 +253,7 @@ export class MomentoPorts {
 
     // === Lists
     pushList = async (args: PushListArgs) => {
-        console.info("Momento.pushList");
+        //console.info("Momento.pushList");
 
         const pushResponse =
             await args.session.cacheClient.listPushBack(
@@ -261,10 +263,10 @@ export class MomentoPorts {
 
         switch (pushResponse.type) {
             case CacheListPushBackResponse.Success:
-                console.info(`Value '${args.payload}' added successfully to back of list '${args.list}'`);
+                //console.info(`Value '${args.payload}' added successfully to back of list '${args.list}'`);
                 break;
             case CacheListPushBackResponse.Error:
-                console.info("Momento.pusList.Error");
+                //console.info("Momento.pusList.Error");
 
                 this.app.ports.mmResponse.send({
                     id: args.id,
@@ -281,7 +283,7 @@ export class MomentoPorts {
     }
 
     popList = async (args: PopListArgs) => {
-        console.info("Momento.popList");
+        //console.info("Momento.popList");
 
         const popResponse =
             await args.session.cacheClient.listPopFront(
@@ -290,7 +292,7 @@ export class MomentoPorts {
 
         switch (popResponse.type) {
             case CacheListPopFrontResponse.Hit:
-                console.info(`Value '${popResponse.value()}' popped from list '${args.list}'`);
+                //console.info(`Value '${popResponse.value()}' popped from list '${args.list}'`);
 
                 this.app.ports.mmResponse.send({
                     id: args.id,
@@ -301,7 +303,7 @@ export class MomentoPorts {
                 break;
 
             case CacheListPopFrontResponse.Miss:
-                console.info(`No value  popped from list '${args.list}'`);
+                //console.info(`No value  popped from list '${args.list}'`);
 
                 this.app.ports.mmResponse.send({
                     id: args.id,
@@ -311,7 +313,7 @@ export class MomentoPorts {
 
                 break;
             case CacheListPopFrontResponse.Error:
-                console.info("Momento.popList.Error");
+                //console.info("Momento.popList.Error");
 
                 this.app.ports.mmResponse.send({
                     id: args.id,
@@ -324,8 +326,8 @@ export class MomentoPorts {
 
     // == Webhooks
     createWebhook = async (args: CreateWebhookArgs) => {
-        console.info("Momento.createWebhook");
-        console.info(args);
+        //console.info("Momento.createWebhook");
+        //console.info(args);
 
         const webhookResponse =
             await args.session.topicClient.putWebhook(
@@ -338,11 +340,11 @@ export class MomentoPorts {
 
         switch (webhookResponse.type) {
             case PutWebhookResponse.Success:
-                console.info('Successfully put webhook');
+                //console.info('Successfully put webhook');
                 break;
 
             case PutWebhookResponse.Error:
-                console.info("Momento.createWebhook.Error");
+                //console.info("Momento.createWebhook.Error");
                 // console.error(webhookResponse.innerException());
 
                 this.app.ports.mmResponse.send({

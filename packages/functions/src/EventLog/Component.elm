@@ -25,7 +25,6 @@ import Random
 import Random.Char
 import Random.String
 import Result.Extra
-import Serverless.Body as Body exposing (Body)
 import Serverless.HttpServer as HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Serverless.Request as Request exposing (Method(..))
 import Serverless.Response as Response exposing (Response)
@@ -56,6 +55,7 @@ type Msg
     | RandomSeed Random.Seed
     | HttpRequest HttpSessionKey (Result HttpServer.Error (ApiRequest Route))
     | HttpResponse HttpSessionKey (Result Response Response)
+    | MomentoError Momento.Error
 
 
 type Model
@@ -91,6 +91,7 @@ subscriptions protocol component =
         ModelReady state ->
             [ Procedure.Program.subscriptions state.procedure
             , httpServerApi.request HttpRequest
+            , momentoApi.asyncError MomentoError
             ]
                 |> Sub.batch
                 |> Sub.map protocol.toMsg
@@ -148,6 +149,10 @@ update protocol msg component =
             , result |> Result.Extra.merge |> httpServerApi.response session
             )
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
+        ( _, MomentoError error ) ->
+            U2.pure component
                 |> protocol.onUpdate
 
         _ ->
@@ -517,8 +522,9 @@ publishEvents component channelName ( sessionKey, cacheItem ) =
         { topic = modelTopicName channelName
         , payload = cacheItem.payload
         }
-        |> Procedure.do
-        |> Procedure.mapError (always { message = "Never", details = Encode.null })
+        |> Procedure.fetchResult
+        |> Procedure.map (always ())
+        |> Procedure.mapError Momento.errorToDetails
 
 
 

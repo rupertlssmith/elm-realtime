@@ -256,12 +256,13 @@ update protocol msg component =
             , Cmd.batch
                 [ momentoApi.publish sessionKey
                     { topic = state.channel.saveTopic, payload = notice }
+                    MMNotified
                 , momentoApi.pushList sessionKey
                     { list = state.channel.saveList, payload = payload }
                     MMNotified
-
-                --, momentoApi.publish sessionKey
-                --    { topic = modelTopicName state.realtimeChannel, payload = payload }
+                , momentoApi.publish sessionKey
+                    { topic = state.channel.modelTopic, payload = payload }
+                    MMNotified
                 ]
             )
                 |> U2.andMap (switchState ModelRunning)

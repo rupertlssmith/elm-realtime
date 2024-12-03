@@ -70,8 +70,9 @@ type alias MomentoApi msg =
     , pushList : MomentoSessionKey -> PushListParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
     , popList : MomentoSessionKey -> PopListParams -> (Result Error CacheItem -> msg) -> Cmd msg
     , webhook : MomentoSessionKey -> WebhookParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
-    , publish : MomentoSessionKey -> PublishParams -> Cmd msg
+    , publish : MomentoSessionKey -> PublishParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
     , onMessage : (MomentoSessionKey -> Value -> msg) -> Sub msg
+    , asyncError : (Error -> msg) -> Sub msg
     }
 
 
@@ -82,8 +83,9 @@ momentoApi pt ports =
     , pushList = pushList pt ports
     , popList = popList pt ports
     , webhook = webhook pt ports
-    , publish = publish ports
+    , publish = publish pt ports
     , onMessage = onMessage ports
+    , asyncError = asyncError ports
     }
 
 
@@ -260,10 +262,21 @@ webhook pt ports (MomentoSessionKey sessionKey) { name, topic, url } dt =
 {-| Publishes a message on a topic. Publish is asynchronous and will not generate a response message in Elm,
 but may report errors on the asyncError subscription.
 -}
-publish : Ports msg -> MomentoSessionKey -> PublishParams -> Cmd msg
-publish ports (MomentoSessionKey sessionKey) { topic, payload } =
-    --ports.publish { id = "", session = sessionKey, topic = topic, payload = Encode.encode 0 payload |> Encode.string }
-    ports.publish { id = "", session = sessionKey, topic = topic, payload = payload }
+publish :
+    (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
+    -> MomentoSessionKey
+    -> PublishParams
+    -> (Result Error MomentoSessionKey -> msg)
+    -> Cmd msg
+publish pt ports (MomentoSessionKey sessionKey) { topic, payload } dt =
+    --ports.publish { id = "", session = sessionKey, topic = topic, payload = payload }
+    Channel.open
+        (\key -> ports.publish { id = key, session = sessionKey, topic = topic, payload = payload })
+        |> Channel.connect ports.response
+        |> Channel.filter (\key { id } -> id == key)
+        |> Channel.acceptOne
+        |> Procedure.run pt (\res -> decodeResponse res |> dt)
 
 
 {-| Receives new incoming messages on a topic subscription.
@@ -273,4 +286,12 @@ onMessage ports dt =
     ports.onMessage
         (\{ session, payload } ->
             dt (MomentoSessionKey session) payload
+        )
+
+
+asyncError : Ports msg -> (Error -> msg) -> Sub msg
+asyncError ports dt =
+    ports.asyncError
+        (\{ error } ->
+            { message = "MomentoPorts Async Error", details = error } |> MomentoError |> dt
         )
