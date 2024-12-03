@@ -53,9 +53,10 @@ type alias Ports msg =
     { open : { id : String, cache : String, apiKey : String } -> Cmd msg
     , close : { id : String, session : Value } -> Cmd msg
     , subscribe : { id : String, session : Value, topic : String } -> Cmd msg
-    , publish : { id : String, session : Value, topic : String, payload : String } -> Cmd msg
-    , onMessage : ({ id : String, session : Value, payload : String } -> msg) -> Sub msg
-    , pushList : { id : String, session : Value, list : String, payload : String } -> Cmd msg
+    , publish : { id : String, session : Value, topic : String, payload : Value } -> Cmd msg
+    , onMessage : ({ id : String, session : Value, payload : Value } -> msg) -> Sub msg
+    , pushList : { id : String, session : Value, list : String, payload : Value } -> Cmd msg
+    , popList : { id : String, session : Value, list : String } -> Cmd msg
     , createWebhook : { id : String, session : Value, name : String, topic : String, url : String } -> Cmd msg
     , response : ({ id : String, type_ : String, response : Value } -> msg) -> Sub msg
     , asyncError : ({ id : String, error : Value } -> msg) -> Sub msg
@@ -66,9 +67,10 @@ type alias MomentoApi msg =
     { open : OpenParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
     , subscribe : MomentoSessionKey -> SubscribeParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
     , pushList : MomentoSessionKey -> PushListParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
+    , popList : MomentoSessionKey -> PopListParams -> (Result Error CacheItem -> msg) -> Cmd msg
     , webhook : MomentoSessionKey -> WebhookParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
     , publish : MomentoSessionKey -> PublishParams -> Cmd msg
-    , onMessage : (MomentoSessionKey -> String -> msg) -> Sub msg
+    , onMessage : (MomentoSessionKey -> Value -> msg) -> Sub msg
     }
 
 
@@ -77,6 +79,7 @@ momentoApi pt ports =
     { open = open pt ports
     , subscribe = subscribe pt ports
     , pushList = pushList pt ports
+    , popList = popList pt ports
     , webhook = webhook pt ports
     , publish = publish ports
     , onMessage = onMessage ports
@@ -96,11 +99,19 @@ type alias SubscribeParams =
 
 
 type alias PublishParams =
-    { topic : String, payload : String }
+    { topic : String, payload : Value }
 
 
 type alias PushListParams =
-    { list : String, payload : String }
+    { list : String, payload : Value }
+
+
+type alias PopListParams =
+    { list : String, payload : Value }
+
+
+type alias CacheItem =
+    { payload : Value }
 
 
 type alias WebhookParams =
@@ -146,6 +157,27 @@ decodeResponse res =
                 |> Err
 
 
+decodeItemResponse : { a | type_ : String, response : Value } -> Result Error CacheItem
+decodeItemResponse res =
+    case res.type_ of
+        "Item" ->
+            { payload = res.response } |> Ok
+
+        "Error" ->
+            MomentoError
+                { message = "MomentoError"
+                , details = res.response
+                }
+                |> Err
+
+        _ ->
+            MomentoError
+                { message = "Momento Unknown response type: " ++ res.type_
+                , details = Encode.null
+                }
+                |> Err
+
+
 open :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
@@ -175,6 +207,8 @@ subscribe pt ports (MomentoSessionKey sessionKey) subscribeParams dt =
         |> Procedure.run pt (\res -> decodeResponse res |> dt)
 
 
+{-| Pushes to the back of the list.
+-}
 pushList :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
@@ -188,6 +222,23 @@ pushList pt ports (MomentoSessionKey sessionKey) { list, payload } dt =
         |> Channel.filter (\key { id } -> id == key)
         |> Channel.acceptOne
         |> Procedure.run pt (\res -> decodeResponse res |> dt)
+
+
+{-| Pops from the front of the list.
+-}
+popList :
+    (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
+    -> MomentoSessionKey
+    -> PushListParams
+    -> (Result Error CacheItem -> msg)
+    -> Cmd msg
+popList pt ports (MomentoSessionKey sessionKey) { list, payload } dt =
+    Channel.open (\key -> ports.popList { id = key, session = sessionKey, list = list })
+        |> Channel.connect ports.response
+        |> Channel.filter (\key { id } -> id == key)
+        |> Channel.acceptOne
+        |> Procedure.run pt (\res -> decodeItemResponse res |> dt)
 
 
 webhook :
@@ -215,7 +266,7 @@ publish ports (MomentoSessionKey sessionKey) { topic, payload } =
 
 {-| Receives new incoming messages on a topic subscription.
 -}
-onMessage : Ports msg -> (MomentoSessionKey -> String -> msg) -> Sub msg
+onMessage : Ports msg -> (MomentoSessionKey -> Value -> msg) -> Sub msg
 onMessage ports dt =
     ports.onMessage
         (\{ session, payload } ->

@@ -9,7 +9,7 @@ module App.Component exposing
     )
 
 import Html.Styled as Html exposing (Html)
-import Json.Encode as Encode
+import Json.Encode as Encode exposing (Value)
 import Momento exposing (Error, MomentoSessionKey, OpenParams, SubscribeParams)
 import Ports
 import Procedure.Program
@@ -31,7 +31,7 @@ type Msg
     | MMOpened (Result Error MomentoSessionKey)
     | MMSubscribed (Result Error MomentoSessionKey)
     | MMNotified (Result Error MomentoSessionKey)
-    | MMOnMessage MomentoSessionKey String
+    | MMOnMessage MomentoSessionKey Value
 
 
 type alias Model =
@@ -105,6 +105,7 @@ momentoApi =
     , publish = Ports.mmPublish
     , onMessage = Ports.mmOnMessage
     , pushList = Ports.mmPushList
+    , popList = Ports.mmPopList
     , createWebhook = Ports.mmCreateWebhook
     , response = Ports.mmResponse
     , asyncError = Ports.mmAsyncError
@@ -205,7 +206,6 @@ update protocol msg component =
                     , ( "value", Encode.string "hello" )
                     ]
                         |> Encode.object
-                        |> Encode.encode 2
 
                 notice =
                     [ ( "client", Encode.string "abcdef" )
@@ -213,11 +213,10 @@ update protocol msg component =
                     , ( "kind", Encode.string "Listed" )
                     ]
                         |> Encode.object
-                        |> Encode.encode 2
             in
             ( { log =
-                    ("PushList: " ++ payload)
-                        :: ("Publish: " ++ notice)
+                    ("PushList: " ++ Encode.encode 2 payload)
+                        :: ("Publish: " ++ Encode.encode 2 notice)
                         :: ("Subscribed: " ++ modelTopicName state.realtimeChannel)
                         :: state.log
               , realtimeChannel = state.realtimeChannel
@@ -241,7 +240,7 @@ update protocol msg component =
                 |> protocol.onUpdate
 
         ( ModelRunning state, MMOnMessage _ payload ) ->
-            { state | log = ("Message: " ++ String.slice 0 90 payload ++ "...") :: state.log }
+            { state | log = ("Message: " ++ String.slice 0 90 (Encode.encode 2 payload) ++ "...") :: state.log }
                 |> U2.pure
                 |> U2.andMap (switchState ModelRunning)
                 |> Tuple.mapFirst (setLifecycle model)

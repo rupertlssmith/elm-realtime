@@ -2,7 +2,7 @@ port module Ports exposing
     ( onPointerCancel, onPointerDown, onPointerMove, onPointerUp
     , wsOpen, wsSend, wsClose, wsOnOpen, wsOnClose, wsOnMessage, wsOnError
     , mmAsyncError, mmClose, mmCreateWebhook, mmOnMessage, mmOpen, mmPublish
-    , mmPushList, mmResponse, mmSubscribe
+    , mmPushList, mmPopList, mmResponse, mmSubscribe
     )
 
 {-| Application ports
@@ -21,7 +21,7 @@ port module Ports exposing
 # Momento Cache
 
 @docs mmAsyncError, mmClose, mmCreateWebhook, mmOnMessage, mmOpen, mmPublish
-@docs mmPushList, mmResponse, mmSubscribe
+@docs mmPushList, mmPopList, mmResponse, mmSubscribe
 
 -}
 
@@ -82,13 +82,16 @@ port mmClose : { id : String, session : Value } -> Cmd msg
 port mmSubscribe : { id : String, session : Value, topic : String } -> Cmd msg
 
 
-port mmPublish : { id : String, session : Value, topic : String, payload : String } -> Cmd msg
+port mmPublish : { id : String, session : Value, topic : String, payload : Value } -> Cmd msg
 
 
-port mmOnMessage : ({ id : String, session : Value, payload : String } -> msg) -> Sub msg
+port mmOnMessage : ({ id : String, session : Value, payload : Value } -> msg) -> Sub msg
 
 
-port mmPushList : { id : String, session : Value, list : String, payload : String } -> Cmd msg
+port mmPushList : { id : String, session : Value, list : String, payload : Value } -> Cmd msg
+
+
+port mmPopList : { id : String, session : Value, list : String } -> Cmd msg
 
 
 port mmCreateWebhook : { id : String, session : Value, name : String, topic : String, url : String } -> Cmd msg

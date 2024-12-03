@@ -5302,7 +5302,7 @@ var $author$project$Ports$mmOnMessage = _Platform_incomingPort(
 						},
 						A2($elm$json$Json$Decode$field, 'id', $elm$json$Json$Decode$string));
 				},
-				A2($elm$json$Json$Decode$field, 'payload', $elm$json$Json$Decode$string));
+				A2($elm$json$Json$Decode$field, 'payload', $elm$json$Json$Decode$value));
 		},
 		A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value)));
 var $author$project$Ports$mmOpen = _Platform_outgoingPort(
@@ -5322,6 +5322,23 @@ var $author$project$Ports$mmOpen = _Platform_outgoingPort(
 					$elm$json$Json$Encode$string($.id))
 				]));
 	});
+var $author$project$Ports$mmPopList = _Platform_outgoingPort(
+	'mmPopList',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'list',
+					$elm$json$Json$Encode$string($.list)),
+					_Utils_Tuple2(
+					'session',
+					$elm$core$Basics$identity($.session))
+				]));
+	});
 var $author$project$Ports$mmPublish = _Platform_outgoingPort(
 	'mmPublish',
 	function ($) {
@@ -5333,7 +5350,7 @@ var $author$project$Ports$mmPublish = _Platform_outgoingPort(
 					$elm$json$Json$Encode$string($.id)),
 					_Utils_Tuple2(
 					'payload',
-					$elm$json$Json$Encode$string($.payload)),
+					$elm$core$Basics$identity($.payload)),
 					_Utils_Tuple2(
 					'session',
 					$elm$core$Basics$identity($.session)),
@@ -5356,7 +5373,7 @@ var $author$project$Ports$mmPushList = _Platform_outgoingPort(
 					$elm$json$Json$Encode$string($.list)),
 					_Utils_Tuple2(
 					'payload',
-					$elm$json$Json$Encode$string($.payload)),
+					$elm$core$Basics$identity($.payload)),
 					_Utils_Tuple2(
 					'session',
 					$elm$core$Basics$identity($.session))
@@ -5587,6 +5604,51 @@ var $author$project$Momento$open = F4(
 									{apiKey: openParams.apiKey, cache: openParams.cache, id: key});
 							})))));
 	});
+var $author$project$Momento$decodeItemResponse = function (res) {
+	var _v0 = res.type_;
+	switch (_v0) {
+		case 'Item':
+			return $elm$core$Result$Ok(
+				{payload: res.response});
+		case 'Error':
+			return $elm$core$Result$Err(
+				$author$project$Momento$MomentoError(
+					{details: res.response, message: 'MomentoError'}));
+		default:
+			return $elm$core$Result$Err(
+				$author$project$Momento$MomentoError(
+					{details: $elm$json$Json$Encode$null, message: 'Momento Unknown response type: ' + res.type_}));
+	}
+};
+var $author$project$Momento$popList = F5(
+	function (pt, ports, _v0, _v1, dt) {
+		var sessionKey = _v0.a;
+		var list = _v1.list;
+		var payload = _v1.payload;
+		return A3(
+			$brian_watkins$elm_procedure$Procedure$run,
+			pt,
+			function (res) {
+				return dt(
+					$author$project$Momento$decodeItemResponse(res));
+			},
+			$brian_watkins$elm_procedure$Procedure$Channel$acceptOne(
+				A2(
+					$brian_watkins$elm_procedure$Procedure$Channel$filter,
+					F2(
+						function (key, _v2) {
+							var id = _v2.id;
+							return _Utils_eq(id, key);
+						}),
+					A2(
+						$brian_watkins$elm_procedure$Procedure$Channel$connect,
+						ports.response,
+						$brian_watkins$elm_procedure$Procedure$Channel$open(
+							function (key) {
+								return ports.popList(
+									{id: key, list: list, session: sessionKey});
+							})))));
+	});
 var $author$project$Momento$publish = F3(
 	function (ports, _v0, _v1) {
 		var sessionKey = _v0.a;
@@ -5686,6 +5748,7 @@ var $author$project$Momento$momentoApi = F2(
 		return {
 			onMessage: $author$project$Momento$onMessage(ports),
 			open: A2($author$project$Momento$open, pt, ports),
+			popList: A2($author$project$Momento$popList, pt, ports),
 			publish: $author$project$Momento$publish(ports),
 			pushList: A2($author$project$Momento$pushList, pt, ports),
 			subscribe: A2($author$project$Momento$subscribe, pt, ports),
@@ -5695,7 +5758,7 @@ var $author$project$Momento$momentoApi = F2(
 var $author$project$EventLog$Component$momentoApi = A2(
 	$author$project$Momento$momentoApi,
 	$author$project$EventLog$Component$ProcedureMsg,
-	{asyncError: $author$project$Ports$mmAsyncError, close: $author$project$Ports$mmClose, createWebhook: $author$project$Ports$mmCreateWebhook, onMessage: $author$project$Ports$mmOnMessage, open: $author$project$Ports$mmOpen, publish: $author$project$Ports$mmPublish, pushList: $author$project$Ports$mmPushList, response: $author$project$Ports$mmResponse, subscribe: $author$project$Ports$mmSubscribe});
+	{asyncError: $author$project$Ports$mmAsyncError, close: $author$project$Ports$mmClose, createWebhook: $author$project$Ports$mmCreateWebhook, onMessage: $author$project$Ports$mmOnMessage, open: $author$project$Ports$mmOpen, popList: $author$project$Ports$mmPopList, publish: $author$project$Ports$mmPublish, pushList: $author$project$Ports$mmPushList, response: $author$project$Ports$mmResponse, subscribe: $author$project$Ports$mmSubscribe});
 var $author$project$EventLog$Component$openMomentoCache = F2(
 	function (component, channelName) {
 		return A2(
@@ -7075,56 +7138,15 @@ var $author$project$Serverless$Request$method = function (_v0) {
 	var request = _v0.a;
 	return request.method;
 };
-var $author$project$Serverless$Body$asJson = function (body) {
-	switch (body.$) {
-		case 'Empty':
-			return $elm$core$Result$Ok($elm$json$Json$Encode$null);
-		case 'Error':
-			var err = body.a;
-			return $elm$core$Result$Err(err);
-		case 'Text':
-			var val = body.a;
-			return A2(
-				$elm$core$Result$mapError,
-				$elm$json$Json$Decode$errorToString,
-				A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, val));
-		case 'Json':
-			var val = body.a;
-			return $elm$core$Result$Ok(val);
-		default:
-			var val = body.b;
-			return A2(
-				$elm$core$Result$mapError,
-				$elm$json$Json$Decode$errorToString,
-				A2($elm$json$Json$Decode$decodeString, $elm$json$Json$Decode$value, val));
-	}
-};
-var $author$project$Serverless$Request$body = function (_v0) {
-	var request = _v0.a;
-	return request.body;
-};
-var $elm$core$Debug$log = _Debug_log;
+var $elm$core$Debug$todo = _Debug_todo;
 var $author$project$EventLog$Component$processSaveChannel = F6(
 	function (protocol, session, state, apiRequest, channelName, component) {
-		var _v0 = A2(
-			$elm$core$Debug$log,
-			'EventLog.processRoute',
-			A2(
-				$elm$core$Result$map,
-				$elm$json$Json$Encode$encode(4),
-				$author$project$Serverless$Body$asJson(
-					$author$project$Serverless$Request$body(apiRequest.request))));
-		return protocol.onUpdate(
-			A2(
-				$elm$core$Tuple$mapSecond,
-				$elm$core$Platform$Cmd$map(protocol.toMsg),
-				A2(
-					$elm$core$Tuple$mapFirst,
-					$author$project$EventLog$Component$setModel(component),
-					A2(
-						$the_sett$elm_update_helper$Update2$andMap,
-						$author$project$EventLog$Component$switchState($author$project$EventLog$Component$ModelReady),
-						$the_sett$elm_update_helper$Update2$pure(state)))));
+		return _Debug_todo(
+			'EventLog.Component',
+			{
+				start: {line: 465, column: 5},
+				end: {line: 465, column: 15}
+			})('');
 	});
 var $elm$core$List$head = function (list) {
 	if (list.b) {
