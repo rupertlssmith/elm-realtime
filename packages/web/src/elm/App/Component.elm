@@ -9,6 +9,9 @@ module App.Component exposing
     )
 
 import Html.Styled as Html exposing (Html)
+import Http
+import Json.Decode as Decode exposing (Decoder)
+import Json.Decode.Extra as DE
 import Json.Encode as Encode exposing (Value)
 import Momento exposing (Error, MomentoSessionKey, OpenParams, SubscribeParams)
 import Ports
@@ -19,7 +22,7 @@ import Update2 as U2
 
 type alias Component a =
     { a
-        | location : String
+        | chatApiUrl : String
         , momentoApiKey : String
         , app : Model
     }
@@ -28,10 +31,20 @@ type alias Component a =
 type Msg
     = ProcedureMsg (Procedure.Program.Msg Msg)
     | RandomSeed Random.Seed
+    | ChannelDetails (Result Http.Error Channel)
     | MMOpened (Result Error MomentoSessionKey)
     | MMSubscribed (Result Error MomentoSessionKey)
     | MMNotified (Result Error MomentoSessionKey)
     | MMOnMessage MomentoSessionKey Value
+
+
+type alias Channel =
+    { id : String
+    , modelTopic : String
+    , saveTopic : String
+    , saveList : String
+    , webhook : String
+    }
 
 
 type alias Model =
@@ -43,36 +56,42 @@ type alias Model =
 type Lifecycle
     = ModelStart StartState
     | ModelRandomized RandomizedState
+    | ModelChannelDetails ChannelDetailsState
     | ModelConnected ConnectedState
     | ModelRunning RunningState
 
 
 type alias StartState =
     { log : List String
-    , realtimeChannel : String
     }
 
 
 type alias RandomizedState =
     { log : List String
-    , realtimeChannel : String
     , seed : Random.Seed
+    }
+
+
+type alias ChannelDetailsState =
+    { log : List String
+    , seed : Random.Seed
+    , channel : Channel
     }
 
 
 type alias ConnectedState =
     { log : List String
-    , realtimeChannel : String
     , socketHandle : MomentoSessionKey
     , seed : Random.Seed
+    , channel : Channel
     }
 
 
 type alias RunningState =
     { log : List String
-    , realtimeChannel : String
     , socketHandle : MomentoSessionKey
     , seed : Random.Seed
+    , channel : Channel
     }
 
 
@@ -113,10 +132,9 @@ momentoApi =
         |> Momento.momentoApi ProcedureMsg
 
 
-init : String -> (Msg -> msg) -> ( Model, Cmd msg )
-init realtimeChannel toMsg =
+init : (Msg -> msg) -> ( Model, Cmd msg )
+init toMsg =
     { log = [ "Started" ]
-    , realtimeChannel = realtimeChannel
     }
         |> U2.pure
         |> U2.andMap randomize
@@ -164,31 +182,43 @@ update protocol msg component =
                 |> protocol.onUpdate
 
         ( ModelStart state, RandomSeed seed ) ->
-            ( { log = "Randomized" :: state.log
-              , realtimeChannel = state.realtimeChannel
-              , seed = seed
-              }
-            , momentoApi.open
-                { apiKey = component.momentoApiKey
-                , cache = cacheName state.realtimeChannel
-                }
-                MMOpened
-            )
+            { log = "Randomized" :: state.log
+            , seed = seed
+            }
+                |> U2.pure
+                |> U2.andThen (getChannelDetails component)
                 |> U2.andMap (switchState ModelRandomized)
                 |> Tuple.mapFirst (setLifecycle model)
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 
-        ( ModelRandomized state, MMOpened (Ok sessionKey) ) ->
-            ( { log = "Connected" :: state.log
-              , realtimeChannel = state.realtimeChannel
+        ( ModelRandomized state, ChannelDetails (Ok channel) ) ->
+            ( { log = "ChannelDetails" :: state.log
               , seed = state.seed
+              , channel = channel
+              }
+            , momentoApi.open
+                { apiKey = component.momentoApiKey
+                , cache = cacheName
+                }
+                MMOpened
+            )
+                |> U2.andMap (switchState ModelChannelDetails)
+                |> Tuple.mapFirst (setLifecycle model)
+                |> Tuple.mapFirst (setModel component)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
+        ( ModelChannelDetails state, MMOpened (Ok sessionKey) ) ->
+            ( { log = "Connected" :: state.log
+              , seed = state.seed
+              , channel = state.channel
               , socketHandle = sessionKey
               }
             , momentoApi.subscribe
                 sessionKey
-                { topic = modelTopicName state.realtimeChannel }
+                { topic = state.channel.modelTopic }
                 MMSubscribed
             )
                 |> U2.andMap (switchState ModelConnected)
@@ -217,17 +247,17 @@ update protocol msg component =
             ( { log =
                     ("PushList: " ++ Encode.encode 2 payload)
                         :: ("Publish: " ++ Encode.encode 2 notice)
-                        :: ("Subscribed: " ++ modelTopicName state.realtimeChannel)
+                        :: ("Subscribed: " ++ state.channel.modelTopic)
                         :: state.log
-              , realtimeChannel = state.realtimeChannel
               , seed = state.seed
+              , channel = state.channel
               , socketHandle = sessionKey
               }
             , Cmd.batch
                 [ momentoApi.publish sessionKey
-                    { topic = notifyTopicName state.realtimeChannel, payload = notice }
+                    { topic = state.channel.saveTopic, payload = notice }
                 , momentoApi.pushList sessionKey
-                    { list = saveListName state.realtimeChannel, payload = payload }
+                    { list = state.channel.saveList, payload = payload }
                     MMNotified
 
                 --, momentoApi.publish sessionKey
@@ -261,6 +291,26 @@ randomize model =
     )
 
 
+channelDecoder : Decoder Channel
+channelDecoder =
+    Decode.succeed Channel
+        |> DE.andMap (Decode.field "id" Decode.string)
+        |> DE.andMap (Decode.field "modelTopic" Decode.string)
+        |> DE.andMap (Decode.field "saveTopic" Decode.string)
+        |> DE.andMap (Decode.field "saveList" Decode.string)
+        |> DE.andMap (Decode.field "webhook" Decode.string)
+
+
+getChannelDetails : Component a -> RandomizedState -> ( RandomizedState, Cmd Msg )
+getChannelDetails component state =
+    ( state
+    , Http.get
+        { url = component.chatApiUrl ++ "/v1/channel"
+        , expect = Http.expectJson ChannelDetails channelDecoder
+        }
+    )
+
+
 view : Component a -> Html msg
 view component =
     case component.app.lifecycle of
@@ -268,6 +318,9 @@ view component =
             logs props
 
         ModelRandomized props ->
+            logs props
+
+        ModelChannelDetails props ->
             logs props
 
         ModelConnected props ->
@@ -286,21 +339,6 @@ logs model =
         |> Html.pre []
 
 
-modelTopicName : String -> String
-modelTopicName channel =
-    channel ++ "-modeltopic"
-
-
-notifyTopicName : String -> String
-notifyTopicName channel =
-    channel ++ "-savetopic"
-
-
-cacheName : String -> String
-cacheName channel =
-    "elm-realtime" ++ "-cache"
-
-
-saveListName : String -> String
-saveListName channel =
-    channel ++ "-savelist"
+cacheName : String
+cacheName =
+    "elm-realtime-cache"
