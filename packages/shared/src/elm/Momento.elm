@@ -68,6 +68,7 @@ type alias MomentoApi msg =
     , pushList : MomentoSessionKey -> PushListParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
     , webhook : MomentoSessionKey -> WebhookParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
     , publish : MomentoSessionKey -> PublishParams -> Cmd msg
+    , onMessage : (MomentoSessionKey -> String -> msg) -> Sub msg
     }
 
 
@@ -78,6 +79,7 @@ momentoApi pt ports =
     , pushList = pushList pt ports
     , webhook = webhook pt ports
     , publish = publish ports
+    , onMessage = onMessage ports
     }
 
 
@@ -209,3 +211,13 @@ but may report errors on the asyncError subscription.
 publish : Ports msg -> MomentoSessionKey -> PublishParams -> Cmd msg
 publish ports (MomentoSessionKey sessionKey) { topic, payload } =
     ports.publish { id = "", session = sessionKey, topic = topic, payload = payload }
+
+
+{-| Receives new incoming messages on a topic subscription.
+-}
+onMessage : Ports msg -> (MomentoSessionKey -> String -> msg) -> Sub msg
+onMessage ports dt =
+    ports.onMessage
+        (\{ session, payload } ->
+            dt (MomentoSessionKey session) payload
+        )

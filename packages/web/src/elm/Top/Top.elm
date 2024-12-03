@@ -21,7 +21,7 @@ type alias Model =
     , momentoApiKey : String
 
     -- Elm modules
-    , app : App.Lifecycle
+    , app : App.Model
 
     -- Routing state
     , route : Maybe Route
@@ -72,28 +72,10 @@ init flags =
     )
 
 
-momentoPorts : Momento.Ports
-momentoPorts =
-    { open = Ports.mmOpen
-    , onOpen = Ports.mmOnOpen
-    , close = Ports.mmClose
-    , subscribe = Ports.mmSubscribe
-    , onSunscribe = Ports.mmOnSubscribe
-    , publish = Ports.mmSend
-    , onMessage = Ports.mmOnMessage
-    , pushList = Ports.mmPushList
-    , createWebhook = Ports.mmCreateWebhook
-    , onError = Ports.mmOnError
-    }
-
-
 appProtocol : App.Protocol Model Msg Model
 appProtocol =
     { toMsg = AppMsg
     , onUpdate = identity
-    , mmOpen = \id params -> U2.andThen (mmOpen id params)
-    , mmSubscribe = \id params -> U2.andThen (mmSubscribe id params)
-    , mmOps = \id ops -> U2.andThen (mmOps id ops)
     }
 
 

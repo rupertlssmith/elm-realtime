@@ -1,5 +1,5 @@
 module App.Component exposing
-    ( Lifecycle
+    ( Model
     , Msg
     , Protocol
     , init
@@ -8,9 +8,8 @@ module App.Component exposing
     )
 
 import Html.Styled as Html exposing (Html)
-import Http
 import Json.Encode as Encode
-import Momento exposing (Error, OpenParams, SubscribeParams)
+import Momento exposing (Error, MomentoSessionKey, OpenParams, SubscribeParams)
 import Ports
 import Procedure.Program
 import Random
@@ -25,14 +24,13 @@ type alias Component a =
     }
 
 
-setModel m x =
-    { m | app = x }
-
-
 type Msg
     = ProcedureMsg (Procedure.Program.Msg Msg)
     | RandomSeed Random.Seed
-    | LoggedIn (Result Http.Error ())
+    | MMOpened (Result Error MomentoSessionKey)
+    | MMSubscribed (Result Error MomentoSessionKey)
+    | MMNotified (Result Error MomentoSessionKey)
+    | MMOnMessage MomentoSessionKey String
 
 
 type alias Model =
@@ -64,7 +62,7 @@ type alias RandomizedState =
 type alias ConnectedState =
     { log : List String
     , realtimeChannel : String
-    , socketHandle : String
+    , socketHandle : MomentoSessionKey
     , seed : Random.Seed
     }
 
@@ -72,12 +70,20 @@ type alias ConnectedState =
 type alias RunningState =
     { log : List String
     , realtimeChannel : String
-    , socketHandle : String
+    , socketHandle : MomentoSessionKey
     , seed : Random.Seed
     }
 
 
-switchState : (a -> Model) -> a -> ( Model, Cmd Msg )
+setModel m x =
+    { m | app = x }
+
+
+setLifecycle m x =
+    { m | lifecycle = x }
+
+
+switchState : (a -> Lifecycle) -> a -> ( Lifecycle, Cmd Msg )
 switchState cons state =
     ( cons state
     , Cmd.none
@@ -113,6 +119,12 @@ init realtimeChannel toMsg =
         |> U2.pure
         |> U2.andMap randomize
         |> U2.andMap (switchState ModelStart)
+        |> Tuple.mapFirst
+            (\state ->
+                { procedure = Procedure.Program.init
+                , lifecycle = state
+                }
+            )
         |> Tuple.mapSecond (Cmd.map toMsg)
 
 
@@ -121,8 +133,11 @@ update protocol msg component =
     let
         model =
             component.app
+
+        lifecycle =
+            model.lifecycle
     in
-    case ( model, msg ) of
+    case ( lifecycle, msg ) of
         ( _, ProcedureMsg innerMsg ) ->
             let
                 ( procMdl, procMsg ) =
@@ -134,18 +149,91 @@ update protocol msg component =
                 |> protocol.onUpdate
 
         ( ModelStart state, RandomSeed seed ) ->
-            { log = "Randomized" :: state.log
-            , realtimeChannel = state.realtimeChannel
-            , seed = seed
-            }
-                |> U2.pure
+            ( { log = "Randomized" :: state.log
+              , realtimeChannel = state.realtimeChannel
+              , seed = seed
+              }
+            , momentoApi.open
+                { apiKey = component.momentoApiKey
+                , cache = cacheName state.realtimeChannel
+                }
+                MMOpened
+            )
                 |> U2.andMap (switchState ModelRandomized)
+                |> Tuple.mapFirst (setLifecycle model)
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.mmOpen "socket"
-                    { apiKey = component.momentoApiKey
-                    , cache = cacheName state.realtimeChannel
-                    }
+                |> protocol.onUpdate
+
+        ( ModelRandomized state, MMOpened (Ok sessionKey) ) ->
+            ( { log = "Connected" :: state.log
+              , realtimeChannel = state.realtimeChannel
+              , seed = state.seed
+              , socketHandle = sessionKey
+              }
+            , momentoApi.subscribe
+                sessionKey
+                { topic = modelTopicName state.realtimeChannel }
+                MMSubscribed
+            )
+                |> U2.andMap (switchState ModelConnected)
+                |> Tuple.mapFirst (setLifecycle model)
+                |> Tuple.mapFirst (setModel component)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
+        ( ModelConnected state, MMSubscribed (Ok sessionKey) ) ->
+            let
+                payload =
+                    [ ( "id", Encode.string "123456" )
+                    , ( "client", Encode.string "abcdef" )
+                    , ( "seq", Encode.int 1 )
+                    , ( "value", Encode.string "hello" )
+                    ]
+                        |> Encode.object
+                        |> Encode.encode 2
+
+                notice =
+                    [ ( "client", Encode.string "abcdef" )
+                    , ( "seq", Encode.int 1 )
+                    , ( "kind", Encode.string "Listed" )
+                    ]
+                        |> Encode.object
+                        |> Encode.encode 2
+            in
+            ( { log =
+                    ("PushList: " ++ payload)
+                        :: ("Publish: " ++ notice)
+                        :: ("Subscribed: " ++ modelTopicName state.realtimeChannel)
+                        :: state.log
+              , realtimeChannel = state.realtimeChannel
+              , seed = state.seed
+              , socketHandle = sessionKey
+              }
+            , Cmd.batch
+                [ momentoApi.publish sessionKey
+                    { topic = notifyTopicName state.realtimeChannel, payload = notice }
+                , momentoApi.pushList sessionKey
+                    { list = saveListName state.realtimeChannel, payload = payload }
+                    MMNotified
+                , momentoApi.publish sessionKey
+                    { topic = modelTopicName state.realtimeChannel, payload = payload }
+                ]
+            )
+                |> U2.andMap (switchState ModelRunning)
+                |> Tuple.mapFirst (setLifecycle model)
+                |> Tuple.mapFirst (setModel component)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
+        ( ModelRunning state, MMOnMessage _ payload ) ->
+            { state | log = ("Message: " ++ String.slice 0 90 payload ++ "...") :: state.log }
+                |> U2.pure
+                |> U2.andMap (switchState ModelRunning)
+                |> Tuple.mapFirst (setLifecycle model)
+                |> Tuple.mapFirst (setModel component)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
 
         _ ->
             U2.pure component
@@ -159,112 +247,9 @@ randomize model =
     )
 
 
-mmOpened : Protocol (Component a) msg model -> String -> Component a -> ( model, Cmd msg )
-mmOpened protocol id component =
-    let
-        model =
-            component.app
-    in
-    case model of
-        ModelRandomized state ->
-            { log = "Connected" :: state.log
-            , realtimeChannel = state.realtimeChannel
-            , seed = state.seed
-            , socketHandle = id
-            }
-                |> U2.pure
-                |> U2.andMap (switchState ModelConnected)
-                |> Tuple.mapFirst (setModel component)
-                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.mmSubscribe id { topic = modelTopicName state.realtimeChannel }
-
-        _ ->
-            U2.pure component
-                |> protocol.onUpdate
-
-
-mmSubscribed : Protocol (Component a) msg model -> String -> SubscribeParams -> Component a -> ( model, Cmd msg )
-mmSubscribed protocol id params component =
-    let
-        _ =
-            Debug.log "Component.mmSubscribed" "called"
-
-        model =
-            component.app
-
-        payload =
-            [ ( "id", Encode.string "123456" )
-            , ( "client", Encode.string "abcdef" )
-            , ( "seq", Encode.int 1 )
-            , ( "value", Encode.string "hello" )
-            ]
-                |> Encode.object
-                |> Encode.encode 2
-
-        notice =
-            [ ( "client", Encode.string "abcdef" )
-            , ( "seq", Encode.int 1 )
-            , ( "kind", Encode.string "Listed" )
-            ]
-                |> Encode.object
-                |> Encode.encode 2
-    in
-    case model of
-        ModelConnected state ->
-            { log =
-                ("PushList: " ++ payload)
-                    :: ("Publish: " ++ notice)
-                    :: ("Subscribed: " ++ params.topic)
-                    :: state.log
-            , realtimeChannel = state.realtimeChannel
-            , seed = state.seed
-            , socketHandle = id
-            }
-                |> U2.pure
-                |> U2.andMap (switchState ModelRunning)
-                |> Tuple.mapFirst (setModel component)
-                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.mmOps id
-                    [ Momento.publish { topic = notifyTopicName state.realtimeChannel, payload = notice }
-                    , Momento.pushList { list = saveListName state.realtimeChannel, payload = payload }
-                    , Momento.publish { topic = modelTopicName state.realtimeChannel, payload = payload }
-                    ]
-
-        _ ->
-            U2.pure component
-                |> protocol.onUpdate
-
-
-mmMessage : Protocol (Component a) msg model -> String -> String -> Component a -> ( model, Cmd msg )
-mmMessage protocol id payload component =
-    let
-        model =
-            component.app
-    in
-    case model of
-        ModelRunning state ->
-            { state | log = ("Message: " ++ String.slice 0 90 payload ++ "...") :: state.log }
-                |> U2.pure
-                |> U2.andMap (switchState ModelRunning)
-                |> Tuple.mapFirst (setModel component)
-                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.onUpdate
-
-        _ ->
-            U2.pure component
-                |> protocol.onUpdate
-
-
-mmError : Protocol (Component a) msg model -> String -> Error -> Component a -> ( model, Cmd msg )
-mmError protocol id error component =
-    component
-        |> U2.pure
-        |> protocol.onUpdate
-
-
 view : Component a -> Html msg
 view component =
-    case component.app of
+    case component.app.lifecycle of
         ModelStart props ->
             logs props
 

@@ -5398,6 +5398,21 @@ var $author$project$Ports$mmSubscribe = _Platform_outgoingPort(
 					$elm$json$Json$Encode$string($.topic))
 				]));
 	});
+var $author$project$Momento$MomentoSessionKey = function (a) {
+	return {$: 'MomentoSessionKey', a: a};
+};
+var $author$project$Momento$onMessage = F2(
+	function (ports, dt) {
+		return ports.onMessage(
+			function (_v0) {
+				var session = _v0.session;
+				var payload = _v0.payload;
+				return A2(
+					dt,
+					$author$project$Momento$MomentoSessionKey(session),
+					payload);
+			});
+	});
 var $brian_watkins$elm_procedure$Procedure$Internal$Continue = {$: 'Continue'};
 var $brian_watkins$elm_procedure$Procedure$Internal$Subscribe = F3(
 	function (a, b, c) {
@@ -5479,9 +5494,6 @@ var $brian_watkins$elm_procedure$Procedure$Channel$connect = F2(
 	});
 var $author$project$Momento$MomentoError = function (a) {
 	return {$: 'MomentoError', a: a};
-};
-var $author$project$Momento$MomentoSessionKey = function (a) {
-	return {$: 'MomentoSessionKey', a: a};
 };
 var $author$project$Momento$decodeResponse = function (res) {
 	var _v0 = res.type_;
@@ -5672,6 +5684,7 @@ var $author$project$Momento$webhook = F5(
 var $author$project$Momento$momentoApi = F2(
 	function (pt, ports) {
 		return {
+			onMessage: $author$project$Momento$onMessage(ports),
 			open: A2($author$project$Momento$open, pt, ports),
 			publish: $author$project$Momento$publish(ports),
 			pushList: A2($author$project$Momento$pushList, pt, ports),
