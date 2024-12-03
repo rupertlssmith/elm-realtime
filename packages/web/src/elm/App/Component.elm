@@ -3,6 +3,7 @@ module App.Component exposing
     , Msg
     , Protocol
     , init
+    , subscriptions
     , update
     , view
     )
@@ -128,6 +129,16 @@ init realtimeChannel toMsg =
         |> Tuple.mapSecond (Cmd.map toMsg)
 
 
+subscriptions : Protocol (Component a) msg model -> Component a -> Sub msg
+subscriptions protocol component =
+    let
+        model =
+            component.app
+    in
+    Procedure.Program.subscriptions model.procedure
+        |> Sub.map protocol.toMsg
+
+
 update : Protocol (Component a) msg model -> Msg -> Component a -> ( model, Cmd msg )
 update protocol msg component =
     let
@@ -137,7 +148,7 @@ update protocol msg component =
         lifecycle =
             model.lifecycle
     in
-    case ( lifecycle, msg ) of
+    case ( lifecycle, msg |> Debug.log "update" ) of
         ( _, ProcedureMsg innerMsg ) ->
             let
                 ( procMdl, procMsg ) =

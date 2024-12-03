@@ -8,9 +8,7 @@ import Html
 import Html.Styled as HS exposing (Html)
 import Html.Styled.Attributes as HA
 import Json.Decode as Decode
-import Momento exposing (Error, OpenParams, SubscribeParams)
 import Navigation exposing (Route)
-import Ports
 import Top.Style
 import Update2 as U2
 
@@ -56,7 +54,7 @@ init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
         ( appMdl, appCmds ) =
-            App.init "aflpeYGXfU" appProtocol.toMsg
+            App.init "EZUCzodhKW" appProtocol.toMsg
     in
     ( { location = flags.location
       , momentoApiKey =
@@ -83,6 +81,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Navigation.onUrlChange (Navigation.locationHrefToRoute >> UrlChanged)
+        , App.subscriptions appProtocol model
         ]
 
 
