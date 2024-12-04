@@ -6,7 +6,8 @@ require("./elmeditor.js");
 const Pointer = require("./pointer.js");
 const Navigation = require("./navigation.js");
 //const Websockets = require("./websockets.js");
-const {MomentoPorts} = require("./momento.ts");
+const {WebMomentoFactory} = require("../../../shared/src/js/web_momento");
+const {MomentoPorts} = require("../../../shared/src/js/momento");
 const {Elm} = require('../elm/Top/Top.elm');
 
 const app = Elm.Top.Top.init({
@@ -18,7 +19,8 @@ const app = Elm.Top.Top.init({
     node: document.getElementById('application')
 });
 
-new Pointer(app);
-new Navigation(app);
+const pointer = new Pointer(app);
+const navigation = new Navigation(app);
+const momentoFactory = new WebMomentoFactory();
+const momentoPorts = new MomentoPorts(app, momentoFactory);
 //new Websockets(app);
-new MomentoPorts(app);

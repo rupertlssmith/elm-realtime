@@ -4,22 +4,22 @@ import {
     TopicClient,
     Configurations,
     TopicConfigurations,
-} from "@gomomento/sdk";
+} from "@gomomento/sdk-web";
 
 import {MomentoFactory} from "./momento";
 
-export class NodeMomentoFactory implements MomentoFactory {
-    getCacheClient(args) {
+export class WebMomentoFactory implements MomentoFactory {
+    getCacheClient(args: any) {
         return new CacheClient({
-            configuration: Configurations.Lambda.latest(),
+            configuration: Configurations.Browser.latest(),
             credentialProvider: CredentialProvider.fromString({apiKey: args.apiKey}),
             defaultTtlSeconds: 60,
         });
     }
 
-    getTopicClient(args) {
+    getTopicClient(args: any) {
         return new TopicClient({
-            configuration: TopicConfigurations.Lambda.latest(),
+            configuration: TopicConfigurations.Browser.latest(),
             credentialProvider: CredentialProvider.fromString({apiKey: args.apiKey}),
         });
     }

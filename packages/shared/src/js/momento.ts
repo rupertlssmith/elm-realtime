@@ -173,7 +173,7 @@ export class MomentoPorts {
         // Set up the topic.
         const topicSubscribeResponse =
             await args.session.topicClient.subscribe(args.session.cache, args.topic, {
-                onError: (err) => {
+                onError: (err: any) => {
                     this.app.ports.mmAsyncError.send({
                         id: args.id,
                         error: err
@@ -181,7 +181,7 @@ export class MomentoPorts {
 
                     return;
                 },
-                onItem: (item) => {
+                onItem: (item: any) => {
                     //console.info(`Received an item on subscription for '${args.topic}': ${item.value().toString()}`);
                     //this.onMessage(args.id, args.session, JSON.stringify(item));
                     this.onMessage(args.id, args.session, JSON.parse(item.value().toString()));

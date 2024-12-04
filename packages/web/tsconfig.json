@@ -2,7 +2,9 @@
   "extends": "@tsconfig/node18/tsconfig.json",
   "exclude": ["packages"],
   "compilerOptions": {
+    "lib": ["es5", "es6", "dom"],
     "module": "esnext",
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "allowJs": true
   }
 }

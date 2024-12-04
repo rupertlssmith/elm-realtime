@@ -6,7 +6,7 @@ const webpack = require('webpack');
 module.exports = (withDebug) => {
     return {
         entry: {
-            index: path.resolve(__dirname, "../src/js/index.js")
+            index: path.resolve(__dirname, "../src/js/index.ts")
         },
         resolve: {
             extensions: ['.tsx', '.ts', '.js'],
