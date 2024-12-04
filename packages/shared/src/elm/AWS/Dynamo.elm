@@ -49,9 +49,11 @@ module AWS.Dynamo exposing
 
 -}
 
+import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Extra as DE
 import Json.Encode as Encode exposing (Value)
+import Json.Encode.Extra
 import Maybe.Extra
 import Procedure
 import Procedure.Channel as Channel
@@ -62,6 +64,7 @@ import Result.Extra
 type alias Ports msg =
     { get : { id : String, req : Value } -> Cmd msg
     , put : { id : String, req : Value } -> Cmd msg
+    , update : { id : String, req : Value } -> Cmd msg
     , delete : { id : String, req : Value } -> Cmd msg
     , batchGet : { id : String, req : Value } -> Cmd msg
     , batchWrite : { id : String, req : Value } -> Cmd msg
@@ -209,6 +212,142 @@ putEncoder encoder putOp =
 
 putResponseDecoder : Value -> Result Error ()
 putResponseDecoder val =
+    let
+        decoder =
+            Decode.field "type_" Decode.string
+                |> Decode.andThen
+                    (\type_ ->
+                        case type_ of
+                            "Ok" ->
+                                Decode.succeed (Ok ())
+
+                            _ ->
+                                errorDecoder
+                    )
+    in
+    Decode.decodeValue decoder val
+        |> Result.mapError (DecodeError >> Err)
+        |> Result.Extra.merge
+
+
+
+---- Update a document in DynamoDB
+
+
+type alias Update k =
+    { tableName : String
+    , key : k
+    , updateExpression : String
+    , conditionExpression : Maybe String
+    , expressionAttributeNames : Dict String String
+    , expressionAttributeValues : Dict String AttributeValue
+    , returnConsumedCapacity : Maybe ReturnConsumedCapacity
+    , returnItemCollectionMetrics : Maybe ReturnItemCollectionMetrics
+    , returnValues : Maybe ReturnValues
+    , returnValuesOnConditionCheckFailure : Maybe ReturnValuesOnConditionCheckFailure
+    }
+
+
+type ReturnConsumedCapacity
+    = CapacityIndexes
+    | CapacityTotal
+
+
+type ReturnItemCollectionMetrics
+    = MetricsSize
+
+
+type ReturnValues
+    = ReturnValuesAllOld
+    | ReturnValuesUpdatedOld
+    | ReturnValuesAllNew
+    | ReturnValuesUpdatedNew
+
+
+type ReturnValuesOnConditionCheckFailure
+    = CheckFailAllOld
+
+
+update :
+    (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
+    -> (k -> Value)
+    -> Decoder v
+    -> Update k
+    -> (Result Error (Maybe v) -> msg)
+    -> Cmd msg
+update pt ports encoder decoder updateProps dt =
+    Channel.open (\key -> ports.put { id = key, req = updateEncoder encoder updateProps })
+        |> Channel.connect ports.response
+        |> Channel.filter (\key { id } -> id == key)
+        |> Channel.acceptOne
+        |> Procedure.run pt (\{ res } -> getResponseDecoder decoder res |> dt)
+
+
+updateEncoder : (k -> Value) -> Update k -> Value
+updateEncoder encoder putOp =
+    Encode.object
+        [ ( "TableName", Encode.string putOp.tableName )
+        , ( "Key", encoder putOp.key )
+        , ( "UpdateExpression", Encode.string putOp.updateExpression )
+        , ( "ConditionExpression", Json.Encode.Extra.maybe Encode.string putOp.conditionExpression )
+        , ( "ExpressionAttributeNames", Encode.dict identity Encode.string putOp.expressionAttributeNames )
+        , ( "ExpressionAttributeValues", Encode.dict identity encodeAttr putOp.expressionAttributeValues )
+        , ( "ReturnConsumedCapacity"
+          , Json.Encode.Extra.maybe encodeReturnConsumedCapacity putOp.returnConsumedCapacity
+          )
+        , ( "ReturnItemCollectionMetrics"
+          , Json.Encode.Extra.maybe encodeReturnItemCollectionMetrics putOp.returnItemCollectionMetrics
+          )
+        , ( "ReturnValues", Json.Encode.Extra.maybe encodeReturnValues putOp.returnValues )
+        , ( "ReturnValuesOnConditionCheckFailure"
+          , Json.Encode.Extra.maybe encodeReturnValuesOnConditionCheckFailure putOp.returnValuesOnConditionCheckFailure
+          )
+        ]
+
+
+encodeReturnConsumedCapacity : ReturnConsumedCapacity -> Value
+encodeReturnConsumedCapacity arg =
+    case arg of
+        CapacityIndexes ->
+            Encode.string "INDEXES"
+
+        CapacityTotal ->
+            Encode.string "TOTAL"
+
+
+encodeReturnItemCollectionMetrics : ReturnItemCollectionMetrics -> Value
+encodeReturnItemCollectionMetrics arg =
+    case arg of
+        MetricsSize ->
+            Encode.string "SIZE"
+
+
+encodeReturnValues : ReturnValues -> Value
+encodeReturnValues arg =
+    case arg of
+        ReturnValuesAllOld ->
+            Encode.string "ALL_OLD"
+
+        ReturnValuesUpdatedOld ->
+            Encode.string "UPDATED_OLD"
+
+        ReturnValuesAllNew ->
+            Encode.string "ALL_NEW"
+
+        ReturnValuesUpdatedNew ->
+            Encode.string "UPDATED_NEW"
+
+
+encodeReturnValuesOnConditionCheckFailure : ReturnValuesOnConditionCheckFailure -> Value
+encodeReturnValuesOnConditionCheckFailure arg =
+    case arg of
+        CheckFailAllOld ->
+            Encode.string "ALL_OLD"
+
+
+updateResponseDecoder : Value -> Result Error ()
+updateResponseDecoder val =
     let
         decoder =
             Decode.field "type_" Decode.string

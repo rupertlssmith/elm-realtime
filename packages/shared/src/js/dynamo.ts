@@ -7,7 +7,7 @@ import {
     GetCommandInput,
     PutCommandInput,
     QueryCommandInput,
-    ScanCommandInput
+    ScanCommandInput, UpdateCommandInput
 } from "@aws-sdk/lib-dynamodb";
 import * as ports from "./ports" ;
 
@@ -22,6 +22,11 @@ type GetArgs = {
 type PutArgs = {
     id: string;
     req: PutCommandInput;
+}
+
+type UpdateArgs = {
+    id: string;
+    req: UpdateCommandInput;
 }
 
 type DeleteArgs = {
@@ -84,6 +89,7 @@ export class DynamoPorts {
         ports.checkPortsExist(app, [
             "dynamoGet",
             "dynamoPut",
+            "dynamoUpdate",
             "dynamoDelete",
             "dynamoBatchGet",
             "dynamoBatchWrite",
@@ -94,6 +100,7 @@ export class DynamoPorts {
 
         app.ports.dynamoGet.subscribe(this.dynamoGet);
         app.ports.dynamoPut.subscribe(this.dynamoPut);
+        app.ports.dynamoUpdate.subscribe(this.dynamoUpdate);
         app.ports.dynamoDelete.subscribe(this.dynamoDelete);
         app.ports.dynamoBatchGet.subscribe(this.dynamoBatchGet);
         app.ports.dynamoBatchWrite.subscribe(this.dynamoBatchWrite);
@@ -124,9 +131,27 @@ export class DynamoPorts {
     }
 
     dynamoPut = async (args: PutArgs) => {
-        //console.log("dynamoPut: called");
+        console.info("dynamoPut: called");
 
         documentClient.put(args.req, (error, result) => {
+            var putResponse;
+
+            if (error) {
+                putResponse = errorResponse(error);
+            } else {
+                putResponse = {
+                    type_: "Ok"
+                }
+            }
+
+            this.app.ports.dynamoResponse.send({id: args.id, res: putResponse});
+        });
+    }
+
+    dynamoUpdate = async (args: UpdateArgs) => {
+        console.info("dynamoUpdate: called");
+
+        documentClient.update(args.req, (error, result) => {
             var putResponse;
 
             if (error) {

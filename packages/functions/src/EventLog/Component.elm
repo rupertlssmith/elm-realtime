@@ -187,6 +187,7 @@ dynamoPorts : Dynamo.Ports Msg
 dynamoPorts =
     { get = Ports.dynamoGet
     , put = Ports.dynamoPut
+    , update = Ports.dynamoUpdate
     , delete = Ports.dynamoDelete
     , batchGet = Ports.dynamoBatchGet
     , batchWrite = Ports.dynamoBatchWrite
