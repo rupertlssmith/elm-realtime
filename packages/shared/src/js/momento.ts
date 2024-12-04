@@ -1,13 +1,15 @@
+import * as ports from "./ports" ;
 import {
-    CacheClient,
+    CacheListPopFrontResponse,
     CacheListPushBackResponse,
     CreateCacheResponse,
-    CredentialProvider,
-    TopicClient,
-    TopicSubscribeResponse,
-    TopicPublishResponse, PutWebhookResponse, CacheListPopFrontResponse, Configurations, TopicConfigurations,
-} from "@gomomento/sdk";
-import * as ports from "./ports" ;
+    PutWebhookResponse,
+    TopicPublishResponse,
+    TopicSubscribeResponse
+} from "@gomomento/sdk-core";
+
+type CacheClient = any;
+type TopicClient = any;
 
 type Session = {
     apiKey: string;
@@ -70,12 +72,21 @@ type Ports = {
     mmAsyncError: { send: any };
 }
 
+
+export interface MomentoFactory {
+    getCacheClient(args: OpenArgs): CacheClient;
+
+    getTopicClient(args: OpenArgs): TopicClient;
+}
+
 export class MomentoPorts {
     app: { ports: Ports };
+    factory: MomentoFactory;
 
-    constructor(app: any) {
+    constructor(app: any, factory: MomentoFactory) {
         //console.info("Momento.constructor");
         this.app = app;
+        this.factory = factory;
 
         ports.checkPortsExist(app, [
             "mmOpen",
@@ -105,11 +116,7 @@ export class MomentoPorts {
         //console.info(args);
 
         // Connect to the Momento Cache.
-        const cacheClient = new CacheClient({
-            configuration: Configurations.Lambda.latest(),
-            credentialProvider: CredentialProvider.fromString({apiKey: args.apiKey}),
-            defaultTtlSeconds: 60,
-        });
+        const cacheClient = this.factory.getCacheClient(args);
 
         const createCacheResponse = await cacheClient.createCache(args.cache);
 
@@ -131,10 +138,7 @@ export class MomentoPorts {
         }
 
         // Set up the topic client.
-        const topicClient = new TopicClient({
-            configuration: TopicConfigurations.Lambda.latest(),
-            credentialProvider: CredentialProvider.fromString({apiKey: args.apiKey}),
-        });
+        const topicClient = this.factory.getTopicClient(args);
 
         // Provide of a reference to the topic client and let the application know it is open.
         const session = {

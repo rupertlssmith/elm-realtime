@@ -1,6 +1,7 @@
 import {Elm} from './elm.js';
 import * as elmServerless from "./bridge/index.js";
 import {Resource} from "sst";
+import {NodeMomentoFactory} from "../../shared/src/js/node_momento";
 import {MomentoPorts} from "../../shared/src/js/momento";
 import {DynamoPorts} from "../../shared/src/js/dynamo";
 
@@ -16,7 +17,8 @@ const app = Elm.API.init({
     },
 });
 
-const momentoPorts = new MomentoPorts(app);
+const momentoFactory = new NodeMomentoFactory();
+const momentoPorts = new MomentoPorts(app, momentoFactory);
 const dynamoPorts = new DynamoPorts(app);
 
 export async function main(event, context) {
