@@ -77,6 +77,7 @@ type alias Ports msg =
 type alias DynamoApi msg =
     { get : Get Value -> (Result Error (Maybe Value) -> msg) -> Cmd msg
     , put : Put Value -> (Result Error () -> msg) -> Cmd msg
+    , update : Update Value -> (Result Error (Maybe Value) -> msg) -> Cmd msg
     , delete : Delete Value -> (Result Error () -> msg) -> Cmd msg
     , batchGet : BatchGet Value -> (Result Error (List Value) -> msg) -> Cmd msg
     , batchPut : BatchPut Value -> (Result Error () -> msg) -> Cmd msg
@@ -89,6 +90,7 @@ type alias DynamoApi msg =
 type alias DynamoTypedApi k v msg =
     { get : Get k -> (Result Error (Maybe v) -> msg) -> Cmd msg
     , put : Put v -> (Result Error () -> msg) -> Cmd msg
+    , update : Update k -> (Result Error (Maybe v) -> msg) -> Cmd msg
     , delete : Delete k -> (Result Error () -> msg) -> Cmd msg
     , batchGet : BatchGet k -> (Result Error (List v) -> msg) -> Cmd msg
     , batchPut : BatchPut v -> (Result Error () -> msg) -> Cmd msg
@@ -102,6 +104,7 @@ dynamoApi : (Procedure.Program.Msg msg -> msg) -> Ports msg -> DynamoApi msg
 dynamoApi pt ports =
     { get = get pt ports identity Decode.value
     , put = put pt ports identity
+    , update = update pt ports identity Decode.value
     , delete = delete pt ports identity
     , batchGet = batchGet pt ports identity Decode.value
     , batchPut = batchPut pt ports identity
@@ -121,6 +124,7 @@ dynamoTypedApi :
 dynamoTypedApi keyEncoder valEncoder decoder pt ports =
     { get = get pt ports keyEncoder decoder
     , put = put pt ports valEncoder
+    , update = update pt ports keyEncoder decoder
     , delete = delete pt ports keyEncoder
     , batchGet = batchGet pt ports keyEncoder decoder
     , batchPut = batchPut pt ports valEncoder

@@ -6923,6 +6923,145 @@ var $author$project$AWS$Dynamo$scan = F5(
 			},
 			A4($author$project$AWS$Dynamo$scanInner, ports, decoder, scanProps, _List_Nil));
 	});
+var $elm$core$Dict$foldl = F3(
+	function (func, acc, dict) {
+		foldl:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return acc;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var $temp$func = func,
+					$temp$acc = A3(
+					func,
+					key,
+					value,
+					A3($elm$core$Dict$foldl, func, acc, left)),
+					$temp$dict = right;
+				func = $temp$func;
+				acc = $temp$acc;
+				dict = $temp$dict;
+				continue foldl;
+			}
+		}
+	});
+var $elm$json$Json$Encode$dict = F3(
+	function (toKey, toValue, dictionary) {
+		return _Json_wrap(
+			A3(
+				$elm$core$Dict$foldl,
+				F3(
+					function (key, value, obj) {
+						return A3(
+							_Json_addField,
+							toKey(key),
+							toValue(value),
+							obj);
+					}),
+				_Json_emptyObject(_Utils_Tuple0),
+				dictionary));
+	});
+var $author$project$AWS$Dynamo$encodeReturnConsumedCapacity = function (arg) {
+	if (arg.$ === 'CapacityIndexes') {
+		return $elm$json$Json$Encode$string('INDEXES');
+	} else {
+		return $elm$json$Json$Encode$string('TOTAL');
+	}
+};
+var $author$project$AWS$Dynamo$encodeReturnItemCollectionMetrics = function (arg) {
+	return $elm$json$Json$Encode$string('SIZE');
+};
+var $author$project$AWS$Dynamo$encodeReturnValues = function (arg) {
+	switch (arg.$) {
+		case 'ReturnValuesAllOld':
+			return $elm$json$Json$Encode$string('ALL_OLD');
+		case 'ReturnValuesUpdatedOld':
+			return $elm$json$Json$Encode$string('UPDATED_OLD');
+		case 'ReturnValuesAllNew':
+			return $elm$json$Json$Encode$string('ALL_NEW');
+		default:
+			return $elm$json$Json$Encode$string('UPDATED_NEW');
+	}
+};
+var $author$project$AWS$Dynamo$encodeReturnValuesOnConditionCheckFailure = function (arg) {
+	return $elm$json$Json$Encode$string('ALL_OLD');
+};
+var $elm_community$json_extra$Json$Encode$Extra$maybe = function (encoder) {
+	return A2(
+		$elm$core$Basics$composeR,
+		$elm$core$Maybe$map(encoder),
+		$elm$core$Maybe$withDefault($elm$json$Json$Encode$null));
+};
+var $author$project$AWS$Dynamo$updateEncoder = F2(
+	function (encoder, putOp) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'TableName',
+					$elm$json$Json$Encode$string(putOp.tableName)),
+					_Utils_Tuple2(
+					'Key',
+					encoder(putOp.key)),
+					_Utils_Tuple2(
+					'UpdateExpression',
+					$elm$json$Json$Encode$string(putOp.updateExpression)),
+					_Utils_Tuple2(
+					'ConditionExpression',
+					A2($elm_community$json_extra$Json$Encode$Extra$maybe, $elm$json$Json$Encode$string, putOp.conditionExpression)),
+					_Utils_Tuple2(
+					'ExpressionAttributeNames',
+					A3($elm$json$Json$Encode$dict, $elm$core$Basics$identity, $elm$json$Json$Encode$string, putOp.expressionAttributeNames)),
+					_Utils_Tuple2(
+					'ExpressionAttributeValues',
+					A3($elm$json$Json$Encode$dict, $elm$core$Basics$identity, $author$project$AWS$Dynamo$encodeAttr, putOp.expressionAttributeValues)),
+					_Utils_Tuple2(
+					'ReturnConsumedCapacity',
+					A2($elm_community$json_extra$Json$Encode$Extra$maybe, $author$project$AWS$Dynamo$encodeReturnConsumedCapacity, putOp.returnConsumedCapacity)),
+					_Utils_Tuple2(
+					'ReturnItemCollectionMetrics',
+					A2($elm_community$json_extra$Json$Encode$Extra$maybe, $author$project$AWS$Dynamo$encodeReturnItemCollectionMetrics, putOp.returnItemCollectionMetrics)),
+					_Utils_Tuple2(
+					'ReturnValues',
+					A2($elm_community$json_extra$Json$Encode$Extra$maybe, $author$project$AWS$Dynamo$encodeReturnValues, putOp.returnValues)),
+					_Utils_Tuple2(
+					'ReturnValuesOnConditionCheckFailure',
+					A2($elm_community$json_extra$Json$Encode$Extra$maybe, $author$project$AWS$Dynamo$encodeReturnValuesOnConditionCheckFailure, putOp.returnValuesOnConditionCheckFailure))
+				]));
+	});
+var $author$project$AWS$Dynamo$update = F6(
+	function (pt, ports, encoder, decoder, updateProps, dt) {
+		return A3(
+			$brian_watkins$elm_procedure$Procedure$run,
+			pt,
+			function (_v1) {
+				var res = _v1.res;
+				return dt(
+					A2($author$project$AWS$Dynamo$getResponseDecoder, decoder, res));
+			},
+			$brian_watkins$elm_procedure$Procedure$Channel$acceptOne(
+				A2(
+					$brian_watkins$elm_procedure$Procedure$Channel$filter,
+					F2(
+						function (key, _v0) {
+							var id = _v0.id;
+							return _Utils_eq(id, key);
+						}),
+					A2(
+						$brian_watkins$elm_procedure$Procedure$Channel$connect,
+						ports.response,
+						$brian_watkins$elm_procedure$Procedure$Channel$open(
+							function (key) {
+								return ports.put(
+									{
+										id: key,
+										req: A2($author$project$AWS$Dynamo$updateEncoder, encoder, updateProps)
+									});
+							})))));
+	});
 var $author$project$AWS$Dynamo$dynamoTypedApi = F5(
 	function (keyEncoder, valEncoder, decoder, pt, ports) {
 		return {
@@ -6933,7 +7072,8 @@ var $author$project$AWS$Dynamo$dynamoTypedApi = F5(
 			put: A3($author$project$AWS$Dynamo$put, pt, ports, valEncoder),
 			query: A3($author$project$AWS$Dynamo$query, pt, ports, decoder),
 			queryIndex: A3($author$project$AWS$Dynamo$queryIndex, pt, ports, decoder),
-			scan: A3($author$project$AWS$Dynamo$scan, pt, ports, decoder)
+			scan: A3($author$project$AWS$Dynamo$scan, pt, ports, decoder),
+			update: A4($author$project$AWS$Dynamo$update, pt, ports, keyEncoder, decoder)
 		};
 	});
 var $author$project$DB$ChannelTable$encodeKey = function (key) {
