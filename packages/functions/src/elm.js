@@ -7408,29 +7408,24 @@ var $author$project$Serverless$Request$method = function (_v0) {
 	var request = _v0.a;
 	return request.method;
 };
-var $elm$core$Debug$todo = _Debug_todo;
 var $author$project$EventLog$Component$getEventsLogMetaData = F3(
 	function (component, channelName, sessionKey) {
 		var key = {id: channelName, seq: 0};
 		return A2(
-			$brian_watkins$elm_procedure$Procedure$mapError,
-			$author$project$AWS$Dynamo$errorToDetails,
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (maybeMetaData) {
+				if (maybeMetaData.$ === 'Just') {
+					var metadata = maybeMetaData.a;
+					return $brian_watkins$elm_procedure$Procedure$provide(
+						{lastSeqNo: metadata.lastId, sessionKey: sessionKey});
+				} else {
+					return $brian_watkins$elm_procedure$Procedure$break(
+						{details: $elm$json$Json$Encode$null, message: 'No EventLog metadata record found for channel: ' + channelName});
+				}
+			},
 			A2(
-				$brian_watkins$elm_procedure$Procedure$andThen,
-				function (maybeMetaData) {
-					if (maybeMetaData.$ === 'Just') {
-						var metadata = maybeMetaData.a;
-						return $brian_watkins$elm_procedure$Procedure$provide(
-							{lastSeqNo: metadata.lastId, sessionKey: sessionKey});
-					} else {
-						return _Debug_todo(
-							'EventLog.Component',
-							{
-								start: {line: 543, column: 25},
-								end: {line: 543, column: 35}
-							})('');
-					}
-				},
+				$brian_watkins$elm_procedure$Procedure$mapError,
+				$author$project$AWS$Dynamo$errorToDetails,
 				$brian_watkins$elm_procedure$Procedure$fetchResult(
 					$author$project$EventLog$Component$eventLogTableMetadataApi.get(
 						{key: key, tableName: component.eventLogTable}))));
@@ -7444,6 +7439,9 @@ var $author$project$EventLog$Component$publishEvents = F3(
 					_Utils_Tuple2(
 					'rt',
 					$elm$json$Json$Encode$string('P')),
+					_Utils_Tuple2(
+					'client',
+					$elm$json$Json$Encode$string(state.cacheItem.client)),
 					_Utils_Tuple2(
 					'seq',
 					$elm$json$Json$Encode$int(state.lastSeqNo)),
@@ -7464,16 +7462,38 @@ var $author$project$EventLog$Component$publishEvents = F3(
 							topic: $author$project$EventLog$Component$modelTopicName(channelName)
 						}))));
 	});
+var $author$project$EventLog$Component$UnsavedEvent = F3(
+	function (rt, client, payload) {
+		return {client: client, payload: payload, rt: rt};
+	});
+var $author$project$EventLog$Component$decodeUnsavedEvent = A2(
+	$elm_community$json_extra$Json$Decode$Extra$andMap,
+	A2($elm$json$Json$Decode$field, 'payload', $elm$json$Json$Decode$value),
+	A2(
+		$elm_community$json_extra$Json$Decode$Extra$andMap,
+		A2($elm$json$Json$Decode$field, 'client', $elm$json$Json$Decode$string),
+		A2(
+			$elm_community$json_extra$Json$Decode$Extra$andMap,
+			A2($elm$json$Json$Decode$field, 'rt', $elm$json$Json$Decode$string),
+			$elm$json$Json$Decode$succeed($author$project$EventLog$Component$UnsavedEvent))));
 var $author$project$EventLog$Component$readEvents = F3(
 	function (component, channelName, state) {
 		return A2(
-			$brian_watkins$elm_procedure$Procedure$mapError,
-			$author$project$Momento$errorToDetails,
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (cacheItem) {
+				var _v0 = A2($elm$json$Json$Decode$decodeValue, $author$project$EventLog$Component$decodeUnsavedEvent, cacheItem.payload);
+				if (_v0.$ === 'Ok') {
+					var unsavedEvent = _v0.a;
+					return $brian_watkins$elm_procedure$Procedure$provide(
+						{cacheItem: unsavedEvent, lastSeqNo: state.lastSeqNo, sessionKey: state.sessionKey});
+				} else {
+					return $brian_watkins$elm_procedure$Procedure$break(
+						{details: $elm$json$Json$Encode$null, message: 'No EventLog metadata record found for channel: ' + channelName});
+				}
+			},
 			A2(
-				$brian_watkins$elm_procedure$Procedure$map,
-				function (cacheItem) {
-					return {cacheItem: cacheItem, lastSeqNo: state.lastSeqNo, sessionKey: state.sessionKey};
-				},
+				$brian_watkins$elm_procedure$Procedure$mapError,
+				$author$project$Momento$errorToDetails,
 				$brian_watkins$elm_procedure$Procedure$fetchResult(
 					A2(
 						$author$project$EventLog$Component$momentoApi.popList,

@@ -230,17 +230,27 @@ update protocol msg component =
         ( ModelConnected state, MMSubscribed (Ok sessionKey) ) ->
             let
                 payload =
-                    [ ( "id", Encode.string "123456" )
-                    , ( "client", Encode.string "abcdef" )
-                    , ( "seq", Encode.int 1 )
-                    , ( "value", Encode.string "hello" )
+                    [ ( "message", Encode.string "hello" )
                     ]
                         |> Encode.object
 
                 notice =
-                    [ ( "client", Encode.string "abcdef" )
-                    , ( "seq", Encode.int 1 )
-                    , ( "kind", Encode.string "Listed" )
+                    [ ( "rt", Encode.string "N" )
+                    , ( "client", Encode.string "abcdef" )
+                    ]
+                        |> Encode.object
+
+                transient =
+                    [ ( "rt", Encode.string "T" )
+                    , ( "client", Encode.string "abcdef" )
+                    , ( "payload", payload )
+                    ]
+                        |> Encode.object
+
+                unsaved =
+                    [ ( "rt", Encode.string "U" )
+                    , ( "client", Encode.string "abcdef" )
+                    , ( "payload", payload )
                     ]
                         |> Encode.object
             in
@@ -258,10 +268,10 @@ update protocol msg component =
                     { topic = state.channel.saveTopic, payload = notice }
                     MMNotified
                 , momentoApi.pushList sessionKey
-                    { list = state.channel.saveList, payload = payload }
+                    { list = state.channel.saveList, payload = unsaved }
                     MMNotified
                 , momentoApi.publish sessionKey
-                    { topic = state.channel.modelTopic, payload = payload }
+                    { topic = state.channel.modelTopic, payload = transient }
                     MMNotified
                 ]
             )

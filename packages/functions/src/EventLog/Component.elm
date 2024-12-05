@@ -15,7 +15,8 @@ import AWS.Dynamo as Dynamo
 import Codec
 import DB.ChannelTable as ChannelTable
 import DB.EventLogTable as EventLogTable
-import Json.Decode exposing (Value)
+import Json.Decode as Decode exposing (Decoder, Value)
+import Json.Decode.Extra as DE
 import Json.Encode as Encode
 import Momento exposing (CacheItem, Error, MomentoSessionKey)
 import Ports
@@ -533,6 +534,7 @@ getEventsLogMetaData component channelName sessionKey =
         , key = key
         }
         |> Procedure.fetchResult
+        |> Procedure.mapError Dynamo.errorToDetails
         |> Procedure.andThen
             (\maybeMetaData ->
                 case maybeMetaData of
@@ -540,9 +542,26 @@ getEventsLogMetaData component channelName sessionKey =
                         { sessionKey = sessionKey, lastSeqNo = metadata.lastId } |> Procedure.provide
 
                     Nothing ->
-                        Debug.todo ""
+                        { message = "No EventLog metadata record found for channel: " ++ channelName
+                        , details = Encode.null
+                        }
+                            |> Procedure.break
             )
-        |> Procedure.mapError Dynamo.errorToDetails
+
+
+type alias UnsavedEvent =
+    { rt : String
+    , client : String
+    , payload : Value
+    }
+
+
+decodeUnsavedEvent : Decoder UnsavedEvent
+decodeUnsavedEvent =
+    Decode.succeed UnsavedEvent
+        |> DE.andMap (Decode.field "rt" Decode.string)
+        |> DE.andMap (Decode.field "client" Decode.string)
+        |> DE.andMap (Decode.field "payload" Decode.value)
 
 
 readEvents :
@@ -553,7 +572,7 @@ readEvents :
         Procedure.Procedure ErrorFormat
             { sessionKey : MomentoSessionKey
             , lastSeqNo : Int
-            , cacheItem : CacheItem
+            , cacheItem : UnsavedEvent
             }
             Msg
 readEvents component channelName state =
@@ -562,14 +581,23 @@ readEvents component channelName state =
         { list = saveListName channelName
         }
         |> Procedure.fetchResult
-        |> Procedure.map
-            (\cacheItem ->
-                { sessionKey = state.sessionKey
-                , lastSeqNo = state.lastSeqNo
-                , cacheItem = cacheItem
-                }
-            )
         |> Procedure.mapError Momento.errorToDetails
+        |> Procedure.andThen
+            (\cacheItem ->
+                case Decode.decodeValue decodeUnsavedEvent cacheItem.payload of
+                    Ok unsavedEvent ->
+                        { sessionKey = state.sessionKey
+                        , lastSeqNo = state.lastSeqNo
+                        , cacheItem = unsavedEvent
+                        }
+                            |> Procedure.provide
+
+                    Err _ ->
+                        { message = "No EventLog metadata record found for channel: " ++ channelName
+                        , details = Encode.null
+                        }
+                            |> Procedure.break
+            )
 
 
 {-| Records the event in the event log table AND updates the metadata so that the sequence number is bumped
@@ -583,13 +611,13 @@ recordEventsAndMetadata :
     ->
         { sessionKey : MomentoSessionKey
         , lastSeqNo : Int
-        , cacheItem : CacheItem
+        , cacheItem : UnsavedEvent
         }
     ->
         Procedure.Procedure ErrorFormat
             { sessionKey : MomentoSessionKey
             , lastSeqNo : Int
-            , cacheItem : CacheItem
+            , cacheItem : UnsavedEvent
             }
             Msg
 recordEventsAndMetadata component channelName state =
@@ -646,13 +674,14 @@ publishEvents :
     ->
         { sessionKey : MomentoSessionKey
         , lastSeqNo : Int
-        , cacheItem : CacheItem
+        , cacheItem : UnsavedEvent
         }
     -> Procedure.Procedure ErrorFormat () Msg
 publishEvents component channelName state =
     let
         payload =
             [ ( "rt", Encode.string "P" )
+            , ( "client", Encode.string state.cacheItem.client )
             , ( "seq", Encode.int state.lastSeqNo )
             , ( "payload", state.cacheItem.payload )
             ]
