@@ -207,6 +207,11 @@ eventLogTableApi =
     EventLogTable.operations ProcedureMsg dynamoPorts
 
 
+eventLogTableMetadataApi : Dynamo.DynamoTypedApi EventLogTable.Key EventLogTable.MetadataRecord Msg
+eventLogTableMetadataApi =
+    EventLogTable.metadataOperations ProcedureMsg dynamoPorts
+
+
 momentoApi : Momento.MomentoApi Msg
 momentoApi =
     { open = Ports.mmOpen
@@ -280,13 +285,7 @@ processRoute protocol session apiRequest component =
 -- Try and get the connection details of an available channel
 
 
-{-| Channel creation:
-
-    * Take the first available channel from the database of channels.
-    * Confirm the cache and webhooks for it exists in momento.
-    * Mark the channel as allocated in the database.
-    * Return a confirmation that everything has been set up.
-
+{-| Look for an available channel.
 -}
 tryGetAvailableChannel : Protocol (Component a) msg model -> HttpSessionKey -> ReadyState -> Component a -> ( model, Cmd msg )
 tryGetAvailableChannel protocol session state component =
@@ -338,8 +337,9 @@ findAvailableChannel component _ =
 {-| Channel creation:
 
     * Create the cache or confirm it already exists.
-    * Create a dynamodb table for the persisted events or confirm it already exists.
     * Create a webhook on the save topic.
+    * Create the meta-data record for the channel in the events table.
+    * Record the channel information in the channels table.
     * Return a confirmation that everything has been set up.
 
 -}
@@ -354,7 +354,8 @@ createChannel protocol session state component =
             Procedure.provide channelName
                 |> Procedure.andThen (openMomentoCache component)
                 |> Procedure.andThen (setupChannelWebhook component channelName)
-                |> Procedure.andThen (recordChannelToDB component channelName)
+                |> Procedure.andThen (recordEventsLogMetaData component channelName)
+                |> Procedure.andThen (recordChannel component channelName)
                 |> Procedure.mapError (encodeErrorFormat >> Response.err500json)
                 |> Procedure.map (Codec.encoder ChannelTable.recordCodec >> Response.ok200json)
     in
@@ -399,12 +400,39 @@ setupChannelWebhook component channelName sessionKey =
         |> Procedure.mapError Momento.errorToDetails
 
 
-recordChannelToDB :
+recordEventsLogMetaData :
+    Component a
+    -> String
+    -> MomentoSessionKey
+    -> Procedure.Procedure ErrorFormat MomentoSessionKey Msg
+recordEventsLogMetaData component channelName sessionKey =
+    Procedure.fromTask Time.now
+        |> Procedure.andThen
+            (\timestamp ->
+                let
+                    metadataRecord =
+                        { id = channelName
+                        , seq = 0
+                        , updatedAt = timestamp
+                        , lastId = 0
+                        }
+                in
+                eventLogTableMetadataApi.put
+                    { tableName = component.eventLogTable
+                    , item = metadataRecord
+                    }
+                    |> Procedure.fetchResult
+                    |> Procedure.map (always sessionKey)
+                    |> Procedure.mapError Dynamo.errorToDetails
+            )
+
+
+recordChannel :
     Component a
     -> String
     -> MomentoSessionKey
     -> Procedure.Procedure ErrorFormat ChannelTable.Record Msg
-recordChannelToDB component channelName sessionKey =
+recordChannel component channelName sessionKey =
     Procedure.fromTask Time.now
         |> Procedure.andThen
             (\timestamp ->
@@ -472,10 +500,11 @@ processSaveChannel protocol session state apiRequest channelName component =
         procedure =
             Procedure.provide channelName
                 |> Procedure.andThen (openMomentoCache component)
+                |> Procedure.andThen (getEventsLogMetaData component channelName)
                 |> Procedure.andThen (readEvents component channelName)
-                |> Procedure.andThen (recordEventsToDB component channelName)
+                |> Procedure.andThen (recordEventsAndMetadata component channelName)
                 |> Procedure.andThen (publishEvents component channelName)
-                |> Procedure.mapError (encodeErrorFormat >> Response.err500json)
+                |> Procedure.mapError (Debug.log "error" >> encodeErrorFormat >> Response.err500json)
                 |> Procedure.map (Response.ok200json Encode.null |> always)
     in
     ( state
@@ -487,36 +516,102 @@ processSaveChannel protocol session state apiRequest channelName component =
         |> protocol.onUpdate
 
 
-readEvents :
+getEventsLogMetaData :
     Component a
     -> String
     -> MomentoSessionKey
-    -> Procedure.Procedure ErrorFormat ( MomentoSessionKey, CacheItem ) Msg
-readEvents component channelName sessionKey =
+    -> Procedure.Procedure ErrorFormat { sessionKey : MomentoSessionKey, lastSeqNo : Int } Msg
+getEventsLogMetaData component channelName sessionKey =
+    let
+        key =
+            { id = channelName
+            , seq = 0
+            }
+    in
+    eventLogTableMetadataApi.get
+        { tableName = component.eventLogTable
+        , key = key
+        }
+        |> Procedure.fetchResult
+        |> Procedure.andThen
+            (\maybeMetaData ->
+                case maybeMetaData of
+                    Just metadata ->
+                        { sessionKey = sessionKey, lastSeqNo = metadata.lastId } |> Procedure.provide
+
+                    Nothing ->
+                        Debug.todo ""
+            )
+        |> Procedure.mapError Dynamo.errorToDetails
+
+
+readEvents :
+    Component a
+    -> String
+    -> { sessionKey : MomentoSessionKey, lastSeqNo : Int }
+    ->
+        Procedure.Procedure ErrorFormat
+            { sessionKey : MomentoSessionKey
+            , lastSeqNo : Int
+            , cacheItem : CacheItem
+            }
+            Msg
+readEvents component channelName state =
     momentoApi.popList
-        sessionKey
+        state.sessionKey
         { list = saveListName channelName
         }
         |> Procedure.fetchResult
-        |> Procedure.map (Tuple.pair sessionKey)
+        |> Procedure.map
+            (\cacheItem ->
+                { sessionKey = state.sessionKey
+                , lastSeqNo = state.lastSeqNo
+                , cacheItem = cacheItem
+                }
+            )
         |> Procedure.mapError Momento.errorToDetails
 
 
-recordEventsToDB :
+{-| Records the event in the event log table AND updates the metadata so that the sequence number is bumped
+by one. If more than one process attempts to do this at the same time, it can fail because the sequence
+number is already taken. In that case the operation is retried until it succeeds and a unique sequence
+number is assigned to the event.
+-}
+recordEventsAndMetadata :
     Component a
     -> String
-    -> ( MomentoSessionKey, CacheItem )
-    -> Procedure.Procedure ErrorFormat ( MomentoSessionKey, CacheItem ) Msg
-recordEventsToDB component channelName ( sessionKey, cacheItem ) =
+    ->
+        { sessionKey : MomentoSessionKey
+        , lastSeqNo : Int
+        , cacheItem : CacheItem
+        }
+    ->
+        Procedure.Procedure ErrorFormat
+            { sessionKey : MomentoSessionKey
+            , lastSeqNo : Int
+            , cacheItem : CacheItem
+            }
+            Msg
+recordEventsAndMetadata component channelName state =
     Procedure.fromTask Time.now
         |> Procedure.andThen
             (\timestamp ->
                 let
+                    assignedSeqNo =
+                        state.lastSeqNo + 1
+
                     eventRecord =
+                        { id = channelName
+                        , seq = assignedSeqNo
+                        , updatedAt = timestamp
+                        , event = state.cacheItem.payload
+                        }
+
+                    metadataRecord =
                         { id = channelName
                         , seq = 0
                         , updatedAt = timestamp
-                        , event = cacheItem.payload
+                        , lastId = assignedSeqNo
                         }
                 in
                 eventLogTableApi.put
@@ -524,21 +619,35 @@ recordEventsToDB component channelName ( sessionKey, cacheItem ) =
                     , item = eventRecord
                     }
                     |> Procedure.fetchResult
-                    |> Procedure.map (always ( sessionKey, cacheItem ))
+                    |> Procedure.map (always state)
                     |> Procedure.mapError Dynamo.errorToDetails
+                    |> Procedure.andThen
+                        (\_ ->
+                            eventLogTableMetadataApi.put
+                                { tableName = component.eventLogTable
+                                , item = metadataRecord
+                                }
+                                |> Procedure.fetchResult
+                                |> Procedure.map (always state)
+                                |> Procedure.mapError Dynamo.errorToDetails
+                        )
             )
 
 
 publishEvents :
     Component a
     -> String
-    -> ( MomentoSessionKey, CacheItem )
+    ->
+        { sessionKey : MomentoSessionKey
+        , lastSeqNo : Int
+        , cacheItem : CacheItem
+        }
     -> Procedure.Procedure ErrorFormat () Msg
-publishEvents component channelName ( sessionKey, cacheItem ) =
+publishEvents component channelName state =
     momentoApi.publish
-        sessionKey
+        state.sessionKey
         { topic = modelTopicName channelName
-        , payload = cacheItem.payload
+        , payload = state.cacheItem.payload
         }
         |> Procedure.fetchResult
         |> Procedure.map (always ())
