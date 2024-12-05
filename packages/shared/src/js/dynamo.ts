@@ -7,7 +7,9 @@ import {
     GetCommandInput,
     PutCommandInput,
     QueryCommandInput,
-    ScanCommandInput, UpdateCommandInput
+    ScanCommandInput,
+    TransactWriteCommandInput,
+    UpdateCommandInput
 } from "@aws-sdk/lib-dynamodb";
 import * as ports from "./ports" ;
 
@@ -27,6 +29,11 @@ type PutArgs = {
 type UpdateArgs = {
     id: string;
     req: UpdateCommandInput;
+}
+
+type WriteTxArgs = {
+    id: string;
+    req: TransactWriteCommandInput;
 }
 
 type DeleteArgs = {
@@ -63,6 +70,8 @@ type Error = {
 type Ports = {
     dynamoGet: { subscribe: any };
     dynamoPut: { subscribe: any };
+    dynamoUpdate: { subscribe: any };
+    dynamoWriteTx: { subscribe: any };
     dynamoDelete: { subscribe: any };
     dynamoBatchGet: { subscribe: any };
     dynamoBatchWrite: { subscribe: any };
@@ -90,6 +99,7 @@ export class DynamoPorts {
             "dynamoGet",
             "dynamoPut",
             "dynamoUpdate",
+            "dynamoWriteTx",
             "dynamoDelete",
             "dynamoBatchGet",
             "dynamoBatchWrite",
@@ -101,6 +111,7 @@ export class DynamoPorts {
         app.ports.dynamoGet.subscribe(this.dynamoGet);
         app.ports.dynamoPut.subscribe(this.dynamoPut);
         app.ports.dynamoUpdate.subscribe(this.dynamoUpdate);
+        app.ports.dynamoWriteTx.subscribe(this.dynamoWriteTx);
         app.ports.dynamoDelete.subscribe(this.dynamoDelete);
         app.ports.dynamoBatchGet.subscribe(this.dynamoBatchGet);
         app.ports.dynamoBatchWrite.subscribe(this.dynamoBatchWrite);
@@ -153,6 +164,25 @@ export class DynamoPorts {
         console.info(args);
 
         documentClient.update(args.req, (error, result) => {
+            var putResponse;
+
+            if (error) {
+                putResponse = errorResponse(error);
+            } else {
+                putResponse = {
+                    type_: "Ok"
+                }
+            }
+
+            this.app.ports.dynamoResponse.send({id: args.id, res: putResponse});
+        });
+    }
+
+    dynamoWriteTx = async (args: WriteTxArgs) => {
+        console.info("dynamoWriteTx: called");
+        console.info(args);
+
+        documentClient.transactWrite(args.req, (error, result) => {
             var putResponse;
 
             if (error) {

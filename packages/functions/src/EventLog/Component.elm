@@ -190,6 +190,7 @@ dynamoPorts =
     { get = Ports.dynamoGet
     , put = Ports.dynamoPut
     , update = Ports.dynamoUpdate
+    , writeTx = Ports.dynamoWriteTx
     , delete = Ports.dynamoDelete
     , batchGet = Ports.dynamoBatchGet
     , batchWrite = Ports.dynamoBatchWrite
@@ -636,48 +637,71 @@ recordEventsAndMetadata component channelName state =
                         , event = state.cacheItem.payload
                         }
 
-                    metadataRecord =
-                        { id = channelName
-                        , seq = 0
-                        , updatedAt = timestamp
-                        , lastId = assignedSeqNo
-                        }
+                    seqUpdate =
+                        Dynamo.updateCommand
+                            EventLogTable.encodeKey
+                            { tableName = component.eventLogTable
+                            , key = { id = metadataKeyName channelName, seq = 0 }
+                            , updateExpression = "SET lastId = lastId + :incr"
+                            , conditionExpression = Just "lastId = :current_id"
+                            , expressionAttributeNames = Dict.empty
+                            , expressionAttributeValues =
+                                [ ( ":incr", Dynamo.int 1 )
+                                , ( ":current_id", Dynamo.int state.lastSeqNo )
+                                ]
+                                    |> Dict.fromList
+                            , returnConsumedCapacity = Nothing
+                            , returnItemCollectionMetrics = Nothing
+                            , returnValues = Nothing
+                            , returnValuesOnConditionCheckFailure = Nothing
+                            }
+
+                    eventPut =
+                        Dynamo.putCommand
+                            EventLogTable.encodeRecord
+                            { tableName = component.eventLogTable
+                            , item = eventRecord
+                            }
                 in
-                eventLogTableApi.put
+                eventLogTableMetadataApi.writeTx
                     { tableName = component.eventLogTable
-                    , item = eventRecord
+                    , commands = [ seqUpdate, eventPut ]
                     }
+                    --eventLogTableMetadataApi.update
+                    --    { tableName = component.eventLogTable
+                    --    , key = { id = metadataKeyName channelName, seq = 0 }
+                    --    , updateExpression = "SET lastId = lastId + :incr"
+                    --    , conditionExpression = Just "lastId = :current_id"
+                    --    , expressionAttributeNames = Dict.empty
+                    --    , expressionAttributeValues =
+                    --        [ ( ":incr", Dynamo.int 1 )
+                    --        , ( ":current_id", Dynamo.int state.lastSeqNo )
+                    --        ]
+                    --            |> Dict.fromList
+                    --    , returnConsumedCapacity = Nothing
+                    --    , returnItemCollectionMetrics = Nothing
+                    --    , returnValues = Nothing
+                    --    , returnValuesOnConditionCheckFailure = Nothing
+                    --    }
+                    --    |> Procedure.fetchResult
+                    --    |> Procedure.map (always state)
+                    --    |> Procedure.mapError Dynamo.errorToDetails
+                    --    |> Procedure.andThen
+                    --        (\_ ->
+                    --            eventLogTableApi.put
+                    --                { tableName = component.eventLogTable
+                    --                , item = eventRecord
+                    --                }
                     |> Procedure.fetchResult
-                    |> Procedure.map (always state)
-                    |> Procedure.mapError Dynamo.errorToDetails
-                    |> Procedure.andThen
-                        (\_ ->
-                            eventLogTableMetadataApi.update
-                                { tableName = component.eventLogTable
-                                , key = { id = metadataKeyName channelName, seq = 0 }
-                                , updateExpression = "SET lastId = lastId + :incr"
-                                , conditionExpression = Just "lastId = :current_id"
-                                , expressionAttributeNames = Dict.empty
-                                , expressionAttributeValues =
-                                    [ ( ":incr", Dynamo.int 1 )
-                                    , ( ":current_id", Dynamo.int state.lastSeqNo )
-                                    ]
-                                        |> Dict.fromList
-                                , returnConsumedCapacity = Nothing
-                                , returnItemCollectionMetrics = Nothing
-                                , returnValues = Nothing
-                                , returnValuesOnConditionCheckFailure = Nothing
-                                }
-                                |> Procedure.fetchResult
-                                |> Procedure.map
-                                    (always
-                                        { sessionKey = state.sessionKey
-                                        , lastSeqNo = assignedSeqNo
-                                        , cacheItem = state.cacheItem
-                                        }
-                                    )
-                                |> Procedure.mapError Dynamo.errorToDetails
+                    |> Procedure.map
+                        (always
+                            { sessionKey = state.sessionKey
+                            , lastSeqNo = assignedSeqNo
+                            , cacheItem = state.cacheItem
+                            }
                         )
+                    |> Procedure.mapError Dynamo.errorToDetails
+             --        )
             )
 
 

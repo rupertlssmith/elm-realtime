@@ -2,6 +2,8 @@ module DB.EventLogTable exposing
     ( Key
     , MetadataRecord
     , Record
+    , encodeKey
+    , encodeRecord
     , metadataOperations
     , operations
     )
@@ -60,6 +62,11 @@ recordCodec =
         |> Codec.field "updatedAt" .updatedAt posixCodec
         |> Codec.field "event" .event Codec.value
         |> Codec.buildObject
+
+
+encodeRecord : Record -> Value
+encodeRecord =
+    Codec.encoder recordCodec
 
 
 metadataRecordCodec : Codec MetadataRecord

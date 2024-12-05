@@ -2,9 +2,10 @@ module AWS.Dynamo exposing
     ( Ports
     , dynamoApi, DynamoApi
     , dynamoTypedApi, DynamoTypedApi
-    , Put
+    , WriteTx
     , Get
     , Delete
+    , updateCommand, putCommand
     , Match, Order(..), partitionKeyEquals, limitResults, orderResults
     , rangeKeyEquals, rangeKeyLessThan, rangeKeyLessThanOrEqual, rangeKeyGreaterThan
     , rangeKeyGreaterThanOrEqual, rangeKeyBetween
@@ -28,11 +29,16 @@ module AWS.Dynamo exposing
 
 # Read and Write Operations
 
-@docs Put
+@docs WriteTx
 @docs Get
 @docs Delete
 @docs BatchPut
 @docs BatchGet
+
+
+# Write Transaction Commands
+
+@docs updateCommand, putCommand
 
 
 # Database Queries
@@ -53,7 +59,6 @@ import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Extra as DE
 import Json.Encode as Encode exposing (Value)
-import Json.Encode.Extra
 import Maybe.Extra
 import Procedure
 import Procedure.Channel as Channel
@@ -65,6 +70,7 @@ type alias Ports msg =
     { get : { id : String, req : Value } -> Cmd msg
     , put : { id : String, req : Value } -> Cmd msg
     , update : { id : String, req : Value } -> Cmd msg
+    , writeTx : { id : String, req : Value } -> Cmd msg
     , delete : { id : String, req : Value } -> Cmd msg
     , batchGet : { id : String, req : Value } -> Cmd msg
     , batchWrite : { id : String, req : Value } -> Cmd msg
@@ -78,6 +84,7 @@ type alias DynamoApi msg =
     { get : Get Value -> (Result Error (Maybe Value) -> msg) -> Cmd msg
     , put : Put Value -> (Result Error () -> msg) -> Cmd msg
     , update : Update Value -> (Result Error (Maybe Value) -> msg) -> Cmd msg
+    , writeTx : WriteTx -> (Result Error () -> msg) -> Cmd msg
     , delete : Delete Value -> (Result Error () -> msg) -> Cmd msg
     , batchGet : BatchGet Value -> (Result Error (List Value) -> msg) -> Cmd msg
     , batchPut : BatchPut Value -> (Result Error () -> msg) -> Cmd msg
@@ -91,6 +98,7 @@ type alias DynamoTypedApi k v msg =
     { get : Get k -> (Result Error (Maybe v) -> msg) -> Cmd msg
     , put : Put v -> (Result Error () -> msg) -> Cmd msg
     , update : Update k -> (Result Error (Maybe v) -> msg) -> Cmd msg
+    , writeTx : WriteTx -> (Result Error () -> msg) -> Cmd msg
     , delete : Delete k -> (Result Error () -> msg) -> Cmd msg
     , batchGet : BatchGet k -> (Result Error (List v) -> msg) -> Cmd msg
     , batchPut : BatchPut v -> (Result Error () -> msg) -> Cmd msg
@@ -105,6 +113,7 @@ dynamoApi pt ports =
     { get = get pt ports identity Decode.value
     , put = put pt ports identity
     , update = update pt ports identity Decode.value
+    , writeTx = writeTx pt ports
     , delete = delete pt ports identity
     , batchGet = batchGet pt ports identity Decode.value
     , batchPut = batchPut pt ports identity
@@ -125,6 +134,7 @@ dynamoTypedApi keyEncoder valEncoder decoder pt ports =
     { get = get pt ports keyEncoder decoder
     , put = put pt ports valEncoder
     , update = update pt ports keyEncoder decoder
+    , writeTx = writeTx pt ports
     , delete = delete pt ports keyEncoder
     , batchGet = batchGet pt ports keyEncoder decoder
     , batchPut = batchPut pt ports valEncoder
@@ -132,6 +142,12 @@ dynamoTypedApi keyEncoder valEncoder decoder pt ports =
     , query = query pt ports decoder
     , queryIndex = queryIndex pt ports decoder
     }
+
+
+type WriteCommand
+    = PutCommand Value
+    | UpdateCommand Value
+    | DeleteCommand Value
 
 
 
@@ -189,6 +205,14 @@ type alias Put v =
     { tableName : String
     , item : v
     }
+
+
+{-| Builds a put command as JSON. Useful when doing multiple write commands in a transaction.
+-}
+putCommand : (v -> Value) -> Put v -> WriteCommand
+putCommand encoder putProps =
+    putEncoder encoder putProps
+        |> PutCommand
 
 
 put :
@@ -270,6 +294,14 @@ type ReturnValues
 
 type ReturnValuesOnConditionCheckFailure
     = CheckFailAllOld
+
+
+{-| Builds an update command as JSON. Useful when doing multiple write commands in a transaction.
+-}
+updateCommand : (v -> Value) -> Update v -> WriteCommand
+updateCommand encoder updateProps =
+    updateEncoder encoder updateProps
+        |> UpdateCommand
 
 
 update :
@@ -399,6 +431,73 @@ updateResponseDecoder valDecoder val =
                             "Item" ->
                                 Decode.at [ "item", "Item" ] valDecoder
                                     |> Decode.map (Just >> Ok)
+
+                            _ ->
+                                errorDecoder
+                    )
+    in
+    Decode.decodeValue decoder val
+        |> Result.mapError (DecodeError >> Err)
+        |> Result.Extra.merge
+
+
+
+---- Write transactions
+
+
+type alias WriteTx =
+    { tableName : String
+    , commands : List WriteCommand
+    }
+
+
+writeTx :
+    (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
+    -> WriteTx
+    -> (Result Error () -> msg)
+    -> Cmd msg
+writeTx pt ports writeTxProps dt =
+    Channel.open (\key -> ports.writeTx { id = key, req = writeTxEncoder writeTxProps })
+        |> Channel.connect ports.response
+        |> Channel.filter (\key { id } -> id == key)
+        |> Channel.acceptOne
+        |> Procedure.run pt (\{ res } -> writeTxResponseDecoder res |> dt)
+
+
+writeTxEncoder : WriteTx -> Value
+writeTxEncoder writeTxOp =
+    let
+        encoder writeCommand =
+            case writeCommand of
+                PutCommand v ->
+                    [ ( "Put", v ) ]
+                        |> Encode.object
+
+                UpdateCommand v ->
+                    [ ( "Update", v ) ]
+                        |> Encode.object
+
+                DeleteCommand v ->
+                    [ ( "Delete", v ) ]
+                        |> Encode.object
+    in
+    Encode.object
+        [ ( "TableName", Encode.string writeTxOp.tableName )
+        , ( "TransactItems", Encode.list encoder writeTxOp.commands )
+        ]
+
+
+writeTxResponseDecoder : Value -> Result Error ()
+writeTxResponseDecoder val =
+    let
+        decoder =
+            Decode.field "type_" Decode.string
+                |> Decode.andThen
+                    (\type_ ->
+                        case type_ of
+                            "Ok" ->
+                                Decode.succeed (Ok ())
 
                             _ ->
                                 errorDecoder

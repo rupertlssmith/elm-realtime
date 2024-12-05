@@ -5932,7 +5932,21 @@ var $author$project$Ports$dynamoUpdate = _Platform_outgoingPort(
 					$elm$core$Basics$identity($.req))
 				]));
 	});
-var $author$project$EventLog$Component$dynamoPorts = {batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse, scan: $author$project$Ports$dynamoScan, update: $author$project$Ports$dynamoUpdate};
+var $author$project$Ports$dynamoWriteTx = _Platform_outgoingPort(
+	'dynamoWriteTx',
+	function ($) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'id',
+					$elm$json$Json$Encode$string($.id)),
+					_Utils_Tuple2(
+					'req',
+					$elm$core$Basics$identity($.req))
+				]));
+	});
+var $author$project$EventLog$Component$dynamoPorts = {batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse, scan: $author$project$Ports$dynamoScan, update: $author$project$Ports$dynamoUpdate, writeTx: $author$project$Ports$dynamoWriteTx};
 var $miniBill$elm_codec$Codec$decoder = function (_v0) {
 	var m = _v0.a;
 	return m.decoder;
@@ -7165,6 +7179,91 @@ var $author$project$AWS$Dynamo$update = F6(
 									});
 							})))));
 	});
+var $author$project$AWS$Dynamo$writeTxEncoder = function (writeTxOp) {
+	var encoder = function (writeCommand) {
+		switch (writeCommand.$) {
+			case 'PutCommand':
+				var v = writeCommand.a;
+				return $elm$json$Json$Encode$object(
+					_List_fromArray(
+						[
+							_Utils_Tuple2('Put', v)
+						]));
+			case 'UpdateCommand':
+				var v = writeCommand.a;
+				return $elm$json$Json$Encode$object(
+					_List_fromArray(
+						[
+							_Utils_Tuple2('Update', v)
+						]));
+			default:
+				var v = writeCommand.a;
+				return $elm$json$Json$Encode$object(
+					_List_fromArray(
+						[
+							_Utils_Tuple2('Delete', v)
+						]));
+		}
+	};
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'TableName',
+				$elm$json$Json$Encode$string(writeTxOp.tableName)),
+				_Utils_Tuple2(
+				'TransactItems',
+				A2($elm$json$Json$Encode$list, encoder, writeTxOp.commands))
+			]));
+};
+var $author$project$AWS$Dynamo$writeTxResponseDecoder = function (val) {
+	var decoder = A2(
+		$elm$json$Json$Decode$andThen,
+		function (type_) {
+			if (type_ === 'Ok') {
+				return $elm$json$Json$Decode$succeed(
+					$elm$core$Result$Ok(_Utils_Tuple0));
+			} else {
+				return $author$project$AWS$Dynamo$errorDecoder;
+			}
+		},
+		A2($elm$json$Json$Decode$field, 'type_', $elm$json$Json$Decode$string));
+	return $elm_community$result_extra$Result$Extra$merge(
+		A2(
+			$elm$core$Result$mapError,
+			A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err),
+			A2($elm$json$Json$Decode$decodeValue, decoder, val)));
+};
+var $author$project$AWS$Dynamo$writeTx = F4(
+	function (pt, ports, writeTxProps, dt) {
+		return A3(
+			$brian_watkins$elm_procedure$Procedure$run,
+			pt,
+			function (_v1) {
+				var res = _v1.res;
+				return dt(
+					$author$project$AWS$Dynamo$writeTxResponseDecoder(res));
+			},
+			$brian_watkins$elm_procedure$Procedure$Channel$acceptOne(
+				A2(
+					$brian_watkins$elm_procedure$Procedure$Channel$filter,
+					F2(
+						function (key, _v0) {
+							var id = _v0.id;
+							return _Utils_eq(id, key);
+						}),
+					A2(
+						$brian_watkins$elm_procedure$Procedure$Channel$connect,
+						ports.response,
+						$brian_watkins$elm_procedure$Procedure$Channel$open(
+							function (key) {
+								return ports.writeTx(
+									{
+										id: key,
+										req: $author$project$AWS$Dynamo$writeTxEncoder(writeTxProps)
+									});
+							})))));
+	});
 var $author$project$AWS$Dynamo$dynamoTypedApi = F5(
 	function (keyEncoder, valEncoder, decoder, pt, ports) {
 		return {
@@ -7176,7 +7275,8 @@ var $author$project$AWS$Dynamo$dynamoTypedApi = F5(
 			query: A3($author$project$AWS$Dynamo$query, pt, ports, decoder),
 			queryIndex: A3($author$project$AWS$Dynamo$queryIndex, pt, ports, decoder),
 			scan: A3($author$project$AWS$Dynamo$scan, pt, ports, decoder),
-			update: A4($author$project$AWS$Dynamo$update, pt, ports, keyEncoder, decoder)
+			update: A4($author$project$AWS$Dynamo$update, pt, ports, keyEncoder, decoder),
+			writeTx: A2($author$project$AWS$Dynamo$writeTx, pt, ports)
 		};
 	});
 var $author$project$DB$ChannelTable$encodeKey = function (key) {
@@ -7651,72 +7751,81 @@ var $author$project$DB$EventLogTable$recordCodec = $miniBill$elm_codec$Codec$bui
 					},
 					$miniBill$elm_codec$Codec$string,
 					$miniBill$elm_codec$Codec$object($author$project$DB$EventLogTable$Record))))));
-var $author$project$DB$EventLogTable$operations = A3(
-	$author$project$AWS$Dynamo$dynamoTypedApi,
-	$author$project$DB$EventLogTable$encodeKey,
-	$miniBill$elm_codec$Codec$encoder($author$project$DB$EventLogTable$recordCodec),
-	$miniBill$elm_codec$Codec$decoder($author$project$DB$EventLogTable$recordCodec));
-var $author$project$EventLog$Component$eventLogTableApi = A2($author$project$DB$EventLogTable$operations, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$dynamoPorts);
+var $author$project$DB$EventLogTable$encodeRecord = $miniBill$elm_codec$Codec$encoder($author$project$DB$EventLogTable$recordCodec);
 var $author$project$AWS$Dynamo$NumberAttr = function (a) {
 	return {$: 'NumberAttr', a: a};
 };
 var $author$project$AWS$Dynamo$int = function (val) {
 	return $author$project$AWS$Dynamo$NumberAttr(val);
 };
+var $author$project$AWS$Dynamo$PutCommand = function (a) {
+	return {$: 'PutCommand', a: a};
+};
+var $author$project$AWS$Dynamo$putCommand = F2(
+	function (encoder, putProps) {
+		return $author$project$AWS$Dynamo$PutCommand(
+			A2($author$project$AWS$Dynamo$putEncoder, encoder, putProps));
+	});
+var $author$project$AWS$Dynamo$UpdateCommand = function (a) {
+	return {$: 'UpdateCommand', a: a};
+};
+var $author$project$AWS$Dynamo$updateCommand = F2(
+	function (encoder, updateProps) {
+		return $author$project$AWS$Dynamo$UpdateCommand(
+			A2($author$project$AWS$Dynamo$updateEncoder, encoder, updateProps));
+	});
 var $author$project$EventLog$Component$recordEventsAndMetadata = F3(
 	function (component, channelName, state) {
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$andThen,
 			function (timestamp) {
+				var seqUpdate = A2(
+					$author$project$AWS$Dynamo$updateCommand,
+					$author$project$DB$EventLogTable$encodeKey,
+					{
+						conditionExpression: $elm$core$Maybe$Just('lastId = :current_id'),
+						expressionAttributeNames: $elm$core$Dict$empty,
+						expressionAttributeValues: $elm$core$Dict$fromList(
+							_List_fromArray(
+								[
+									_Utils_Tuple2(
+									':incr',
+									$author$project$AWS$Dynamo$int(1)),
+									_Utils_Tuple2(
+									':current_id',
+									$author$project$AWS$Dynamo$int(state.lastSeqNo))
+								])),
+						key: {
+							id: $author$project$EventLog$Component$metadataKeyName(channelName),
+							seq: 0
+						},
+						returnConsumedCapacity: $elm$core$Maybe$Nothing,
+						returnItemCollectionMetrics: $elm$core$Maybe$Nothing,
+						returnValues: $elm$core$Maybe$Nothing,
+						returnValuesOnConditionCheckFailure: $elm$core$Maybe$Nothing,
+						tableName: component.eventLogTable,
+						updateExpression: 'SET lastId = lastId + :incr'
+					});
 				var assignedSeqNo = state.lastSeqNo + 1;
 				var eventRecord = {event: state.cacheItem.payload, id: channelName, seq: assignedSeqNo, updatedAt: timestamp};
-				var metadataRecord = {id: channelName, lastId: assignedSeqNo, seq: 0, updatedAt: timestamp};
+				var eventPut = A2(
+					$author$project$AWS$Dynamo$putCommand,
+					$author$project$DB$EventLogTable$encodeRecord,
+					{item: eventRecord, tableName: component.eventLogTable});
 				return A2(
-					$brian_watkins$elm_procedure$Procedure$andThen,
-					function (_v0) {
-						return A2(
-							$brian_watkins$elm_procedure$Procedure$mapError,
-							$author$project$AWS$Dynamo$errorToDetails,
-							A2(
-								$brian_watkins$elm_procedure$Procedure$map,
-								$elm$core$Basics$always(
-									{cacheItem: state.cacheItem, lastSeqNo: assignedSeqNo, sessionKey: state.sessionKey}),
-								$brian_watkins$elm_procedure$Procedure$fetchResult(
-									$author$project$EventLog$Component$eventLogTableMetadataApi.update(
-										{
-											conditionExpression: $elm$core$Maybe$Just('lastId = :current_id'),
-											expressionAttributeNames: $elm$core$Dict$empty,
-											expressionAttributeValues: $elm$core$Dict$fromList(
-												_List_fromArray(
-													[
-														_Utils_Tuple2(
-														':incr',
-														$author$project$AWS$Dynamo$int(1)),
-														_Utils_Tuple2(
-														':current_id',
-														$author$project$AWS$Dynamo$int(state.lastSeqNo))
-													])),
-											key: {
-												id: $author$project$EventLog$Component$metadataKeyName(channelName),
-												seq: 0
-											},
-											returnConsumedCapacity: $elm$core$Maybe$Nothing,
-											returnItemCollectionMetrics: $elm$core$Maybe$Nothing,
-											returnValues: $elm$core$Maybe$Nothing,
-											returnValuesOnConditionCheckFailure: $elm$core$Maybe$Nothing,
-											tableName: component.eventLogTable,
-											updateExpression: 'SET lastId = lastId + :incr'
-										}))));
-					},
+					$brian_watkins$elm_procedure$Procedure$mapError,
+					$author$project$AWS$Dynamo$errorToDetails,
 					A2(
-						$brian_watkins$elm_procedure$Procedure$mapError,
-						$author$project$AWS$Dynamo$errorToDetails,
-						A2(
-							$brian_watkins$elm_procedure$Procedure$map,
-							$elm$core$Basics$always(state),
-							$brian_watkins$elm_procedure$Procedure$fetchResult(
-								$author$project$EventLog$Component$eventLogTableApi.put(
-									{item: eventRecord, tableName: component.eventLogTable})))));
+						$brian_watkins$elm_procedure$Procedure$map,
+						$elm$core$Basics$always(
+							{cacheItem: state.cacheItem, lastSeqNo: assignedSeqNo, sessionKey: state.sessionKey}),
+						$brian_watkins$elm_procedure$Procedure$fetchResult(
+							$author$project$EventLog$Component$eventLogTableMetadataApi.writeTx(
+								{
+									commands: _List_fromArray(
+										[seqUpdate, eventPut]),
+									tableName: component.eventLogTable
+								}))));
 			},
 			$brian_watkins$elm_procedure$Procedure$fromTask($elm$time$Time$now));
 	});

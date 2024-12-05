@@ -6,7 +6,7 @@ port module Ports exposing
     , mmCreateWebhook
     , mmPushList, mmPopList
     , dynamoBatchGet, dynamoBatchWrite, dynamoDelete, dynamoGet, dynamoPut, dynamoUpdate
-    , dynamoScan, dynamoQuery, dynamoResponse
+    , dynamoScan, dynamoQuery, dynamoResponse, dynamoWriteTx
     )
 
 {-| Application ports
@@ -29,7 +29,7 @@ port module Ports exposing
 # AWS Dynamo DB
 
 @docs dynamoBatchGet, dynamoBatchWrite, dynamoDelete, dynamoGet, dynamoPut, dynamoUpdate
-@docs dynamoScan, dynamoQuery, dynamoResponse
+@docs dynamoScan, dynamoQuery, dynamoResponse, dynamoWriteTx
 
 -}
 
@@ -91,6 +91,9 @@ port dynamoPut : { id : String, req : Value } -> Cmd msg
 
 
 port dynamoUpdate : { id : String, req : Value } -> Cmd msg
+
+
+port dynamoWriteTx : { id : String, req : Value } -> Cmd msg
 
 
 port dynamoDelete : { id : String, req : Value } -> Cmd msg
