@@ -6923,6 +6923,7 @@ var $author$project$AWS$Dynamo$scan = F5(
 			},
 			A4($author$project$AWS$Dynamo$scanInner, ports, decoder, scanProps, _List_Nil));
 	});
+var $elm$core$Debug$log = _Debug_log;
 var $elm$core$Dict$foldl = F3(
 	function (func, acc, dict) {
 		foldl:
@@ -6989,65 +6990,167 @@ var $author$project$AWS$Dynamo$encodeReturnValues = function (arg) {
 var $author$project$AWS$Dynamo$encodeReturnValuesOnConditionCheckFailure = function (arg) {
 	return $elm$json$Json$Encode$string('ALL_OLD');
 };
-var $elm_community$json_extra$Json$Encode$Extra$maybe = function (encoder) {
-	return A2(
-		$elm$core$Basics$composeR,
-		$elm$core$Maybe$map(encoder),
-		$elm$core$Maybe$withDefault($elm$json$Json$Encode$null));
+var $elm$core$List$maybeCons = F3(
+	function (f, mx, xs) {
+		var _v0 = f(mx);
+		if (_v0.$ === 'Just') {
+			var x = _v0.a;
+			return A2($elm$core$List$cons, x, xs);
+		} else {
+			return xs;
+		}
+	});
+var $elm$core$List$filterMap = F2(
+	function (f, xs) {
+		return A3(
+			$elm$core$List$foldr,
+			$elm$core$List$maybeCons(f),
+			_List_Nil,
+			xs);
+	});
+var $elm$core$Dict$isEmpty = function (dict) {
+	if (dict.$ === 'RBEmpty_elm_builtin') {
+		return true;
+	} else {
+		return false;
+	}
 };
 var $author$project$AWS$Dynamo$updateEncoder = F2(
 	function (encoder, putOp) {
 		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'TableName',
-					$elm$json$Json$Encode$string(putOp.tableName)),
-					_Utils_Tuple2(
-					'Key',
-					encoder(putOp.key)),
-					_Utils_Tuple2(
-					'UpdateExpression',
-					$elm$json$Json$Encode$string(putOp.updateExpression)),
-					_Utils_Tuple2(
-					'ConditionExpression',
-					A2($elm_community$json_extra$Json$Encode$Extra$maybe, $elm$json$Json$Encode$string, putOp.conditionExpression)),
-					_Utils_Tuple2(
-					'ExpressionAttributeNames',
-					A3($elm$json$Json$Encode$dict, $elm$core$Basics$identity, $elm$json$Json$Encode$string, putOp.expressionAttributeNames)),
-					_Utils_Tuple2(
-					'ExpressionAttributeValues',
-					A3($elm$json$Json$Encode$dict, $elm$core$Basics$identity, $author$project$AWS$Dynamo$encodeAttr, putOp.expressionAttributeValues)),
-					_Utils_Tuple2(
-					'ReturnConsumedCapacity',
-					A2($elm_community$json_extra$Json$Encode$Extra$maybe, $author$project$AWS$Dynamo$encodeReturnConsumedCapacity, putOp.returnConsumedCapacity)),
-					_Utils_Tuple2(
-					'ReturnItemCollectionMetrics',
-					A2($elm_community$json_extra$Json$Encode$Extra$maybe, $author$project$AWS$Dynamo$encodeReturnItemCollectionMetrics, putOp.returnItemCollectionMetrics)),
-					_Utils_Tuple2(
-					'ReturnValues',
-					A2($elm_community$json_extra$Json$Encode$Extra$maybe, $author$project$AWS$Dynamo$encodeReturnValues, putOp.returnValues)),
-					_Utils_Tuple2(
-					'ReturnValuesOnConditionCheckFailure',
-					A2($elm_community$json_extra$Json$Encode$Extra$maybe, $author$project$AWS$Dynamo$encodeReturnValuesOnConditionCheckFailure, putOp.returnValuesOnConditionCheckFailure))
-				]));
+			A2(
+				$elm$core$List$filterMap,
+				$elm$core$Basics$identity,
+				_List_fromArray(
+					[
+						$elm$core$Maybe$Just(
+						_Utils_Tuple2(
+							'TableName',
+							$elm$json$Json$Encode$string(putOp.tableName))),
+						$elm$core$Maybe$Just(
+						_Utils_Tuple2(
+							'Key',
+							encoder(putOp.key))),
+						$elm$core$Maybe$Just(
+						_Utils_Tuple2(
+							'UpdateExpression',
+							$elm$json$Json$Encode$string(putOp.updateExpression))),
+						A2(
+						$elm$core$Maybe$map,
+						function (ce) {
+							return _Utils_Tuple2(
+								'ConditionExpression',
+								$elm$json$Json$Encode$string(ce));
+						},
+						putOp.conditionExpression),
+						function () {
+						var _v0 = $elm$core$Dict$isEmpty(putOp.expressionAttributeNames);
+						if (!_v0) {
+							return $elm$core$Maybe$Just(
+								_Utils_Tuple2(
+									'ExpressionAttributeNames',
+									A3($elm$json$Json$Encode$dict, $elm$core$Basics$identity, $elm$json$Json$Encode$string, putOp.expressionAttributeNames)));
+						} else {
+							return $elm$core$Maybe$Nothing;
+						}
+					}(),
+						function () {
+						var _v1 = $elm$core$Dict$isEmpty(putOp.expressionAttributeValues);
+						if (!_v1) {
+							return $elm$core$Maybe$Just(
+								_Utils_Tuple2(
+									'ExpressionAttributeValues',
+									A3($elm$json$Json$Encode$dict, $elm$core$Basics$identity, $author$project$AWS$Dynamo$encodeAttr, putOp.expressionAttributeValues)));
+						} else {
+							return $elm$core$Maybe$Nothing;
+						}
+					}(),
+						A2(
+						$elm$core$Maybe$map,
+						function (rcc) {
+							return _Utils_Tuple2(
+								'ReturnConsumedCapacity',
+								$author$project$AWS$Dynamo$encodeReturnConsumedCapacity(rcc));
+						},
+						putOp.returnConsumedCapacity),
+						A2(
+						$elm$core$Maybe$map,
+						function (rcm) {
+							return _Utils_Tuple2(
+								'ReturnItemCollectionMetrics',
+								$author$project$AWS$Dynamo$encodeReturnItemCollectionMetrics(rcm));
+						},
+						putOp.returnItemCollectionMetrics),
+						A2(
+						$elm$core$Maybe$map,
+						function (rv) {
+							return _Utils_Tuple2(
+								'ReturnValues',
+								$author$project$AWS$Dynamo$encodeReturnValues(rv));
+						},
+						putOp.returnValues),
+						A2(
+						$elm$core$Maybe$map,
+						function (rvcf) {
+							return _Utils_Tuple2(
+								'ReturnValuesOnConditionCheckFailure',
+								$author$project$AWS$Dynamo$encodeReturnValuesOnConditionCheckFailure(rvcf));
+						},
+						putOp.returnValuesOnConditionCheckFailure)
+					])));
+	});
+var $author$project$AWS$Dynamo$updateResponseDecoder = F2(
+	function (valDecoder, val) {
+		var decoder = A2(
+			$elm$json$Json$Decode$andThen,
+			function (type_) {
+				switch (type_) {
+					case 'Ok':
+						return $elm$json$Json$Decode$succeed(
+							$elm$core$Result$Ok($elm$core$Maybe$Nothing));
+					case 'Item':
+						return A2(
+							$elm$json$Json$Decode$map,
+							A2($elm$core$Basics$composeR, $elm$core$Maybe$Just, $elm$core$Result$Ok),
+							A2(
+								$elm$json$Json$Decode$at,
+								_List_fromArray(
+									['item', 'Item']),
+								valDecoder));
+					default:
+						return $author$project$AWS$Dynamo$errorDecoder;
+				}
+			},
+			A2($elm$json$Json$Decode$field, 'type_', $elm$json$Json$Decode$string));
+		return $elm_community$result_extra$Result$Extra$merge(
+			A2(
+				$elm$core$Result$mapError,
+				A2($elm$core$Basics$composeR, $author$project$AWS$Dynamo$DecodeError, $elm$core$Result$Err),
+				A2($elm$json$Json$Decode$decodeValue, decoder, val)));
 	});
 var $author$project$AWS$Dynamo$update = F6(
 	function (pt, ports, encoder, decoder, updateProps, dt) {
+		var _v0 = A2(
+			$elm$core$Debug$log,
+			'Dynamo.update',
+			A2(
+				$elm$json$Json$Encode$encode,
+				2,
+				A2($author$project$AWS$Dynamo$updateEncoder, encoder, updateProps)));
 		return A3(
 			$brian_watkins$elm_procedure$Procedure$run,
 			pt,
-			function (_v1) {
-				var res = _v1.res;
+			function (_v2) {
+				var res = _v2.res;
 				return dt(
-					A2($author$project$AWS$Dynamo$getResponseDecoder, decoder, res));
+					A2($author$project$AWS$Dynamo$updateResponseDecoder, decoder, res));
 			},
 			$brian_watkins$elm_procedure$Procedure$Channel$acceptOne(
 				A2(
 					$brian_watkins$elm_procedure$Procedure$Channel$filter,
 					F2(
-						function (key, _v0) {
-							var id = _v0.id;
+						function (key, _v1) {
+							var id = _v1.id;
 							return _Utils_eq(id, key);
 						}),
 					A2(
@@ -7055,7 +7158,7 @@ var $author$project$AWS$Dynamo$update = F6(
 						ports.response,
 						$brian_watkins$elm_procedure$Procedure$Channel$open(
 							function (key) {
-								return ports.put(
+								return ports.update(
 									{
 										id: key,
 										req: A2($author$project$AWS$Dynamo$updateEncoder, encoder, updateProps)
@@ -7320,12 +7423,20 @@ var $author$project$DB$EventLogTable$metadataOperations = A3(
 	$miniBill$elm_codec$Codec$encoder($author$project$DB$EventLogTable$metadataRecordCodec),
 	$miniBill$elm_codec$Codec$decoder($author$project$DB$EventLogTable$metadataRecordCodec));
 var $author$project$EventLog$Component$eventLogTableMetadataApi = A2($author$project$DB$EventLogTable$metadataOperations, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$dynamoPorts);
+var $author$project$EventLog$Component$metadataKeyName = function (channel) {
+	return channel + '-metadata';
+};
 var $author$project$EventLog$Component$recordEventsLogMetaData = F3(
 	function (component, channelName, sessionKey) {
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$andThen,
 			function (timestamp) {
-				var metadataRecord = {id: channelName, lastId: 0, seq: 0, updatedAt: timestamp};
+				var metadataRecord = {
+					id: $author$project$EventLog$Component$metadataKeyName(channelName),
+					lastId: 0,
+					seq: 0,
+					updatedAt: timestamp
+				};
 				return A2(
 					$brian_watkins$elm_procedure$Procedure$mapError,
 					$author$project$AWS$Dynamo$errorToDetails,
@@ -7410,7 +7521,10 @@ var $author$project$Serverless$Request$method = function (_v0) {
 };
 var $author$project$EventLog$Component$getEventsLogMetaData = F3(
 	function (component, channelName, sessionKey) {
-		var key = {id: channelName, seq: 0};
+		var key = {
+			id: $author$project$EventLog$Component$metadataKeyName(channelName),
+			seq: 0
+		};
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$andThen,
 			function (maybeMetaData) {
@@ -7430,7 +7544,6 @@ var $author$project$EventLog$Component$getEventsLogMetaData = F3(
 					$author$project$EventLog$Component$eventLogTableMetadataApi.get(
 						{key: key, tableName: component.eventLogTable}))));
 	});
-var $elm$core$Debug$log = _Debug_log;
 var $author$project$EventLog$Component$publishEvents = F3(
 	function (component, channelName, state) {
 		var payload = $elm$json$Json$Encode$object(
@@ -7544,6 +7657,12 @@ var $author$project$DB$EventLogTable$operations = A3(
 	$miniBill$elm_codec$Codec$encoder($author$project$DB$EventLogTable$recordCodec),
 	$miniBill$elm_codec$Codec$decoder($author$project$DB$EventLogTable$recordCodec));
 var $author$project$EventLog$Component$eventLogTableApi = A2($author$project$DB$EventLogTable$operations, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$dynamoPorts);
+var $author$project$AWS$Dynamo$NumberAttr = function (a) {
+	return {$: 'NumberAttr', a: a};
+};
+var $author$project$AWS$Dynamo$int = function (val) {
+	return $author$project$AWS$Dynamo$NumberAttr(val);
+};
 var $author$project$EventLog$Component$recordEventsAndMetadata = F3(
 	function (component, channelName, state) {
 		return A2(
@@ -7563,8 +7682,31 @@ var $author$project$EventLog$Component$recordEventsAndMetadata = F3(
 								$elm$core$Basics$always(
 									{cacheItem: state.cacheItem, lastSeqNo: assignedSeqNo, sessionKey: state.sessionKey}),
 								$brian_watkins$elm_procedure$Procedure$fetchResult(
-									$author$project$EventLog$Component$eventLogTableMetadataApi.put(
-										{item: metadataRecord, tableName: component.eventLogTable}))));
+									$author$project$EventLog$Component$eventLogTableMetadataApi.update(
+										{
+											conditionExpression: $elm$core$Maybe$Just('lastId = :current_id'),
+											expressionAttributeNames: $elm$core$Dict$empty,
+											expressionAttributeValues: $elm$core$Dict$fromList(
+												_List_fromArray(
+													[
+														_Utils_Tuple2(
+														':incr',
+														$author$project$AWS$Dynamo$int(1)),
+														_Utils_Tuple2(
+														':current_id',
+														$author$project$AWS$Dynamo$int(state.lastSeqNo))
+													])),
+											key: {
+												id: $author$project$EventLog$Component$metadataKeyName(channelName),
+												seq: 0
+											},
+											returnConsumedCapacity: $elm$core$Maybe$Nothing,
+											returnItemCollectionMetrics: $elm$core$Maybe$Nothing,
+											returnValues: $elm$core$Maybe$Nothing,
+											returnValuesOnConditionCheckFailure: $elm$core$Maybe$Nothing,
+											tableName: component.eventLogTable,
+											updateExpression: 'SET lastId = lastId + :incr'
+										}))));
 					},
 					A2(
 						$brian_watkins$elm_procedure$Procedure$mapError,

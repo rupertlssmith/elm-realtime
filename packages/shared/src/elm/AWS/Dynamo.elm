@@ -281,33 +281,68 @@ update :
     -> (Result Error (Maybe v) -> msg)
     -> Cmd msg
 update pt ports encoder decoder updateProps dt =
-    Channel.open (\key -> ports.put { id = key, req = updateEncoder encoder updateProps })
+    let
+        _ =
+            updateEncoder encoder updateProps
+                |> Encode.encode 2
+                |> Debug.log "Dynamo.update"
+    in
+    Channel.open (\key -> ports.update { id = key, req = updateEncoder encoder updateProps })
         |> Channel.connect ports.response
         |> Channel.filter (\key { id } -> id == key)
         |> Channel.acceptOne
-        |> Procedure.run pt (\{ res } -> getResponseDecoder decoder res |> dt)
+        |> Procedure.run pt (\{ res } -> updateResponseDecoder decoder res |> dt)
 
 
 updateEncoder : (k -> Value) -> Update k -> Value
 updateEncoder encoder putOp =
-    Encode.object
-        [ ( "TableName", Encode.string putOp.tableName )
-        , ( "Key", encoder putOp.key )
-        , ( "UpdateExpression", Encode.string putOp.updateExpression )
-        , ( "ConditionExpression", Json.Encode.Extra.maybe Encode.string putOp.conditionExpression )
-        , ( "ExpressionAttributeNames", Encode.dict identity Encode.string putOp.expressionAttributeNames )
-        , ( "ExpressionAttributeValues", Encode.dict identity encodeAttr putOp.expressionAttributeValues )
-        , ( "ReturnConsumedCapacity"
-          , Json.Encode.Extra.maybe encodeReturnConsumedCapacity putOp.returnConsumedCapacity
-          )
-        , ( "ReturnItemCollectionMetrics"
-          , Json.Encode.Extra.maybe encodeReturnItemCollectionMetrics putOp.returnItemCollectionMetrics
-          )
-        , ( "ReturnValues", Json.Encode.Extra.maybe encodeReturnValues putOp.returnValues )
-        , ( "ReturnValuesOnConditionCheckFailure"
-          , Json.Encode.Extra.maybe encodeReturnValuesOnConditionCheckFailure putOp.returnValuesOnConditionCheckFailure
-          )
-        ]
+    [ ( "TableName", Encode.string putOp.tableName ) |> Just
+    , ( "Key", encoder putOp.key ) |> Just
+    , ( "UpdateExpression", Encode.string putOp.updateExpression ) |> Just
+    , Maybe.map
+        (\ce ->
+            ( "ConditionExpression"
+            , Encode.string ce
+            )
+        )
+        putOp.conditionExpression
+    , case Dict.isEmpty putOp.expressionAttributeNames of
+        False ->
+            ( "ExpressionAttributeNames", Encode.dict identity Encode.string putOp.expressionAttributeNames ) |> Just
+
+        True ->
+            Nothing
+    , case Dict.isEmpty putOp.expressionAttributeValues of
+        False ->
+            ( "ExpressionAttributeValues", Encode.dict identity encodeAttr putOp.expressionAttributeValues ) |> Just
+
+        True ->
+            Nothing
+    , Maybe.map
+        (\rcc ->
+            ( "ReturnConsumedCapacity"
+            , encodeReturnConsumedCapacity rcc
+            )
+        )
+        putOp.returnConsumedCapacity
+    , Maybe.map
+        (\rcm ->
+            ( "ReturnItemCollectionMetrics"
+            , encodeReturnItemCollectionMetrics rcm
+            )
+        )
+        putOp.returnItemCollectionMetrics
+    , Maybe.map (\rv -> ( "ReturnValues", encodeReturnValues rv )) putOp.returnValues
+    , Maybe.map
+        (\rvcf ->
+            ( "ReturnValuesOnConditionCheckFailure"
+            , encodeReturnValuesOnConditionCheckFailure rvcf
+            )
+        )
+        putOp.returnValuesOnConditionCheckFailure
+    ]
+        |> List.filterMap identity
+        |> Encode.object
 
 
 encodeReturnConsumedCapacity : ReturnConsumedCapacity -> Value
@@ -350,8 +385,8 @@ encodeReturnValuesOnConditionCheckFailure arg =
             Encode.string "ALL_OLD"
 
 
-updateResponseDecoder : Value -> Result Error ()
-updateResponseDecoder val =
+updateResponseDecoder : Decoder v -> Value -> Result Error (Maybe v)
+updateResponseDecoder valDecoder val =
     let
         decoder =
             Decode.field "type_" Decode.string
@@ -359,7 +394,11 @@ updateResponseDecoder val =
                     (\type_ ->
                         case type_ of
                             "Ok" ->
-                                Decode.succeed (Ok ())
+                                Decode.succeed (Ok Nothing)
+
+                            "Item" ->
+                                Decode.at [ "item", "Item" ] valDecoder
+                                    |> Decode.map (Just >> Ok)
 
                             _ ->
                                 errorDecoder
@@ -844,9 +883,13 @@ encodeAttr : AttributeValue -> Value
 encodeAttr attr =
     case attr of
         StringAttr val ->
+            --[ ( "S", Encode.string val ) ]
+            --    |> Encode.object
             Encode.string val
 
         NumberAttr val ->
+            --[ ( "N", Encode.int val ) ]
+            --    |> Encode.object
             Encode.int val
 
 

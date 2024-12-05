@@ -150,6 +150,7 @@ export class DynamoPorts {
 
     dynamoUpdate = async (args: UpdateArgs) => {
         console.info("dynamoUpdate: called");
+        console.info(args);
 
         documentClient.update(args.req, (error, result) => {
             var putResponse;

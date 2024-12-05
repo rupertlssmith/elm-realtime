@@ -15,6 +15,7 @@ import AWS.Dynamo as Dynamo
 import Codec
 import DB.ChannelTable as ChannelTable
 import DB.EventLogTable as EventLogTable
+import Dict
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Extra as DE
 import Json.Encode as Encode
@@ -412,7 +413,7 @@ recordEventsLogMetaData component channelName sessionKey =
             (\timestamp ->
                 let
                     metadataRecord =
-                        { id = channelName
+                        { id = metadataKeyName channelName
                         , seq = 0
                         , updatedAt = timestamp
                         , lastId = 0
@@ -525,7 +526,7 @@ getEventsLogMetaData :
 getEventsLogMetaData component channelName sessionKey =
     let
         key =
-            { id = channelName
+            { id = metadataKeyName channelName
             , seq = 0
             }
     in
@@ -651,9 +652,21 @@ recordEventsAndMetadata component channelName state =
                     |> Procedure.mapError Dynamo.errorToDetails
                     |> Procedure.andThen
                         (\_ ->
-                            eventLogTableMetadataApi.put
+                            eventLogTableMetadataApi.update
                                 { tableName = component.eventLogTable
-                                , item = metadataRecord
+                                , key = { id = metadataKeyName channelName, seq = 0 }
+                                , updateExpression = "SET lastId = lastId + :incr"
+                                , conditionExpression = Just "lastId = :current_id"
+                                , expressionAttributeNames = Dict.empty
+                                , expressionAttributeValues =
+                                    [ ( ":incr", Dynamo.int 1 )
+                                    , ( ":current_id", Dynamo.int state.lastSeqNo )
+                                    ]
+                                        |> Dict.fromList
+                                , returnConsumedCapacity = Nothing
+                                , returnItemCollectionMetrics = Nothing
+                                , returnValues = Nothing
+                                , returnValuesOnConditionCheckFailure = Nothing
                                 }
                                 |> Procedure.fetchResult
                                 |> Procedure.map
@@ -748,3 +761,8 @@ saveListName channel =
 webhookName : String -> String
 webhookName channel =
     channel ++ "-webhook"
+
+
+metadataKeyName : String -> String
+metadataKeyName channel =
+    channel ++ "-metadata"
