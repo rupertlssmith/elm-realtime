@@ -628,7 +628,13 @@ recordEventsAndMetadata component channelName state =
                                 , item = metadataRecord
                                 }
                                 |> Procedure.fetchResult
-                                |> Procedure.map (always state)
+                                |> Procedure.map
+                                    (always
+                                        { sessionKey = state.sessionKey
+                                        , lastSeqNo = assignedSeqNo
+                                        , cacheItem = state.cacheItem
+                                        }
+                                    )
                                 |> Procedure.mapError Dynamo.errorToDetails
                         )
             )
@@ -644,10 +650,18 @@ publishEvents :
         }
     -> Procedure.Procedure ErrorFormat () Msg
 publishEvents component channelName state =
+    let
+        payload =
+            [ ( "rt", Encode.string "P" )
+            , ( "seq", Encode.int state.lastSeqNo )
+            , ( "payload", state.cacheItem.payload )
+            ]
+                |> Encode.object
+    in
     momentoApi.publish
         state.sessionKey
         { topic = modelTopicName channelName
-        , payload = state.cacheItem.payload
+        , payload = payload
         }
         |> Procedure.fetchResult
         |> Procedure.map (always ())

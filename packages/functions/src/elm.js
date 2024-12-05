@@ -7438,6 +7438,17 @@ var $author$project$EventLog$Component$getEventsLogMetaData = F3(
 var $elm$core$Debug$log = _Debug_log;
 var $author$project$EventLog$Component$publishEvents = F3(
 	function (component, channelName, state) {
+		var payload = $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'rt',
+					$elm$json$Json$Encode$string('P')),
+					_Utils_Tuple2(
+					'seq',
+					$elm$json$Json$Encode$int(state.lastSeqNo)),
+					_Utils_Tuple2('payload', state.cacheItem.payload)
+				]));
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$mapError,
 			$author$project$Momento$errorToDetails,
@@ -7449,7 +7460,7 @@ var $author$project$EventLog$Component$publishEvents = F3(
 						$author$project$EventLog$Component$momentoApi.publish,
 						state.sessionKey,
 						{
-							payload: state.cacheItem.payload,
+							payload: payload,
 							topic: $author$project$EventLog$Component$modelTopicName(channelName)
 						}))));
 	});
@@ -7529,7 +7540,8 @@ var $author$project$EventLog$Component$recordEventsAndMetadata = F3(
 							$author$project$AWS$Dynamo$errorToDetails,
 							A2(
 								$brian_watkins$elm_procedure$Procedure$map,
-								$elm$core$Basics$always(state),
+								$elm$core$Basics$always(
+									{cacheItem: state.cacheItem, lastSeqNo: assignedSeqNo, sessionKey: state.sessionKey}),
 								$brian_watkins$elm_procedure$Procedure$fetchResult(
 									$author$project$EventLog$Component$eventLogTableMetadataApi.put(
 										{item: metadataRecord, tableName: component.eventLogTable}))));
