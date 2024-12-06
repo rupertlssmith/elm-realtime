@@ -10,7 +10,7 @@ module AWS.Dynamo exposing
     , rangeKeyEquals, rangeKeyLessThan, rangeKeyLessThanOrEqual, rangeKeyGreaterThan
     , rangeKeyGreaterThanOrEqual, rangeKeyBetween
     , int, string
-    , Error, errorToString, errorToDetails
+    , Error(..), errorToString, errorToDetails
     )
 
 {-| A wrapper around the AWS DynamoDB Document API.
@@ -155,7 +155,8 @@ type WriteCommand
 
 
 type Error
-    = Error { message : String, details : Value }
+    = ConditionCheckFailed { message : String, details : Value }
+    | Error { message : String, details : Value }
     | DecodeError Decode.Error
 
 
@@ -163,6 +164,9 @@ errorToString : Error -> String
 errorToString error =
     case error of
         Error { message } ->
+            "AWS.Dynamo: " ++ message
+
+        ConditionCheckFailed { message } ->
             "AWS.Dynamo: " ++ message
 
         DecodeError err ->
@@ -173,6 +177,11 @@ errorToDetails : Error -> { message : String, details : Value }
 errorToDetails error =
     case error of
         Error { message, details } ->
+            { message = message
+            , details = details
+            }
+
+        ConditionCheckFailed { message, details } ->
             { message = message
             , details = details
             }
@@ -193,8 +202,19 @@ errorDecoder =
         )
         |> DE.andMap (Decode.field "message" Decode.string)
         |> DE.andMap (Decode.field "details" Decode.value)
-        |> Decode.map Error
-        |> Decode.map Err
+        |> Decode.andThen
+            (\details ->
+                Decode.field "type_" Decode.string
+                    |> Decode.andThen
+                        (\type_ ->
+                            case type_ of
+                                "ConditionCheckFailed" ->
+                                    ConditionCheckFailed details |> Err |> Decode.succeed
+
+                                _ ->
+                                    Error details |> Err |> Decode.succeed
+                        )
+            )
 
 
 

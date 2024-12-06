@@ -32,7 +32,15 @@ export default $config({
                 id: "string",
                 seq: "number"
             },
-            primaryIndex: {hashKey: "id", rangeKey: "seq" }
+            primaryIndex: {hashKey: "id", rangeKey: "seq"}
+        });
+
+        const snapshotTable = new sst.aws.Dynamo("SnapshotTable", {
+            fields: {
+                id: "string",
+                seq: "number"
+            },
+            primaryIndex: {hashKey: "id", rangeKey: "seq"}
         });
 
         // API for managing the realtime channels.
@@ -41,7 +49,13 @@ export default $config({
         api.route("ANY /v1/{proxy+}",
             {
                 handler: "packages/functions/src/api.main",
-                link: [momentoApiKey, api, channelTable, eventLogTable]
+                link: [
+                    momentoApiKey,
+                    api,
+                    channelTable,
+                    eventLogTable,
+                    snapshotTable
+                ]
             }
         );
 

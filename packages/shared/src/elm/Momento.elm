@@ -68,7 +68,7 @@ type alias MomentoApi msg =
     { open : OpenParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
     , subscribe : MomentoSessionKey -> SubscribeParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
     , pushList : MomentoSessionKey -> PushListParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
-    , popList : MomentoSessionKey -> PopListParams -> (Result Error CacheItem -> msg) -> Cmd msg
+    , popList : MomentoSessionKey -> PopListParams -> (Result Error (Maybe CacheItem) -> msg) -> Cmd msg
     , webhook : MomentoSessionKey -> WebhookParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
     , publish : MomentoSessionKey -> PublishParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
     , onMessage : (MomentoSessionKey -> Value -> msg) -> Sub msg
@@ -160,11 +160,14 @@ decodeResponse res =
                 |> Err
 
 
-decodeItemResponse : { a | type_ : String, response : Value } -> Result Error CacheItem
+decodeItemResponse : { a | type_ : String, response : Value } -> Result Error (Maybe CacheItem)
 decodeItemResponse res =
     case res.type_ of
         "Item" ->
-            { payload = res.response } |> Ok
+            Just { payload = res.response } |> Ok
+
+        "ItemNotFound" ->
+            Ok Nothing
 
         "Error" ->
             MomentoError
@@ -234,7 +237,7 @@ popList :
     -> Ports msg
     -> MomentoSessionKey
     -> PopListParams
-    -> (Result Error CacheItem -> msg)
+    -> (Result Error (Maybe CacheItem) -> msg)
     -> Cmd msg
 popList pt ports (MomentoSessionKey sessionKey) { list } dt =
     Channel.open (\key -> ports.popList { id = key, session = sessionKey, list = list })

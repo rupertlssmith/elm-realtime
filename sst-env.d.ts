@@ -26,5 +26,9 @@ declare module "sst" {
       "type": "sst.sst.Secret"
       "value": string
     }
+    "SnapshotTable": {
+      "name": string
+      "type": "sst.aws.Dynamo"
+    }
   }
 }

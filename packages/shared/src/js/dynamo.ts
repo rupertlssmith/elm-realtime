@@ -167,7 +167,16 @@ export class DynamoPorts {
             var putResponse;
 
             if (error) {
-                putResponse = errorResponse(error);
+                if (error.code === 'ConditionalCheckFailedException') {
+                    putResponse = {
+                        type_: "ConditionalCheckFailed",
+                        message: error.message,
+                        details: error
+                    }
+                } else {
+                    putResponse = errorResponse(error);
+                }
+
             } else {
                 putResponse = {
                     type_: "Ok"
@@ -186,7 +195,15 @@ export class DynamoPorts {
             var putResponse;
 
             if (error) {
-                putResponse = errorResponse(error);
+                if (error.code === 'ConditionalCheckFailedException') {
+                    putResponse = {
+                        type_: "ConditionalCheckFailed",
+                        message: error.message,
+                        details: error
+                    }
+                } else {
+                    putResponse = errorResponse(error);
+                }
             } else {
                 putResponse = {
                     type_: "Ok"

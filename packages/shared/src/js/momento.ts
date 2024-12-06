@@ -312,7 +312,7 @@ export class MomentoPorts {
                 this.app.ports.mmResponse.send({
                     id: args.id,
                     type_: "ItemNotFound",
-                    response: args.session
+                    response: null
                 });
 
                 break;

@@ -5225,7 +5225,10 @@ var $author$project$Momento$decodeItemResponse = function (res) {
 	switch (_v0) {
 		case 'Item':
 			return $elm$core$Result$Ok(
-				{payload: res.response});
+				$elm$core$Maybe$Just(
+					{payload: res.response}));
+		case 'ItemNotFound':
+			return $elm$core$Result$Ok($elm$core$Maybe$Nothing);
 		case 'Error':
 			return $elm$core$Result$Err(
 				$author$project$Momento$MomentoError(
@@ -5989,27 +5992,42 @@ var $elm$json$Json$Decode$at = F2(
 	function (fields, decoder) {
 		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
 	});
+var $author$project$AWS$Dynamo$ConditionCheckFailed = function (a) {
+	return {$: 'ConditionCheckFailed', a: a};
+};
 var $author$project$AWS$Dynamo$Error = function (a) {
 	return {$: 'Error', a: a};
 };
 var $elm_community$json_extra$Json$Decode$Extra$andMap = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
 var $author$project$AWS$Dynamo$errorDecoder = A2(
-	$elm$json$Json$Decode$map,
-	$elm$core$Result$Err,
+	$elm$json$Json$Decode$andThen,
+	function (details) {
+		return A2(
+			$elm$json$Json$Decode$andThen,
+			function (type_) {
+				if (type_ === 'ConditionCheckFailed') {
+					return $elm$json$Json$Decode$succeed(
+						$elm$core$Result$Err(
+							$author$project$AWS$Dynamo$ConditionCheckFailed(details)));
+				} else {
+					return $elm$json$Json$Decode$succeed(
+						$elm$core$Result$Err(
+							$author$project$AWS$Dynamo$Error(details)));
+				}
+			},
+			A2($elm$json$Json$Decode$field, 'type_', $elm$json$Json$Decode$string));
+	},
 	A2(
-		$elm$json$Json$Decode$map,
-		$author$project$AWS$Dynamo$Error,
+		$elm_community$json_extra$Json$Decode$Extra$andMap,
+		A2($elm$json$Json$Decode$field, 'details', $elm$json$Json$Decode$value),
 		A2(
 			$elm_community$json_extra$Json$Decode$Extra$andMap,
-			A2($elm$json$Json$Decode$field, 'details', $elm$json$Json$Decode$value),
-			A2(
-				$elm_community$json_extra$Json$Decode$Extra$andMap,
-				A2($elm$json$Json$Decode$field, 'message', $elm$json$Json$Decode$string),
-				$elm$json$Json$Decode$succeed(
-					F2(
-						function (message, details) {
-							return {details: details, message: message};
-						}))))));
+			A2($elm$json$Json$Decode$field, 'message', $elm$json$Json$Decode$string),
+			$elm$json$Json$Decode$succeed(
+				F2(
+					function (message, details) {
+						return {details: details, message: message};
+					})))));
 var $elm$json$Json$Decode$list = _Json_decodeList;
 var $author$project$AWS$Dynamo$batchGetResponseDecoder = F3(
 	function (valDecoder, tableName, val) {
@@ -7414,16 +7432,21 @@ var $author$project$DB$ChannelTable$operations = A3(
 	$miniBill$elm_codec$Codec$decoder($author$project$DB$ChannelTable$recordCodec));
 var $author$project$EventLog$Component$channelTableApi = A2($author$project$DB$ChannelTable$operations, $author$project$EventLog$Component$ProcedureMsg, $author$project$EventLog$Component$dynamoPorts);
 var $author$project$AWS$Dynamo$errorToDetails = function (error) {
-	if (error.$ === 'Error') {
-		var message = error.a.message;
-		var details = error.a.details;
-		return {details: details, message: message};
-	} else {
-		var err = error.a;
-		return {
-			details: $elm$json$Json$Encode$null,
-			message: $elm$json$Json$Decode$errorToString(err)
-		};
+	switch (error.$) {
+		case 'Error':
+			var message = error.a.message;
+			var details = error.a.details;
+			return {details: details, message: message};
+		case 'ConditionCheckFailed':
+			var message = error.a.message;
+			var details = error.a.details;
+			return {details: details, message: message};
+		default:
+			var err = error.a;
+			return {
+				details: $elm$json$Json$Encode$null,
+				message: $elm$json$Json$Decode$errorToString(err)
+			};
 	}
 };
 var $author$project$EventLog$Component$modelTopicName = function (channel) {
@@ -7619,32 +7642,7 @@ var $author$project$Serverless$Request$method = function (_v0) {
 	var request = _v0.a;
 	return request.method;
 };
-var $author$project$EventLog$Component$getEventsLogMetaData = F3(
-	function (component, channelName, sessionKey) {
-		var key = {
-			id: $author$project$EventLog$Component$metadataKeyName(channelName),
-			seq: 0
-		};
-		return A2(
-			$brian_watkins$elm_procedure$Procedure$andThen,
-			function (maybeMetaData) {
-				if (maybeMetaData.$ === 'Just') {
-					var metadata = maybeMetaData.a;
-					return $brian_watkins$elm_procedure$Procedure$provide(
-						{lastSeqNo: metadata.lastId, sessionKey: sessionKey});
-				} else {
-					return $brian_watkins$elm_procedure$Procedure$break(
-						{details: $elm$json$Json$Encode$null, message: 'No EventLog metadata record found for channel: ' + channelName});
-				}
-			},
-			A2(
-				$brian_watkins$elm_procedure$Procedure$mapError,
-				$author$project$AWS$Dynamo$errorToDetails,
-				$brian_watkins$elm_procedure$Procedure$fetchResult(
-					$author$project$EventLog$Component$eventLogTableMetadataApi.get(
-						{key: key, tableName: component.eventLogTable}))));
-	});
-var $author$project$EventLog$Component$publishEvents = F3(
+var $author$project$EventLog$Component$publishEvent = F3(
 	function (component, channelName, state) {
 		var payload = $elm$json$Json$Encode$object(
 			_List_fromArray(
@@ -7654,11 +7652,11 @@ var $author$project$EventLog$Component$publishEvents = F3(
 					$elm$json$Json$Encode$string('P')),
 					_Utils_Tuple2(
 					'client',
-					$elm$json$Json$Encode$string(state.cacheItem.client)),
+					$elm$json$Json$Encode$string(state.unsavedEvent.client)),
 					_Utils_Tuple2(
 					'seq',
 					$elm$json$Json$Encode$int(state.lastSeqNo)),
-					_Utils_Tuple2('payload', state.cacheItem.payload)
+					_Utils_Tuple2('payload', state.unsavedEvent.payload)
 				]));
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$mapError,
@@ -7675,30 +7673,19 @@ var $author$project$EventLog$Component$publishEvents = F3(
 							topic: $author$project$EventLog$Component$modelTopicName(channelName)
 						}))));
 	});
-var $author$project$EventLog$Component$UnsavedEvent = F3(
-	function (rt, client, payload) {
-		return {client: client, payload: payload, rt: rt};
-	});
-var $author$project$EventLog$Component$decodeUnsavedEvent = A2(
-	$elm_community$json_extra$Json$Decode$Extra$andMap,
-	A2($elm$json$Json$Decode$field, 'payload', $elm$json$Json$Decode$value),
-	A2(
-		$elm_community$json_extra$Json$Decode$Extra$andMap,
-		A2($elm$json$Json$Decode$field, 'client', $elm$json$Json$Decode$string),
-		A2(
-			$elm_community$json_extra$Json$Decode$Extra$andMap,
-			A2($elm$json$Json$Decode$field, 'rt', $elm$json$Json$Decode$string),
-			$elm$json$Json$Decode$succeed($author$project$EventLog$Component$UnsavedEvent))));
-var $author$project$EventLog$Component$readEvents = F3(
+var $author$project$EventLog$Component$getEventsLogMetaData = F3(
 	function (component, channelName, state) {
+		var key = {
+			id: $author$project$EventLog$Component$metadataKeyName(channelName),
+			seq: 0
+		};
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$andThen,
-			function (cacheItem) {
-				var _v0 = A2($elm$json$Json$Decode$decodeValue, $author$project$EventLog$Component$decodeUnsavedEvent, cacheItem.payload);
-				if (_v0.$ === 'Ok') {
-					var unsavedEvent = _v0.a;
+			function (maybeMetaData) {
+				if (maybeMetaData.$ === 'Just') {
+					var metadata = maybeMetaData.a;
 					return $brian_watkins$elm_procedure$Procedure$provide(
-						{cacheItem: unsavedEvent, lastSeqNo: state.lastSeqNo, sessionKey: state.sessionKey});
+						{lastSeqNo: metadata.lastId, sessionKey: state.sessionKey, unsavedEvent: state.unsavedEvent});
 				} else {
 					return $brian_watkins$elm_procedure$Procedure$break(
 						{details: $elm$json$Json$Encode$null, message: 'No EventLog metadata record found for channel: ' + channelName});
@@ -7706,14 +7693,25 @@ var $author$project$EventLog$Component$readEvents = F3(
 			},
 			A2(
 				$brian_watkins$elm_procedure$Procedure$mapError,
-				$author$project$Momento$errorToDetails,
+				$author$project$AWS$Dynamo$errorToDetails,
 				$brian_watkins$elm_procedure$Procedure$fetchResult(
-					A2(
-						$author$project$EventLog$Component$momentoApi.popList,
-						state.sessionKey,
-						{
-							list: $author$project$EventLog$Component$saveListName(channelName)
-						}))));
+					$author$project$EventLog$Component$eventLogTableMetadataApi.get(
+						{key: key, tableName: component.eventLogTable}))));
+	});
+var $brian_watkins$elm_procedure$Procedure$catch = F2(
+	function (generator, procedure) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$next,
+			procedure,
+			function (aResult) {
+				if (aResult.$ === 'Ok') {
+					var aData = aResult.a;
+					return $brian_watkins$elm_procedure$Procedure$provide(aData);
+				} else {
+					var eData = aResult.a;
+					return generator(eData);
+				}
+			});
 	});
 var $author$project$DB$EventLogTable$Record = F4(
 	function (id, seq, updatedAt, event) {
@@ -7807,18 +7805,26 @@ var $author$project$EventLog$Component$recordEventsAndMetadata = F3(
 						updateExpression: 'SET lastId = lastId + :incr'
 					});
 				var assignedSeqNo = state.lastSeqNo + 1;
-				var eventRecord = {event: state.cacheItem.payload, id: channelName, seq: assignedSeqNo, updatedAt: timestamp};
+				var eventRecord = {event: state.unsavedEvent.payload, id: channelName, seq: assignedSeqNo, updatedAt: timestamp};
 				var eventPut = A2(
 					$author$project$AWS$Dynamo$putCommand,
 					$author$project$DB$EventLogTable$encodeRecord,
 					{item: eventRecord, tableName: component.eventLogTable});
 				return A2(
-					$brian_watkins$elm_procedure$Procedure$mapError,
-					$author$project$AWS$Dynamo$errorToDetails,
+					$brian_watkins$elm_procedure$Procedure$catch,
+					function (error) {
+						if (error.$ === 'ConditionCheckFailed') {
+							return $brian_watkins$elm_procedure$Procedure$provide(
+								{lastSeqNo: assignedSeqNo, sessionKey: state.sessionKey, txSuccess: false, unsavedEvent: state.unsavedEvent});
+						} else {
+							return $brian_watkins$elm_procedure$Procedure$break(
+								$author$project$AWS$Dynamo$errorToDetails(error));
+						}
+					},
 					A2(
 						$brian_watkins$elm_procedure$Procedure$map,
 						$elm$core$Basics$always(
-							{cacheItem: state.cacheItem, lastSeqNo: assignedSeqNo, sessionKey: state.sessionKey}),
+							{lastSeqNo: assignedSeqNo, sessionKey: state.sessionKey, txSuccess: true, unsavedEvent: state.unsavedEvent}),
 						$brian_watkins$elm_procedure$Procedure$fetchResult(
 							$author$project$EventLog$Component$eventLogTableMetadataApi.writeTx(
 								{
@@ -7828,6 +7834,105 @@ var $author$project$EventLog$Component$recordEventsAndMetadata = F3(
 								}))));
 			},
 			$brian_watkins$elm_procedure$Procedure$fromTask($elm$time$Time$now));
+	});
+var $author$project$EventLog$Component$recordEventWithUniqueSeqNo = F3(
+	function (component, channelName, state) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (stateAfterTxAttempt) {
+				return stateAfterTxAttempt.txSuccess ? $brian_watkins$elm_procedure$Procedure$provide(stateAfterTxAttempt) : A3(
+					$author$project$EventLog$Component$recordEventWithUniqueSeqNo,
+					component,
+					channelName,
+					{sessionKey: stateAfterTxAttempt.sessionKey, unsavedEvent: stateAfterTxAttempt.unsavedEvent});
+			},
+			A2(
+				$brian_watkins$elm_procedure$Procedure$andThen,
+				A2($author$project$EventLog$Component$recordEventsAndMetadata, component, channelName),
+				A2(
+					$brian_watkins$elm_procedure$Procedure$andThen,
+					A2($author$project$EventLog$Component$getEventsLogMetaData, component, channelName),
+					$brian_watkins$elm_procedure$Procedure$provide(state))));
+	});
+var $author$project$EventLog$Component$UnsavedEvent = F3(
+	function (rt, client, payload) {
+		return {client: client, payload: payload, rt: rt};
+	});
+var $author$project$EventLog$Component$decodeUnsavedEvent = A2(
+	$elm_community$json_extra$Json$Decode$Extra$andMap,
+	A2($elm$json$Json$Decode$field, 'payload', $elm$json$Json$Decode$value),
+	A2(
+		$elm_community$json_extra$Json$Decode$Extra$andMap,
+		A2($elm$json$Json$Decode$field, 'client', $elm$json$Json$Decode$string),
+		A2(
+			$elm_community$json_extra$Json$Decode$Extra$andMap,
+			A2($elm$json$Json$Decode$field, 'rt', $elm$json$Json$Decode$string),
+			$elm$json$Json$Decode$succeed($author$project$EventLog$Component$UnsavedEvent))));
+var $author$project$EventLog$Component$tryReadEvent = F3(
+	function (component, channelName, sessionKey) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (maybeCacheItem) {
+				if (maybeCacheItem.$ === 'Just') {
+					var cacheItem = maybeCacheItem.a;
+					var _v1 = A2($elm$json$Json$Decode$decodeValue, $author$project$EventLog$Component$decodeUnsavedEvent, cacheItem.payload);
+					if (_v1.$ === 'Ok') {
+						var unsavedEvent = _v1.a;
+						return $brian_watkins$elm_procedure$Procedure$provide(
+							{
+								sessionKey: sessionKey,
+								unsavedEvent: $elm$core$Maybe$Just(unsavedEvent)
+							});
+					} else {
+						return $brian_watkins$elm_procedure$Procedure$break(
+							{details: $elm$json$Json$Encode$null, message: 'No EventLog metadata record found for channel: ' + channelName});
+					}
+				} else {
+					return $brian_watkins$elm_procedure$Procedure$provide(
+						{sessionKey: sessionKey, unsavedEvent: $elm$core$Maybe$Nothing});
+				}
+			},
+			A2(
+				$brian_watkins$elm_procedure$Procedure$mapError,
+				$author$project$Momento$errorToDetails,
+				$brian_watkins$elm_procedure$Procedure$fetchResult(
+					A2(
+						$author$project$EventLog$Component$momentoApi.popList,
+						sessionKey,
+						{
+							list: $author$project$EventLog$Component$saveListName(channelName)
+						}))));
+	});
+var $author$project$EventLog$Component$drainSaveList = F3(
+	function (component, channelName, sessionKey) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (state) {
+				var _v0 = state.unsavedEvent;
+				if (_v0.$ === 'Nothing') {
+					return $brian_watkins$elm_procedure$Procedure$provide(_Utils_Tuple0);
+				} else {
+					var event = _v0.a;
+					return A2(
+						$brian_watkins$elm_procedure$Procedure$andThen,
+						A2($author$project$EventLog$Component$drainSaveList, component, channelName),
+						A2(
+							$brian_watkins$elm_procedure$Procedure$map,
+							$elm$core$Basics$always(sessionKey),
+							A2(
+								$brian_watkins$elm_procedure$Procedure$andThen,
+								A2($author$project$EventLog$Component$publishEvent, component, channelName),
+								A2(
+									$brian_watkins$elm_procedure$Procedure$andThen,
+									A2($author$project$EventLog$Component$recordEventWithUniqueSeqNo, component, channelName),
+									$brian_watkins$elm_procedure$Procedure$provide(
+										{sessionKey: sessionKey, unsavedEvent: event})))));
+				}
+			},
+			A2(
+				$brian_watkins$elm_procedure$Procedure$andThen,
+				A2($author$project$EventLog$Component$tryReadEvent, component, channelName),
+				$brian_watkins$elm_procedure$Procedure$provide(sessionKey)));
 	});
 var $author$project$EventLog$Component$processSaveChannel = F6(
 	function (protocol, session, state, apiRequest, channelName, component) {
@@ -7843,20 +7948,11 @@ var $author$project$EventLog$Component$processSaveChannel = F6(
 					A2($elm$core$Basics$composeR, $author$project$EventLog$Component$encodeErrorFormat, $author$project$Serverless$Response$err500json)),
 				A2(
 					$brian_watkins$elm_procedure$Procedure$andThen,
-					A2($author$project$EventLog$Component$publishEvents, component, channelName),
+					A2($author$project$EventLog$Component$drainSaveList, component, channelName),
 					A2(
 						$brian_watkins$elm_procedure$Procedure$andThen,
-						A2($author$project$EventLog$Component$recordEventsAndMetadata, component, channelName),
-						A2(
-							$brian_watkins$elm_procedure$Procedure$andThen,
-							A2($author$project$EventLog$Component$readEvents, component, channelName),
-							A2(
-								$brian_watkins$elm_procedure$Procedure$andThen,
-								A2($author$project$EventLog$Component$getEventsLogMetaData, component, channelName),
-								A2(
-									$brian_watkins$elm_procedure$Procedure$andThen,
-									$author$project$EventLog$Component$openMomentoCache(component),
-									$brian_watkins$elm_procedure$Procedure$provide(channelName))))))));
+						$author$project$EventLog$Component$openMomentoCache(component),
+						$brian_watkins$elm_procedure$Procedure$provide(channelName)))));
 		return protocol.onUpdate(
 			A2(
 				$elm$core$Tuple$mapSecond,
