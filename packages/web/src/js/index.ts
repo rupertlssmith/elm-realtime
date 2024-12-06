@@ -13,7 +13,7 @@ const {Elm} = require('../elm/Top/Top.elm');
 const app = Elm.Top.Top.init({
     flags: {
         location: location.href,
-        chatApiUrl: process.env.CHAT_API_URL,
+        rtChannelApiUrl: process.env.ELM_RT_CHANNEL_API_URL,
         momentoApiKey : process.env.MOMENTO_API_KEY
     },
     node: document.getElementById('application')

@@ -16,7 +16,7 @@ import Update2 as U2
 type alias Model =
     { -- Flags
       location : String
-    , chatApiUrl : String
+    , rtChannelApiUrl : String
     , momentoApiKey : String
 
     -- Elm modules
@@ -37,7 +37,7 @@ type Msg
 
 type alias Flags =
     { location : String
-    , chatApiUrl : String
+    , rtChannelApiUrl : String
     , momentoApiKey : String
     }
 
@@ -59,7 +59,7 @@ init flags =
             App.init appProtocol.toMsg
     in
     ( { location = flags.location
-      , chatApiUrl = flags.chatApiUrl
+      , rtChannelApiUrl = flags.rtChannelApiUrl
       , momentoApiKey =
             Decode.decodeString (Decode.field "apiKey" Decode.string) flags.momentoApiKey
                 |> Result.withDefault ""

@@ -5,7 +5,7 @@ export default $config({
     app(input) {
         return {
             home: "aws",
-            name: "00-vpc",
+            name: "elm-realtiome",
             removal: input.stage === "production" ? "retain" : "remove",
             providers: {
                 aws: {
@@ -74,7 +74,7 @@ export default $config({
                 output: "dist",
             },
             environment: {
-                CHAT_API_URL: api.url,
+                ELM_RT_CHANNEL_API_URL: api.url,
                 MOMENTO_API_KEY: momentoApiKey.value
             },
         });

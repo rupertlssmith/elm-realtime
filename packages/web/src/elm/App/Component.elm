@@ -22,7 +22,7 @@ import Update2 as U2
 
 type alias Component a =
     { a
-        | chatApiUrl : String
+        | rtChannelApiUrl : String
         , momentoApiKey : String
         , app : Model
     }
@@ -316,7 +316,7 @@ getChannelDetails : Component a -> RandomizedState -> ( RandomizedState, Cmd Msg
 getChannelDetails component state =
     ( state
     , Http.get
-        { url = component.chatApiUrl ++ "/v1/channel"
+        { url = component.rtChannelApiUrl ++ "/v1/channel"
         , expect = Http.expectJson ChannelDetails channelDecoder
         }
     )

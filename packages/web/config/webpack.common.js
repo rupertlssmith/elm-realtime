@@ -25,7 +25,7 @@ module.exports = (withDebug) => {
             }),
             new CleanWebpackPlugin(),
             new webpack.EnvironmentPlugin([
-                'CHAT_API_URL',
+                'ELM_RT_CHANNEL_API_URL',
                 'MOMENTO_API_KEY'])
         ],
         optimization: {
