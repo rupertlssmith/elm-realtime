@@ -7859,7 +7859,7 @@ var $author$project$EventLog$Component$UnsavedEvent = F3(
 	function (rt, client, payload) {
 		return {client: client, payload: payload, rt: rt};
 	});
-var $author$project$EventLog$Component$decodeUnsavedEvent = A2(
+var $author$project$EventLog$Component$decodeNoticeEvent = A2(
 	$elm_community$json_extra$Json$Decode$Extra$andMap,
 	A2($elm$json$Json$Decode$field, 'payload', $elm$json$Json$Decode$value),
 	A2(
@@ -7876,7 +7876,7 @@ var $author$project$EventLog$Component$tryReadEvent = F3(
 			function (maybeCacheItem) {
 				if (maybeCacheItem.$ === 'Just') {
 					var cacheItem = maybeCacheItem.a;
-					var _v1 = A2($elm$json$Json$Decode$decodeValue, $author$project$EventLog$Component$decodeUnsavedEvent, cacheItem.payload);
+					var _v1 = A2($elm$json$Json$Decode$decodeValue, $author$project$EventLog$Component$decodeNoticeEvent, cacheItem.payload);
 					if (_v1.$ === 'Ok') {
 						var unsavedEvent = _v1.a;
 						return $brian_watkins$elm_procedure$Procedure$provide(
@@ -7885,8 +7885,12 @@ var $author$project$EventLog$Component$tryReadEvent = F3(
 								unsavedEvent: $elm$core$Maybe$Just(unsavedEvent)
 							});
 					} else {
+						var err = _v1.a;
 						return $brian_watkins$elm_procedure$Procedure$break(
-							{details: $elm$json$Json$Encode$null, message: 'No EventLog metadata record found for channel: ' + channelName});
+							{
+								details: $elm$json$Json$Encode$null,
+								message: $elm$json$Json$Decode$errorToString(err)
+							});
 					}
 				} else {
 					return $brian_watkins$elm_procedure$Procedure$provide(

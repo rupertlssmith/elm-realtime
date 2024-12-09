@@ -549,8 +549,8 @@ type alias UnsavedEvent =
     }
 
 
-decodeUnsavedEvent : Decoder UnsavedEvent
-decodeUnsavedEvent =
+decodeNoticeEvent : Decoder UnsavedEvent
+decodeNoticeEvent =
     Decode.succeed UnsavedEvent
         |> DE.andMap (Decode.field "rt" Decode.string)
         |> DE.andMap (Decode.field "client" Decode.string)
@@ -581,15 +581,15 @@ tryReadEvent component channelName sessionKey =
             (\maybeCacheItem ->
                 case maybeCacheItem of
                     Just cacheItem ->
-                        case Decode.decodeValue decodeUnsavedEvent cacheItem.payload of
+                        case Decode.decodeValue decodeNoticeEvent cacheItem.payload of
                             Ok unsavedEvent ->
                                 { sessionKey = sessionKey
                                 , unsavedEvent = Just unsavedEvent
                                 }
                                     |> Procedure.provide
 
-                            Err _ ->
-                                { message = "No EventLog metadata record found for channel: " ++ channelName
+                            Err err ->
+                                { message = Decode.errorToString err
                                 , details = Encode.null
                                 }
                                     |> Procedure.break
