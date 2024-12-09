@@ -1,6 +1,12 @@
 module Realtime exposing
-    ( Model
-    , init
+    ( Config
+    , Delta
+    , Error
+    , Model
+    , RealtimeApi
+    , errorToDetails
+    , errorToString
+    , realtimeApi
     )
 
 import Http
@@ -10,25 +16,62 @@ import Json.Encode as Encode exposing (Value)
 import Momento exposing (Error, MomentoSessionKey, OpenParams, SubscribeParams)
 import Ports
 import Procedure exposing (Procedure)
-import Procedure.Channel as Channel
 import Procedure.Program
 import Random
 
 
-type alias Model =
-    { rtChannelApiUrl : String
-    , momentoApiKey : String
-    , state : State
+{-| Realtime channels.
+
+
+# Set up and step the model.
+
+@docs Config
+@docs Model, Delta
+
+
+# The Realtime API
+
+@docs RealtimeApi, realtimeApi
+
+
+# Error reporting
+
+@docs Error, errorToDetails, errorToString
+
+-}
+type alias Config =
+    { rtChannelApiUrl : String, momentoApiKey : String }
+
+
+type alias RealtimeApi msg =
+    { join : Config -> (Result Error Model -> msg) -> Cmd msg
+    , publishPersisted : Model -> Value -> (Result Error Delta -> msg) -> Cmd msg
+    , publishTransient : Model -> Value -> (Result Error Delta -> msg) -> Cmd msg
+    , onMessage : Model -> (Value -> msg) -> Sub msg
+    , asyncError : Model -> (Error -> msg) -> Sub msg
     }
+
+
+realtimeApi : (Procedure.Program.Msg msg -> msg) -> RealtimeApi msg
+realtimeApi pt =
+    { join = join pt
+    , publishPersisted = publishPersisted pt
+    , publishTransient = publishTransient pt
+    , onMessage = onMessage pt
+    , asyncError = asyncError pt
+    }
+
+
+type Model
+    = Private
+        { rtChannelApiUrl : String
+        , momentoApiKey : String
+        , state : State
+        }
 
 
 type alias Delta =
     Model -> Model
-
-
-type Error
-    = HttpError Http.Error
-    | MomentoError Momento.Error
 
 
 type State
@@ -79,6 +122,35 @@ buildMomentoApi pt =
 
 
 
+-- Error reporting.
+
+
+type Error
+    = HttpError Http.Error
+    | MomentoError Momento.Error
+
+
+errorToString : Error -> String
+errorToString err =
+    case err of
+        HttpError _ ->
+            ""
+
+        MomentoError momentoErr ->
+            Momento.errorToString momentoErr
+
+
+errorToDetails : Error -> { message : String, details : Value }
+errorToDetails err =
+    case err of
+        HttpError _ ->
+            { message = "", details = Encode.null }
+
+        MomentoError momentoErr ->
+            Momento.errorToDetails momentoErr
+
+
+
 -- Initialization procedure.
 
 
@@ -89,7 +161,7 @@ buildMomentoApi pt =
     * Subscribes to the model topic for the channel.
 
 -}
-init :
+join :
     (Procedure.Program.Msg msg -> msg)
     ->
         { rtChannelApiUrl : String
@@ -97,7 +169,7 @@ init :
         }
     -> (Result Error Model -> msg)
     -> Cmd msg
-init pt props rt =
+join pt props rt =
     let
         momentoApi =
             buildMomentoApi pt
@@ -107,6 +179,7 @@ init pt props rt =
             , momentoApiKey = props.momentoApiKey
             , state = StartState
             }
+                |> Private
 
         initProcedure =
             randomize
@@ -119,6 +192,7 @@ init pt props rt =
                         , momentoApiKey = props.momentoApiKey
                         , state = RunningState state
                         }
+                            |> Private
                     )
     in
     initProcedure
@@ -140,7 +214,7 @@ getChannelDetails :
             , channel : Channel
             }
             msg
-getChannelDetails model seed =
+getChannelDetails (Private model) seed =
     (\rt ->
         Http.get
             { url = model.rtChannelApiUrl ++ "/v1/channel"
@@ -168,7 +242,7 @@ openMomentoCache :
         , channel : Channel
         }
     -> Procedure.Procedure Error RunningProps msg
-openMomentoCache model momentoApi state =
+openMomentoCache (Private model) momentoApi state =
     momentoApi.open
         { apiKey = model.momentoApiKey
         , cache = cacheName state.channel.id
@@ -211,7 +285,7 @@ publishPersisted :
     -> Value
     -> (Result Error Delta -> msg)
     -> Cmd msg
-publishPersisted pt model payload rt =
+publishPersisted pt (Private model) payload rt =
     let
         momentoApi =
             buildMomentoApi pt
@@ -241,13 +315,14 @@ publishPersisted pt model payload rt =
                             |> Procedure.fetchResult
                     )
                 |> Procedure.map
-                    (\sk mdl ->
-                        case mdl.state of
+                    (\sk (Private innerModel) ->
+                        case innerModel.state of
                             RunningState innerState ->
-                                { mdl | state = { innerState | sessionKey = sk } |> RunningState }
+                                { innerModel | state = { innerState | sessionKey = sk } |> RunningState }
+                                    |> Private
 
                             _ ->
-                                mdl
+                                innerModel |> Private
                     )
                 |> Procedure.mapError MomentoError
                 |> Procedure.try pt rt
@@ -265,7 +340,7 @@ publishTransient :
     -> Value
     -> (Result Error Delta -> msg)
     -> Cmd msg
-publishTransient pt model payload rt =
+publishTransient pt (Private model) payload rt =
     let
         momentoApi =
             buildMomentoApi pt
@@ -283,13 +358,14 @@ publishTransient pt model payload rt =
             momentoApi.publish state.sessionKey { topic = state.channel.saveTopic, payload = transient }
                 |> Procedure.fetchResult
                 |> Procedure.map
-                    (\sk mdl ->
-                        case mdl.state of
+                    (\sk (Private innerModel) ->
+                        case innerModel.state of
                             RunningState innerState ->
-                                { mdl | state = { innerState | sessionKey = sk } |> RunningState }
+                                { innerModel | state = { innerState | sessionKey = sk } |> RunningState }
+                                    |> Private
 
                             _ ->
-                                mdl
+                                innerModel |> Private
                     )
                 |> Procedure.mapError MomentoError
                 |> Procedure.try pt rt
@@ -307,7 +383,7 @@ onMessage :
     -> Model
     -> (Value -> msg)
     -> Sub msg
-onMessage pt model rt =
+onMessage pt (Private model) rt =
     let
         momentoApi =
             buildMomentoApi pt
@@ -316,6 +392,24 @@ onMessage pt model rt =
         RunningState state ->
             (\val -> momentoApi.onMessage (always val))
                 rt
+
+        _ ->
+            Sub.none
+
+
+asyncError :
+    (Procedure.Program.Msg msg -> msg)
+    -> Model
+    -> (Error -> msg)
+    -> Sub msg
+asyncError pt (Private model) rt =
+    let
+        momentoApi =
+            buildMomentoApi pt
+    in
+    case model.state of
+        RunningState state ->
+            momentoApi.asyncError (\err -> MomentoError err |> rt)
 
         _ ->
             Sub.none
