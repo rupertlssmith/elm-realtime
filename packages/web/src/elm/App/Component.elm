@@ -21,8 +21,10 @@ type alias Component a =
 
 type Msg
     = ProcedureMsg (Procedure.Program.Msg Msg)
+    | RealtimeDelta (Result Error Realtime.Delta)
     | JoinedChannel (Result Error Realtime.Model)
     | MMOnMessage Value
+    | MMAsyncError Realtime.Error
 
 
 type alias Model =
@@ -75,6 +77,7 @@ subscriptions protocol component =
     in
     [ Procedure.Program.subscriptions model.procedure
     , realtimeApi.onMessage model.realtime MMOnMessage
+    , realtimeApi.asyncError model.realtime MMAsyncError
     ]
         |> Sub.batch
         |> Sub.map protocol.toMsg
@@ -86,7 +89,7 @@ update protocol msg component =
         model =
             component.app
     in
-    case msg |> Debug.log "update" of
+    case msg |> Debug.log "App.update" of
         ProcedureMsg innerMsg ->
             let
                 ( procMdl, procMsg ) =
@@ -97,8 +100,36 @@ update protocol msg component =
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 
+        RealtimeDelta (Ok delta) ->
+            { model | realtime = delta model.realtime }
+                |> U2.pure
+                |> Tuple.mapFirst (setModel component)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
+        JoinedChannel (Ok realtime) ->
+            let
+                hello =
+                    [ ( "message", Encode.string "hello" ) ] |> Encode.object
+            in
+            ( { model | realtime = realtime }
+            , Cmd.batch
+                [ realtimeApi.publishTransient realtime hello RealtimeDelta
+                ]
+            )
+                |> Tuple.mapFirst (setModel component)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
         MMOnMessage payload ->
             { model | log = ("Message: " ++ String.slice 0 90 (Encode.encode 2 payload) ++ "...") :: model.log }
+                |> U2.pure
+                |> Tuple.mapFirst (setModel component)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
+        MMAsyncError err ->
+            { model | log = ("Error: " ++ Realtime.errorToString err) :: model.log }
                 |> U2.pure
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)

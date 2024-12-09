@@ -4960,12 +4960,14 @@ var $author$project$Momento$asyncError = F2(
 var $author$project$Momento$MomentoSessionKey = function (a) {
 	return {$: 'MomentoSessionKey', a: a};
 };
+var $elm$core$Debug$log = _Debug_log;
 var $author$project$Momento$onMessage = F2(
 	function (ports, dt) {
 		return ports.onMessage(
 			function (_v0) {
 				var session = _v0.session;
 				var payload = _v0.payload;
+				var _v1 = A2($elm$core$Debug$log, 'Momento.onMessage', 'called');
 				return A2(
 					dt,
 					$author$project$Momento$MomentoSessionKey(session),
@@ -6955,7 +6957,6 @@ var $author$project$AWS$Dynamo$scan = F5(
 			},
 			A4($author$project$AWS$Dynamo$scanInner, ports, decoder, scanProps, _List_Nil));
 	});
-var $elm$core$Debug$log = _Debug_log;
 var $elm$core$Dict$foldl = F3(
 	function (func, acc, dict) {
 		foldl:

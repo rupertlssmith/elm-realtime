@@ -288,6 +288,10 @@ onMessage : Ports msg -> (MomentoSessionKey -> Value -> msg) -> Sub msg
 onMessage ports dt =
     ports.onMessage
         (\{ session, payload } ->
+            let
+                _ =
+                    Debug.log "Momento.onMessage" "called"
+            in
             dt (MomentoSessionKey session) payload
         )
 

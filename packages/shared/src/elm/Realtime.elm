@@ -181,6 +181,9 @@ join :
     -> Cmd msg
 join pt (Private model) rt =
     let
+        _ =
+            Debug.log "Realtime.join" "called"
+
         momentoApi =
             buildMomentoApi pt
 
@@ -204,6 +207,10 @@ join pt (Private model) rt =
 
 randomize : Procedure e Random.Seed msg
 randomize =
+    let
+        _ =
+            Debug.log "Realtime.randomize" "called"
+    in
     (\rt -> Random.generate rt Random.independentSeed)
         |> Procedure.fetch
 
@@ -218,6 +225,10 @@ getChannelDetails :
             }
             msg
 getChannelDetails (Private model) seed =
+    let
+        _ =
+            Debug.log "Realtime.getChannelDetails" "called"
+    in
     (\rt ->
         Http.get
             { url = model.rtChannelApiUrl ++ "/v1/channel"
@@ -246,6 +257,10 @@ openMomentoCache :
         }
     -> Procedure.Procedure Error RunningProps msg
 openMomentoCache (Private model) momentoApi state =
+    let
+        _ =
+            Debug.log "Realtime.openMomentoCache" "called"
+    in
     momentoApi.open
         { apiKey = model.momentoApiKey
         , cache = cacheName state.channel.id
@@ -266,6 +281,10 @@ subscribeModelTopic :
     -> RunningProps
     -> Procedure.Procedure Error RunningProps msg
 subscribeModelTopic momentoApi state =
+    let
+        _ =
+            Debug.log "Realtime.subscribeModelTopic" "called"
+    in
     momentoApi.subscribe
         state.sessionKey
         { topic = state.channel.modelTopic }
@@ -290,6 +309,9 @@ publishPersisted :
     -> Cmd msg
 publishPersisted pt (Private model) payload rt =
     let
+        _ =
+            Debug.log "Realtime.publishPersisted" "called"
+
         momentoApi =
             buildMomentoApi pt
     in
@@ -345,6 +367,9 @@ publishTransient :
     -> Cmd msg
 publishTransient pt (Private model) payload rt =
     let
+        _ =
+            Debug.log "Realtime.publishTransient" "called"
+
         momentoApi =
             buildMomentoApi pt
     in
@@ -358,7 +383,7 @@ publishTransient pt (Private model) payload rt =
                     ]
                         |> Encode.object
             in
-            momentoApi.publish state.sessionKey { topic = state.channel.saveTopic, payload = transient }
+            momentoApi.publish state.sessionKey { topic = state.channel.modelTopic, payload = transient }
                 |> Procedure.fetchResult
                 |> Procedure.map
                     (\sk (Private innerModel) ->
