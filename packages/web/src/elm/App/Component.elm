@@ -115,6 +115,7 @@ update protocol msg component =
             ( { model | realtime = realtime }
             , Cmd.batch
                 [ realtimeApi.publishTransient realtime hello RealtimeDelta
+                , realtimeApi.publishPersisted realtime hello RealtimeDelta
                 ]
             )
                 |> Tuple.mapFirst (setModel component)
