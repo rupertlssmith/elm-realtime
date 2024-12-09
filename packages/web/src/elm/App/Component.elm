@@ -123,7 +123,23 @@ update protocol msg component =
                 |> protocol.onUpdate
 
         OnMessage payload ->
-            { model | log = ("Message: " ++ String.slice 0 90 (Encode.encode 2 payload) ++ "...") :: model.log }
+            let
+                stringPayload =
+                    Encode.encode 2 payload
+            in
+            { model
+                | log =
+                    ("Message: "
+                        ++ String.slice 0 200 stringPayload
+                        ++ (if String.length stringPayload > 200 then
+                                "..."
+
+                            else
+                                ""
+                           )
+                    )
+                        :: model.log
+            }
                 |> U2.pure
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
