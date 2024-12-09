@@ -3,6 +3,7 @@ module Realtime exposing
     , Delta
     , Error
     , Model
+    , RTMessage(..)
     , RealtimeApi
     , errorToDetails
     , errorToString
@@ -64,6 +65,11 @@ realtimeApi pt =
     }
 
 
+type RTMessage
+    = Persisted Int Value
+    | Transient Value
+
+
 type Model
     = Private
         { rtChannelApiUrl : String
@@ -79,6 +85,7 @@ type alias Delta =
 type State
     = StartState
     | RunningState RunningProps
+    | Failed Error
 
 
 type alias RunningProps =
@@ -317,26 +324,15 @@ publishPersisted pt (Private model) payload rt =
     in
     case model.state of
         RunningState state ->
-            let
-                notice =
-                    [ ( "rt", Encode.string "N" )
-                    , ( "client", Encode.string "abcdef" )
-                    ]
-                        |> Encode.object
-
-                unsaved =
-                    [ ( "rt", Encode.string "U" )
-                    , ( "client", Encode.string "abcdef" )
-                    , ( "payload", payload )
-                    ]
-                        |> Encode.object
-            in
-            momentoApi.publish state.sessionKey { topic = state.channel.saveTopic, payload = notice }
+            momentoApi.publish state.sessionKey
+                { topic = state.channel.saveTopic
+                , payload = encodeUnsaved payload
+                }
                 |> Procedure.fetchResult
                 |> Procedure.andThen
                     (\sk ->
                         momentoApi.pushList sk
-                            { list = state.channel.saveList, payload = unsaved }
+                            { list = state.channel.saveList, payload = encodeNotice }
                             |> Procedure.fetchResult
                     )
                 |> Procedure.map
@@ -375,15 +371,10 @@ publishTransient pt (Private model) payload rt =
     in
     case model.state of
         RunningState state ->
-            let
-                transient =
-                    [ ( "rt", Encode.string "T" )
-                    , ( "client", Encode.string "abcdef" )
-                    , ( "payload", payload )
-                    ]
-                        |> Encode.object
-            in
-            momentoApi.publish state.sessionKey { topic = state.channel.modelTopic, payload = transient }
+            momentoApi.publish state.sessionKey
+                { topic = state.channel.modelTopic
+                , payload = encodeTransient payload
+                }
                 |> Procedure.fetchResult
                 |> Procedure.map
                     (\sk (Private innerModel) ->
@@ -417,7 +408,7 @@ onMessage pt (Private model) rt =
             buildMomentoApi pt
     in
     case model.state of
-        RunningState state ->
+        RunningState _ ->
             (\val -> momentoApi.onMessage (always val))
                 rt
 
@@ -446,3 +437,46 @@ asyncError pt (Private model) rt =
 cacheName : String -> String
 cacheName _ =
     "elm-realtime-cache"
+
+
+rtMessageDecoder : Decoder RTMessage
+rtMessageDecoder =
+    Decode.field "rt" Decode.string
+        |> Decode.andThen
+            (\ctor ->
+                case ctor of
+                    "P" ->
+                        Decode.map2 Persisted (Decode.field "0" DE.parseInt) (Decode.field "1" Decode.value)
+
+                    "T" ->
+                        Decode.map Transient (Decode.field "0" Decode.value)
+
+                    _ ->
+                        Decode.fail "Unrecognized constructor"
+            )
+
+
+encodeTransient : Value -> Value
+encodeTransient payload =
+    [ ( "rt", Encode.string "T" )
+    , ( "client", Encode.string "abcdef" )
+    , ( "payload", payload )
+    ]
+        |> Encode.object
+
+
+encodeNotice : Value
+encodeNotice =
+    [ ( "rt", Encode.string "N" )
+    , ( "client", Encode.string "abcdef" )
+    ]
+        |> Encode.object
+
+
+encodeUnsaved : Value -> Value
+encodeUnsaved payload =
+    [ ( "rt", Encode.string "U" )
+    , ( "client", Encode.string "abcdef" )
+    , ( "payload", payload )
+    ]
+        |> Encode.object

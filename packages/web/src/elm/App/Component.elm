@@ -23,8 +23,8 @@ type Msg
     = ProcedureMsg (Procedure.Program.Msg Msg)
     | RealtimeDelta (Result Error Realtime.Delta)
     | JoinedChannel (Result Error Realtime.Model)
-    | MMOnMessage Value
-    | MMAsyncError Realtime.Error
+    | OnMessage Value
+    | AsyncError Realtime.Error
 
 
 type alias Model =
@@ -76,8 +76,8 @@ subscriptions protocol component =
             component.app
     in
     [ Procedure.Program.subscriptions model.procedure
-    , realtimeApi.onMessage model.realtime MMOnMessage
-    , realtimeApi.asyncError model.realtime MMAsyncError
+    , realtimeApi.onMessage model.realtime OnMessage
+    , realtimeApi.asyncError model.realtime AsyncError
     ]
         |> Sub.batch
         |> Sub.map protocol.toMsg
@@ -122,14 +122,14 @@ update protocol msg component =
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 
-        MMOnMessage payload ->
+        OnMessage payload ->
             { model | log = ("Message: " ++ String.slice 0 90 (Encode.encode 2 payload) ++ "...") :: model.log }
                 |> U2.pure
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 
-        MMAsyncError err ->
+        AsyncError err ->
             { model | log = ("Error: " ++ Realtime.errorToString err) :: model.log }
                 |> U2.pure
                 |> Tuple.mapFirst (setModel component)
