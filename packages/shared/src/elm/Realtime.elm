@@ -324,22 +324,22 @@ publishPersisted pt (Private model) payload rt =
     in
     case model.state of
         RunningState state ->
-            momentoApi.publish state.sessionKey
-                { topic = state.channel.saveTopic
-                , payload = encodeUnsaved payload
-                }
+            momentoApi.pushList state.sessionKey
+                { list = state.channel.saveList, payload = encodeUnsaved payload }
                 |> Procedure.fetchResult
                 |> Procedure.andThen
-                    (\sk ->
-                        momentoApi.pushList sk
-                            { list = state.channel.saveList, payload = encodeNotice }
+                    (\nextSessionKey ->
+                        momentoApi.publish nextSessionKey
+                            { topic = state.channel.saveTopic
+                            , payload = encodeNotice
+                            }
                             |> Procedure.fetchResult
                     )
                 |> Procedure.map
-                    (\sk (Private innerModel) ->
+                    (\nextSessionKey (Private innerModel) ->
                         case innerModel.state of
                             RunningState innerState ->
-                                { innerModel | state = { innerState | sessionKey = sk } |> RunningState }
+                                { innerModel | state = { innerState | sessionKey = nextSessionKey } |> RunningState }
                                     |> Private
 
                             _ ->
