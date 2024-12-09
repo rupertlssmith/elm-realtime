@@ -64,6 +64,11 @@ Note, this must be done separately when deploying the other stages.
     cd packages/functions
     elm make src/API.elm --output src/elm.js
 
+This can also be run with a file watcher that will rebuild it immediately when Elm files are edited. 
+
+    cd packages/functions
+    npx onchange '../**/*.elm' -- elm make src/API.elm --output src/elm.js
+
 ### To check that the API is working:
 
 Replace the URL with whatever URL the ApiEndpoint comes out as on the console once dev mode has been started:
