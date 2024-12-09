@@ -56,14 +56,20 @@ main =
 init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
+        momentoApiKey =
+            Decode.decodeString (Decode.field "apiKey" Decode.string) flags.momentoApiKey
+                |> Result.withDefault ""
+
         ( appMdl, appCmds ) =
-            App.init appProtocol.toMsg
+            App.init
+                { rtChannelApiUrl = flags.rtChannelApiUrl
+                , momentoApiKey = momentoApiKey
+                }
+                appProtocol.toMsg
     in
     ( { location = flags.location
       , rtChannelApiUrl = flags.rtChannelApiUrl
-      , momentoApiKey =
-            Decode.decodeString (Decode.field "apiKey" Decode.string) flags.momentoApiKey
-                |> Result.withDefault ""
+      , momentoApiKey = momentoApiKey
       , app = appMdl
       , route = Nothing
       }

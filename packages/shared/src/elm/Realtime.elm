@@ -44,7 +44,8 @@ type alias Config =
 
 
 type alias RealtimeApi msg =
-    { join : Config -> (Result Error Model -> msg) -> Cmd msg
+    { init : Config -> Model
+    , join : Model -> (Result Error Model -> msg) -> Cmd msg
     , publishPersisted : Model -> Value -> (Result Error Delta -> msg) -> Cmd msg
     , publishTransient : Model -> Value -> (Result Error Delta -> msg) -> Cmd msg
     , onMessage : Model -> (Value -> msg) -> Sub msg
@@ -54,7 +55,8 @@ type alias RealtimeApi msg =
 
 realtimeApi : (Procedure.Program.Msg msg -> msg) -> RealtimeApi msg
 realtimeApi pt =
-    { join = join pt
+    { init = init
+    , join = join pt
     , publishPersisted = publishPersisted pt
     , publishTransient = publishTransient pt
     , onMessage = onMessage pt
@@ -154,7 +156,18 @@ errorToDetails err =
 -- Initialization procedure.
 
 
-{-| Initializes the realtime channel:
+{-| Initializeds the channel with its configuration.
+-}
+init : Config -> Model
+init props =
+    { rtChannelApiUrl = props.rtChannelApiUrl
+    , momentoApiKey = props.momentoApiKey
+    , state = StartState
+    }
+        |> Private
+
+
+{-| Joins the realtime channel in order to start an event flow:
 
     * Fetches the channel details from the Channel API.
     * Opens a connection to Momento.
@@ -163,33 +176,23 @@ errorToDetails err =
 -}
 join :
     (Procedure.Program.Msg msg -> msg)
-    ->
-        { rtChannelApiUrl : String
-        , momentoApiKey : String
-        }
+    -> Model
     -> (Result Error Model -> msg)
     -> Cmd msg
-join pt props rt =
+join pt (Private model) rt =
     let
         momentoApi =
             buildMomentoApi pt
 
-        model =
-            { rtChannelApiUrl = props.rtChannelApiUrl
-            , momentoApiKey = props.momentoApiKey
-            , state = StartState
-            }
-                |> Private
-
         initProcedure =
             randomize
-                |> Procedure.andThen (getChannelDetails model)
-                |> Procedure.andThen (openMomentoCache model momentoApi)
+                |> Procedure.andThen (getChannelDetails (Private model))
+                |> Procedure.andThen (openMomentoCache (Private model) momentoApi)
                 |> Procedure.andThen (subscribeModelTopic momentoApi)
                 |> Procedure.map
                     (\state ->
-                        { rtChannelApiUrl = props.rtChannelApiUrl
-                        , momentoApiKey = props.momentoApiKey
+                        { rtChannelApiUrl = model.rtChannelApiUrl
+                        , momentoApiKey = model.momentoApiKey
                         , state = RunningState state
                         }
                             |> Private
