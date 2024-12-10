@@ -7613,8 +7613,8 @@ var $author$project$EventLog$CreateChannel$switchState = F2(
 			cons(state),
 			$elm$core$Platform$Cmd$none);
 	});
-var $author$project$EventLog$CreateChannel$createChannel = F4(
-	function (protocol, session, state, component) {
+var $author$project$EventLog$CreateChannel$createChannel = F3(
+	function (session, state, component) {
 		var _v0 = A2($elm$random$Random$step, $author$project$EventLog$Names$nameGenerator, state.seed);
 		var channelName = _v0.a;
 		var nextSeed = _v0.b;
@@ -7640,23 +7640,19 @@ var $author$project$EventLog$CreateChannel$createChannel = F4(
 								$brian_watkins$elm_procedure$Procedure$andThen,
 								$author$project$EventLog$OpenMomentoCache$openMomentoCache(component),
 								$brian_watkins$elm_procedure$Procedure$provide(channelName)))))));
-		return protocol.onUpdate(
+		return A2(
+			$elm$core$Tuple$mapFirst,
+			$author$project$EventLog$CreateChannel$setModel(component),
 			A2(
-				$elm$core$Tuple$mapSecond,
-				$elm$core$Platform$Cmd$map(protocol.toMsg),
-				A2(
-					$elm$core$Tuple$mapFirst,
-					$author$project$EventLog$CreateChannel$setModel(component),
-					A2(
-						$the_sett$elm_update_helper$Update2$andMap,
-						$author$project$EventLog$CreateChannel$switchState($author$project$EventLog$Model$ModelReady),
-						_Utils_Tuple2(
-							{procedure: state.procedure, seed: nextSeed},
-							A3(
-								$brian_watkins$elm_procedure$Procedure$try,
-								$author$project$EventLog$Msg$ProcedureMsg,
-								$author$project$EventLog$Msg$HttpResponse(session),
-								procedure))))));
+				$the_sett$elm_update_helper$Update2$andMap,
+				$author$project$EventLog$CreateChannel$switchState($author$project$EventLog$Model$ModelReady),
+				_Utils_Tuple2(
+					{procedure: state.procedure, seed: nextSeed},
+					A3(
+						$brian_watkins$elm_procedure$Procedure$try,
+						$author$project$EventLog$Msg$ProcedureMsg,
+						$author$project$EventLog$Msg$HttpResponse(session),
+						procedure))));
 	});
 var $elm$core$List$head = function (list) {
 	if (list.b) {
@@ -7700,8 +7696,8 @@ var $author$project$EventLog$GetAvailableChannel$switchState = F2(
 			cons(state),
 			$elm$core$Platform$Cmd$none);
 	});
-var $author$project$EventLog$GetAvailableChannel$getAvailableChannel = F4(
-	function (protocol, session, state, component) {
+var $author$project$EventLog$GetAvailableChannel$getAvailableChannel = F3(
+	function (session, state, component) {
 		var procedure = A2(
 			$brian_watkins$elm_procedure$Procedure$map,
 			function (maybeChannel) {
@@ -7720,23 +7716,19 @@ var $author$project$EventLog$GetAvailableChannel$getAvailableChannel = F4(
 					$brian_watkins$elm_procedure$Procedure$andThen,
 					$author$project$EventLog$GetAvailableChannel$findAvailableChannel(component),
 					$brian_watkins$elm_procedure$Procedure$provide(_Utils_Tuple0))));
-		return protocol.onUpdate(
+		return A2(
+			$elm$core$Tuple$mapFirst,
+			$author$project$EventLog$GetAvailableChannel$setModel(component),
 			A2(
-				$elm$core$Tuple$mapSecond,
-				$elm$core$Platform$Cmd$map(protocol.toMsg),
-				A2(
-					$elm$core$Tuple$mapFirst,
-					$author$project$EventLog$GetAvailableChannel$setModel(component),
-					A2(
-						$the_sett$elm_update_helper$Update2$andMap,
-						$author$project$EventLog$GetAvailableChannel$switchState($author$project$EventLog$Model$ModelReady),
-						_Utils_Tuple2(
-							{procedure: state.procedure, seed: state.seed},
-							A3(
-								$brian_watkins$elm_procedure$Procedure$try,
-								$author$project$EventLog$Msg$ProcedureMsg,
-								$author$project$EventLog$Msg$HttpResponse(session),
-								procedure))))));
+				$the_sett$elm_update_helper$Update2$andMap,
+				$author$project$EventLog$GetAvailableChannel$switchState($author$project$EventLog$Model$ModelReady),
+				_Utils_Tuple2(
+					{procedure: state.procedure, seed: state.seed},
+					A3(
+						$brian_watkins$elm_procedure$Procedure$try,
+						$author$project$EventLog$Msg$ProcedureMsg,
+						$author$project$EventLog$Msg$HttpResponse(session),
+						procedure))));
 	});
 var $author$project$Serverless$Request$method = function (_v0) {
 	var request = _v0.a;
@@ -8050,8 +8042,8 @@ var $author$project$EventLog$SaveChannel$switchState = F2(
 			cons(state),
 			$elm$core$Platform$Cmd$none);
 	});
-var $author$project$EventLog$SaveChannel$saveChannel = F6(
-	function (protocol, session, state, apiRequest, channelName, component) {
+var $author$project$EventLog$SaveChannel$saveChannel = F5(
+	function (session, state, apiRequest, channelName, component) {
 		var procedure = A2(
 			$brian_watkins$elm_procedure$Procedure$map,
 			$elm$core$Basics$always(
@@ -8069,23 +8061,19 @@ var $author$project$EventLog$SaveChannel$saveChannel = F6(
 						$brian_watkins$elm_procedure$Procedure$andThen,
 						$author$project$EventLog$OpenMomentoCache$openMomentoCache(component),
 						$brian_watkins$elm_procedure$Procedure$provide(channelName)))));
-		return protocol.onUpdate(
+		return A2(
+			$elm$core$Tuple$mapFirst,
+			$author$project$EventLog$SaveChannel$setModel(component),
 			A2(
-				$elm$core$Tuple$mapSecond,
-				$elm$core$Platform$Cmd$map(protocol.toMsg),
-				A2(
-					$elm$core$Tuple$mapFirst,
-					$author$project$EventLog$SaveChannel$setModel(component),
-					A2(
-						$the_sett$elm_update_helper$Update2$andMap,
-						$author$project$EventLog$SaveChannel$switchState($author$project$EventLog$Model$ModelReady),
-						_Utils_Tuple2(
-							state,
-							A3(
-								$brian_watkins$elm_procedure$Procedure$try,
-								$author$project$EventLog$Msg$ProcedureMsg,
-								$author$project$EventLog$Msg$HttpResponse(session),
-								procedure))))));
+				$the_sett$elm_update_helper$Update2$andMap,
+				$author$project$EventLog$SaveChannel$switchState($author$project$EventLog$Model$ModelReady),
+				_Utils_Tuple2(
+					state,
+					A3(
+						$brian_watkins$elm_procedure$Procedure$try,
+						$author$project$EventLog$Msg$ProcedureMsg,
+						$author$project$EventLog$Msg$HttpResponse(session),
+						procedure))));
 	});
 var $author$project$EventLog$Component$processRoute = F4(
 	function (protocol, session, apiRequest, component) {
@@ -8103,10 +8091,14 @@ var $author$project$EventLog$Component$processRoute = F4(
 							var _v1 = _v0.a;
 							var _v2 = _v0.b;
 							var state = _v0.c.a;
-							return A2(
-								$the_sett$elm_update_helper$Update2$andMap,
-								A3($author$project$EventLog$GetAvailableChannel$getAvailableChannel, protocol, session, state),
-								$the_sett$elm_update_helper$Update2$pure(component));
+							return protocol.onUpdate(
+								A2(
+									$elm$core$Tuple$mapSecond,
+									$elm$core$Platform$Cmd$map(protocol.toMsg),
+									A2(
+										$the_sett$elm_update_helper$Update2$andMap,
+										A2($author$project$EventLog$GetAvailableChannel$getAvailableChannel, session, state),
+										$the_sett$elm_update_helper$Update2$pure(component))));
 						} else {
 							break _v0$3;
 						}
@@ -8116,18 +8108,26 @@ var $author$project$EventLog$Component$processRoute = F4(
 								var _v3 = _v0.a;
 								var _v4 = _v0.b;
 								var state = _v0.c.a;
-								return A2(
-									$the_sett$elm_update_helper$Update2$andMap,
-									A3($author$project$EventLog$CreateChannel$createChannel, protocol, session, state),
-									$the_sett$elm_update_helper$Update2$pure(component));
+								return protocol.onUpdate(
+									A2(
+										$elm$core$Tuple$mapSecond,
+										$elm$core$Platform$Cmd$map(protocol.toMsg),
+										A2(
+											$the_sett$elm_update_helper$Update2$andMap,
+											A2($author$project$EventLog$CreateChannel$createChannel, session, state),
+											$the_sett$elm_update_helper$Update2$pure(component))));
 							case 'Channel':
 								var _v5 = _v0.a;
 								var channelName = _v0.b.a;
 								var state = _v0.c.a;
-								return A2(
-									$the_sett$elm_update_helper$Update2$andMap,
-									A5($author$project$EventLog$SaveChannel$saveChannel, protocol, session, state, apiRequest, channelName),
-									$the_sett$elm_update_helper$Update2$pure(component));
+								return protocol.onUpdate(
+									A2(
+										$elm$core$Tuple$mapSecond,
+										$elm$core$Platform$Cmd$map(protocol.toMsg),
+										A2(
+											$the_sett$elm_update_helper$Update2$andMap,
+											A4($author$project$EventLog$SaveChannel$saveChannel, session, state, apiRequest, channelName),
+											$the_sett$elm_update_helper$Update2$pure(component))));
 							default:
 								break _v0$3;
 						}

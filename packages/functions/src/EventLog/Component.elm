@@ -16,8 +16,7 @@ import EventLog.CreateChannel as CreateChannel
 import EventLog.GetAvailableChannel as GetAvailableChannel
 import EventLog.Model as Model exposing (Model(..), ReadyState, StartState)
 import EventLog.Msg as Msg exposing (Msg(..))
-import EventLog.Protocol as Protocol exposing (Protocol)
-import EventLog.Route as Route exposing (Route(..))
+import EventLog.Route exposing (Route(..))
 import EventLog.SaveChannel as SaveChannel
 import Momento exposing (CacheItem, Error, MomentoSessionKey)
 import Procedure.Program
@@ -38,7 +37,9 @@ type alias Msg =
 
 
 type alias Protocol submodel msg model =
-    Protocol.Protocol submodel msg model
+    { toMsg : Msg -> msg
+    , onUpdate : ( submodel, Cmd msg ) -> ( model, Cmd msg )
+    }
 
 
 type alias Component a =
@@ -170,15 +171,21 @@ processRoute protocol session apiRequest component =
     case ( Request.method apiRequest.request, apiRequest.route, model ) of
         ( GET, ChannelRoot, ModelReady state ) ->
             U2.pure component
-                |> U2.andMap (GetAvailableChannel.getAvailableChannel protocol session state)
+                |> U2.andMap (GetAvailableChannel.getAvailableChannel session state)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
 
         ( POST, ChannelRoot, ModelReady state ) ->
             U2.pure component
-                |> U2.andMap (CreateChannel.createChannel protocol session state)
+                |> U2.andMap (CreateChannel.createChannel session state)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
 
         ( POST, Channel channelName, ModelReady state ) ->
             U2.pure component
-                |> U2.andMap (SaveChannel.saveChannel protocol session state apiRequest channelName)
+                |> U2.andMap (SaveChannel.saveChannel session state apiRequest channelName)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
 
         _ ->
             U2.pure component

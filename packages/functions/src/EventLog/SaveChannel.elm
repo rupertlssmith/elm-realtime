@@ -9,7 +9,6 @@ import EventLog.Model exposing (Model(..), ReadyState)
 import EventLog.Msg exposing (Msg(..))
 import EventLog.Names as Names
 import EventLog.OpenMomentoCache as OpenMomentoCache
-import EventLog.Protocol exposing (Protocol)
 import EventLog.Route exposing (Route)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Extra as DE
@@ -77,14 +76,13 @@ switchState cons state =
 
 
 saveChannel :
-    Protocol (Component a) msg model
-    -> HttpSessionKey
+    HttpSessionKey
     -> ReadyState
     -> ApiRequest Route
     -> String
     -> Component a
-    -> ( model, Cmd msg )
-saveChannel protocol session state apiRequest channelName component =
+    -> ( Component a, Cmd Msg )
+saveChannel session state apiRequest channelName component =
     let
         procedure : Procedure.Procedure Response Response Msg
         procedure =
@@ -99,8 +97,6 @@ saveChannel protocol session state apiRequest channelName component =
     )
         |> U2.andMap (ModelReady |> switchState)
         |> Tuple.mapFirst (setModel component)
-        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-        |> protocol.onUpdate
 
 
 {-| Pops a single event from the save list, saves it to the database with a unique and contiguous sequence

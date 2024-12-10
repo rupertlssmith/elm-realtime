@@ -10,7 +10,6 @@ import EventLog.Model exposing (Model(..), ReadyState)
 import EventLog.Msg exposing (Msg(..))
 import EventLog.Names as Names
 import EventLog.OpenMomentoCache as OpenMomentoCache
-import EventLog.Protocol exposing (Protocol)
 import Momento exposing (CacheItem, Error, MomentoSessionKey)
 import Procedure
 import Random
@@ -57,8 +56,8 @@ switchState cons state =
 -- Create a new realtime channel
 
 
-createChannel : Protocol (Component a) msg model -> HttpSessionKey -> ReadyState -> Component a -> ( model, Cmd msg )
-createChannel protocol session state component =
+createChannel : HttpSessionKey -> ReadyState -> Component a -> ( Component a, Cmd Msg )
+createChannel session state component =
     let
         ( channelName, nextSeed ) =
             Random.step Names.nameGenerator state.seed
@@ -80,8 +79,6 @@ createChannel protocol session state component =
     )
         |> U2.andMap (ModelReady |> switchState)
         |> Tuple.mapFirst (setModel component)
-        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-        |> protocol.onUpdate
 
 
 setupChannelWebhook :

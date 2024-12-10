@@ -7,7 +7,6 @@ import EventLog.Apis as Apis
 import EventLog.ErrorFormat as ErrorFormat exposing (ErrorFormat)
 import EventLog.Model exposing (Model(..), ReadyState)
 import EventLog.Msg exposing (Msg(..))
-import EventLog.Protocol exposing (Protocol)
 import Json.Encode as Encode
 import Procedure
 import Serverless.HttpServer exposing (ApiRequest, Error, HttpSessionKey)
@@ -45,8 +44,12 @@ switchState cons state =
 -- Try and get the connection details of an available channel
 
 
-getAvailableChannel : Protocol (Component a) msg model -> HttpSessionKey -> ReadyState -> Component a -> ( model, Cmd msg )
-getAvailableChannel protocol session state component =
+getAvailableChannel :
+    HttpSessionKey
+    -> ReadyState
+    -> Component a
+    -> ( Component a, Cmd Msg )
+getAvailableChannel session state component =
     let
         procedure : Procedure.Procedure Response Response Msg
         procedure =
@@ -70,8 +73,6 @@ getAvailableChannel protocol session state component =
     )
         |> U2.andMap (ModelReady |> switchState)
         |> Tuple.mapFirst (setModel component)
-        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-        |> protocol.onUpdate
 
 
 findAvailableChannel :
