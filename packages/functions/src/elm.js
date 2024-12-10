@@ -7730,11 +7730,7 @@ var $author$project$EventLog$GetAvailableChannel$getAvailableChannel = F3(
 						$author$project$EventLog$Msg$HttpResponse(session),
 						procedure))));
 	});
-var $author$project$Serverless$Request$method = function (_v0) {
-	var request = _v0.a;
-	return request.method;
-};
-var $author$project$EventLog$SaveChannel$publishEvent = F3(
+var $author$project$EventLog$JoinChannel$publishEvent = F3(
 	function (component, channelName, state) {
 		var payload = $elm$json$Json$Encode$object(
 			_List_fromArray(
@@ -7765,7 +7761,7 @@ var $author$project$EventLog$SaveChannel$publishEvent = F3(
 							topic: $author$project$EventLog$Names$modelTopicName(channelName)
 						}))));
 	});
-var $author$project$EventLog$SaveChannel$getEventsLogMetaData = F3(
+var $author$project$EventLog$JoinChannel$getEventsLogMetaData = F3(
 	function (component, channelName, state) {
 		var key = {
 			id: $author$project$EventLog$Names$metadataKeyName(channelName),
@@ -7863,6 +7859,277 @@ var $author$project$AWS$Dynamo$updateCommand = F2(
 	function (encoder, updateProps) {
 		return $author$project$AWS$Dynamo$UpdateCommand(
 			A2($author$project$AWS$Dynamo$updateEncoder, encoder, updateProps));
+	});
+var $author$project$EventLog$JoinChannel$recordEventsAndMetadata = F3(
+	function (component, channelName, state) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (timestamp) {
+				var seqUpdate = A2(
+					$author$project$AWS$Dynamo$updateCommand,
+					$author$project$DB$EventLogTable$encodeKey,
+					{
+						conditionExpression: $elm$core$Maybe$Just('lastId = :current_id'),
+						expressionAttributeNames: $elm$core$Dict$empty,
+						expressionAttributeValues: $elm$core$Dict$fromList(
+							_List_fromArray(
+								[
+									_Utils_Tuple2(
+									':incr',
+									$author$project$AWS$Dynamo$int(1)),
+									_Utils_Tuple2(
+									':current_id',
+									$author$project$AWS$Dynamo$int(state.lastSeqNo))
+								])),
+						key: {
+							id: $author$project$EventLog$Names$metadataKeyName(channelName),
+							seq: 0
+						},
+						returnConsumedCapacity: $elm$core$Maybe$Nothing,
+						returnItemCollectionMetrics: $elm$core$Maybe$Nothing,
+						returnValues: $elm$core$Maybe$Nothing,
+						returnValuesOnConditionCheckFailure: $elm$core$Maybe$Nothing,
+						tableName: component.eventLogTable,
+						updateExpression: 'SET lastId = lastId + :incr'
+					});
+				var assignedSeqNo = state.lastSeqNo + 1;
+				var eventRecord = {event: state.unsavedEvent.payload, id: channelName, seq: assignedSeqNo, updatedAt: timestamp};
+				var eventPut = A2(
+					$author$project$AWS$Dynamo$putCommand,
+					$author$project$DB$EventLogTable$encodeRecord,
+					{item: eventRecord, tableName: component.eventLogTable});
+				return A2(
+					$brian_watkins$elm_procedure$Procedure$catch,
+					function (error) {
+						if (error.$ === 'ConditionCheckFailed') {
+							return $brian_watkins$elm_procedure$Procedure$provide(
+								{lastSeqNo: assignedSeqNo, sessionKey: state.sessionKey, txSuccess: false, unsavedEvent: state.unsavedEvent});
+						} else {
+							return $brian_watkins$elm_procedure$Procedure$break(
+								$author$project$AWS$Dynamo$errorToDetails(error));
+						}
+					},
+					A2(
+						$brian_watkins$elm_procedure$Procedure$map,
+						$elm$core$Basics$always(
+							{lastSeqNo: assignedSeqNo, sessionKey: state.sessionKey, txSuccess: true, unsavedEvent: state.unsavedEvent}),
+						$brian_watkins$elm_procedure$Procedure$fetchResult(
+							$author$project$EventLog$Apis$eventLogTableMetadataApi.writeTx(
+								{
+									commands: _List_fromArray(
+										[seqUpdate, eventPut]),
+									tableName: component.eventLogTable
+								}))));
+			},
+			$brian_watkins$elm_procedure$Procedure$fromTask($elm$time$Time$now));
+	});
+var $author$project$EventLog$JoinChannel$recordEventWithUniqueSeqNo = F3(
+	function (component, channelName, state) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (stateAfterTxAttempt) {
+				return stateAfterTxAttempt.txSuccess ? $brian_watkins$elm_procedure$Procedure$provide(stateAfterTxAttempt) : A3(
+					$author$project$EventLog$JoinChannel$recordEventWithUniqueSeqNo,
+					component,
+					channelName,
+					{sessionKey: stateAfterTxAttempt.sessionKey, unsavedEvent: stateAfterTxAttempt.unsavedEvent});
+			},
+			A2(
+				$brian_watkins$elm_procedure$Procedure$andThen,
+				A2($author$project$EventLog$JoinChannel$recordEventsAndMetadata, component, channelName),
+				A2(
+					$brian_watkins$elm_procedure$Procedure$andThen,
+					A2($author$project$EventLog$JoinChannel$getEventsLogMetaData, component, channelName),
+					$brian_watkins$elm_procedure$Procedure$provide(state))));
+	});
+var $author$project$EventLog$JoinChannel$UnsavedEvent = F3(
+	function (rt, client, payload) {
+		return {client: client, payload: payload, rt: rt};
+	});
+var $author$project$EventLog$JoinChannel$decodeNoticeEvent = A2(
+	$elm_community$json_extra$Json$Decode$Extra$andMap,
+	A2($elm$json$Json$Decode$field, 'payload', $elm$json$Json$Decode$value),
+	A2(
+		$elm_community$json_extra$Json$Decode$Extra$andMap,
+		A2($elm$json$Json$Decode$field, 'client', $elm$json$Json$Decode$string),
+		A2(
+			$elm_community$json_extra$Json$Decode$Extra$andMap,
+			A2($elm$json$Json$Decode$field, 'rt', $elm$json$Json$Decode$string),
+			$elm$json$Json$Decode$succeed($author$project$EventLog$JoinChannel$UnsavedEvent))));
+var $author$project$EventLog$JoinChannel$tryReadEvent = F3(
+	function (component, channelName, sessionKey) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (maybeCacheItem) {
+				if (maybeCacheItem.$ === 'Just') {
+					var cacheItem = maybeCacheItem.a;
+					var _v1 = A2($elm$json$Json$Decode$decodeValue, $author$project$EventLog$JoinChannel$decodeNoticeEvent, cacheItem.payload);
+					if (_v1.$ === 'Ok') {
+						var unsavedEvent = _v1.a;
+						return $brian_watkins$elm_procedure$Procedure$provide(
+							{
+								sessionKey: sessionKey,
+								unsavedEvent: $elm$core$Maybe$Just(unsavedEvent)
+							});
+					} else {
+						var err = _v1.a;
+						return $brian_watkins$elm_procedure$Procedure$break(
+							{
+								details: $elm$json$Json$Encode$null,
+								message: $elm$json$Json$Decode$errorToString(err)
+							});
+					}
+				} else {
+					return $brian_watkins$elm_procedure$Procedure$provide(
+						{sessionKey: sessionKey, unsavedEvent: $elm$core$Maybe$Nothing});
+				}
+			},
+			A2(
+				$brian_watkins$elm_procedure$Procedure$mapError,
+				$author$project$Momento$errorToDetails,
+				$brian_watkins$elm_procedure$Procedure$fetchResult(
+					A2(
+						$author$project$EventLog$Apis$momentoApi.popList,
+						sessionKey,
+						{
+							list: $author$project$EventLog$Names$saveListName(channelName)
+						}))));
+	});
+var $author$project$EventLog$JoinChannel$drainSaveList = F3(
+	function (component, channelName, sessionKey) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (state) {
+				var _v0 = state.unsavedEvent;
+				if (_v0.$ === 'Nothing') {
+					return $brian_watkins$elm_procedure$Procedure$provide(_Utils_Tuple0);
+				} else {
+					var event = _v0.a;
+					return A2(
+						$brian_watkins$elm_procedure$Procedure$andThen,
+						A2($author$project$EventLog$JoinChannel$drainSaveList, component, channelName),
+						A2(
+							$brian_watkins$elm_procedure$Procedure$map,
+							$elm$core$Basics$always(sessionKey),
+							A2(
+								$brian_watkins$elm_procedure$Procedure$andThen,
+								A2($author$project$EventLog$JoinChannel$publishEvent, component, channelName),
+								A2(
+									$brian_watkins$elm_procedure$Procedure$andThen,
+									A2($author$project$EventLog$JoinChannel$recordEventWithUniqueSeqNo, component, channelName),
+									$brian_watkins$elm_procedure$Procedure$provide(
+										{sessionKey: sessionKey, unsavedEvent: event})))));
+				}
+			},
+			A2(
+				$brian_watkins$elm_procedure$Procedure$andThen,
+				A2($author$project$EventLog$JoinChannel$tryReadEvent, component, channelName),
+				$brian_watkins$elm_procedure$Procedure$provide(sessionKey)));
+	});
+var $author$project$EventLog$JoinChannel$setModel = F2(
+	function (m, x) {
+		return _Utils_update(
+			m,
+			{eventLog: x});
+	});
+var $author$project$EventLog$JoinChannel$switchState = F2(
+	function (cons, state) {
+		return _Utils_Tuple2(
+			cons(state),
+			$elm$core$Platform$Cmd$none);
+	});
+var $author$project$EventLog$JoinChannel$joinChannel = F5(
+	function (session, state, apiRequest, channelName, component) {
+		var procedure = A2(
+			$brian_watkins$elm_procedure$Procedure$map,
+			$elm$core$Basics$always(
+				$author$project$Serverless$Response$ok200json($elm$json$Json$Encode$null)),
+			A2(
+				$brian_watkins$elm_procedure$Procedure$mapError,
+				A2(
+					$elm$core$Basics$composeR,
+					$elm$core$Debug$log('error'),
+					A2($elm$core$Basics$composeR, $author$project$EventLog$ErrorFormat$encodeErrorFormat, $author$project$Serverless$Response$err500json)),
+				A2(
+					$brian_watkins$elm_procedure$Procedure$andThen,
+					A2($author$project$EventLog$JoinChannel$drainSaveList, component, channelName),
+					A2(
+						$brian_watkins$elm_procedure$Procedure$andThen,
+						$author$project$EventLog$OpenMomentoCache$openMomentoCache(component),
+						$brian_watkins$elm_procedure$Procedure$provide(channelName)))));
+		return A2(
+			$elm$core$Tuple$mapFirst,
+			$author$project$EventLog$JoinChannel$setModel(component),
+			A2(
+				$the_sett$elm_update_helper$Update2$andMap,
+				$author$project$EventLog$JoinChannel$switchState($author$project$EventLog$Model$ModelReady),
+				_Utils_Tuple2(
+					state,
+					A3(
+						$brian_watkins$elm_procedure$Procedure$try,
+						$author$project$EventLog$Msg$ProcedureMsg,
+						$author$project$EventLog$Msg$HttpResponse(session),
+						procedure))));
+	});
+var $author$project$Serverless$Request$method = function (_v0) {
+	var request = _v0.a;
+	return request.method;
+};
+var $author$project$EventLog$SaveChannel$publishEvent = F3(
+	function (component, channelName, state) {
+		var payload = $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'rt',
+					$elm$json$Json$Encode$string('P')),
+					_Utils_Tuple2(
+					'client',
+					$elm$json$Json$Encode$string(state.unsavedEvent.client)),
+					_Utils_Tuple2(
+					'seq',
+					$elm$json$Json$Encode$int(state.lastSeqNo)),
+					_Utils_Tuple2('payload', state.unsavedEvent.payload)
+				]));
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$mapError,
+			$author$project$Momento$errorToDetails,
+			A2(
+				$brian_watkins$elm_procedure$Procedure$map,
+				$elm$core$Basics$always(_Utils_Tuple0),
+				$brian_watkins$elm_procedure$Procedure$fetchResult(
+					A2(
+						$author$project$EventLog$Apis$momentoApi.publish,
+						state.sessionKey,
+						{
+							payload: payload,
+							topic: $author$project$EventLog$Names$modelTopicName(channelName)
+						}))));
+	});
+var $author$project$EventLog$SaveChannel$getEventsLogMetaData = F3(
+	function (component, channelName, state) {
+		var key = {
+			id: $author$project$EventLog$Names$metadataKeyName(channelName),
+			seq: 0
+		};
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (maybeMetaData) {
+				if (maybeMetaData.$ === 'Just') {
+					var metadata = maybeMetaData.a;
+					return $brian_watkins$elm_procedure$Procedure$provide(
+						{lastSeqNo: metadata.lastId, sessionKey: state.sessionKey, unsavedEvent: state.unsavedEvent});
+				} else {
+					return $brian_watkins$elm_procedure$Procedure$break(
+						{details: $elm$json$Json$Encode$null, message: 'No EventLog metadata record found for channel: ' + channelName});
+				}
+			},
+			A2(
+				$brian_watkins$elm_procedure$Procedure$mapError,
+				$author$project$AWS$Dynamo$errorToDetails,
+				$brian_watkins$elm_procedure$Procedure$fetchResult(
+					$author$project$EventLog$Apis$eventLogTableMetadataApi.get(
+						{key: key, tableName: component.eventLogTable}))));
 	});
 var $author$project$EventLog$SaveChannel$recordEventsAndMetadata = F3(
 	function (component, channelName, state) {
@@ -8082,26 +8349,10 @@ var $author$project$EventLog$Component$processRoute = F4(
 			$author$project$Serverless$Request$method(apiRequest.request),
 			apiRequest.route,
 			model);
-		_v0$3:
+		_v0$4:
 		while (true) {
 			if (_v0.c.$ === 'ModelReady') {
 				switch (_v0.a.$) {
-					case 'GET':
-						if (_v0.b.$ === 'ChannelRoot') {
-							var _v1 = _v0.a;
-							var _v2 = _v0.b;
-							var state = _v0.c.a;
-							return protocol.onUpdate(
-								A2(
-									$elm$core$Tuple$mapSecond,
-									$elm$core$Platform$Cmd$map(protocol.toMsg),
-									A2(
-										$the_sett$elm_update_helper$Update2$andMap,
-										A2($author$project$EventLog$GetAvailableChannel$getAvailableChannel, session, state),
-										$the_sett$elm_update_helper$Update2$pure(component))));
-						} else {
-							break _v0$3;
-						}
 					case 'POST':
 						switch (_v0.b.$) {
 							case 'ChannelRoot':
@@ -8129,13 +8380,42 @@ var $author$project$EventLog$Component$processRoute = F4(
 											A4($author$project$EventLog$SaveChannel$saveChannel, session, state, apiRequest, channelName),
 											$the_sett$elm_update_helper$Update2$pure(component))));
 							default:
-								break _v0$3;
+								break _v0$4;
+						}
+					case 'GET':
+						switch (_v0.b.$) {
+							case 'ChannelRoot':
+								var _v1 = _v0.a;
+								var _v2 = _v0.b;
+								var state = _v0.c.a;
+								return protocol.onUpdate(
+									A2(
+										$elm$core$Tuple$mapSecond,
+										$elm$core$Platform$Cmd$map(protocol.toMsg),
+										A2(
+											$the_sett$elm_update_helper$Update2$andMap,
+											A2($author$project$EventLog$GetAvailableChannel$getAvailableChannel, session, state),
+											$the_sett$elm_update_helper$Update2$pure(component))));
+							case 'ChannelJoin':
+								var _v6 = _v0.a;
+								var channelName = _v0.b.a;
+								var state = _v0.c.a;
+								return protocol.onUpdate(
+									A2(
+										$elm$core$Tuple$mapSecond,
+										$elm$core$Platform$Cmd$map(protocol.toMsg),
+										A2(
+											$the_sett$elm_update_helper$Update2$andMap,
+											A4($author$project$EventLog$JoinChannel$joinChannel, session, state, apiRequest, channelName),
+											$the_sett$elm_update_helper$Update2$pure(component))));
+							default:
+								break _v0$4;
 						}
 					default:
-						break _v0$3;
+						break _v0$4;
 				}
 			} else {
-				break _v0$3;
+				break _v0$4;
 			}
 		}
 		return protocol.onUpdate(

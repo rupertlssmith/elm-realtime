@@ -49,30 +49,7 @@ switchState cons state =
     * Remove the saved events from the cache list.
     * Publish the saved event to the model topic.
 
-    TODO: Use dynamoDB to auto increment the event seq no. This means having a separate table to hold the
-    current top seq numbers, and updating it atomically:
-
-    response = table.update_item(
-        Key={'pk': 'orderCounter'},
-        UpdateExpression="ADD #cnt :val",
-        ExpressionAttributeNames={'#cnt': 'count'},
-        ExpressionAttributeValues={':val': 1},
-        ReturnValues="UPDATED_NEW"
-    )
-
-    Some kind of DSL for building update expressions needed?
-
-    The write to increment the sequence and add the new event can also be done in a transaction:
-
-    https://lucvandonkersgoed.com/2022/01/12/reliable-auto-incrementing-integers-in-dynamodb/
-
 -}
-
-
-
--- Process a save channel notification.
-
-
 saveChannel :
     HttpSessionKey
     -> ReadyState

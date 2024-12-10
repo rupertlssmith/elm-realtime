@@ -35,12 +35,6 @@ switchState cons state =
 
 {-| Look for an available channel.
 -}
-
-
-
--- Try and get the connection details of an available channel
-
-
 getAvailableChannel :
     HttpSessionKey
     -> ReadyState

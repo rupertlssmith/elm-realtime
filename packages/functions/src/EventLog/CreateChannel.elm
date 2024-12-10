@@ -50,12 +50,6 @@ switchState cons state =
     * Return a confirmation that everything has been set up.
 
 -}
-
-
-
--- Create a new realtime channel
-
-
 createChannel : HttpSessionKey -> ReadyState -> CreateChannel a -> ( CreateChannel a, Cmd Msg )
 createChannel session state component =
     let

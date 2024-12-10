@@ -14,6 +14,7 @@ module EventLog.Component exposing
 import EventLog.Apis as Apis
 import EventLog.CreateChannel as CreateChannel
 import EventLog.GetAvailableChannel as GetAvailableChannel
+import EventLog.JoinChannel as JoinChannel
 import EventLog.Model as Model exposing (Model(..), ReadyState, StartState)
 import EventLog.Msg as Msg exposing (Msg(..))
 import EventLog.Route exposing (Route(..))
@@ -184,6 +185,12 @@ processRoute protocol session apiRequest component =
         ( POST, Channel channelName, ModelReady state ) ->
             U2.pure component
                 |> U2.andMap (SaveChannel.saveChannel session state apiRequest channelName)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
+        ( GET, ChannelJoin channelName, ModelReady state ) ->
+            U2.pure component
+                |> U2.andMap (JoinChannel.joinChannel session state apiRequest channelName)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 
