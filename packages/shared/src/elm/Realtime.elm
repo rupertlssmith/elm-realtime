@@ -49,8 +49,8 @@ type alias RealtimeApi msg =
     , join : Model -> (Result Error Model -> msg) -> Cmd msg
     , publishPersisted : Model -> Value -> (Result Error Delta -> msg) -> Cmd msg
     , publishTransient : Model -> Value -> (Result Error Delta -> msg) -> Cmd msg
-    , onMessage : Model -> (Value -> msg) -> Sub msg
-    , asyncError : Model -> (Error -> msg) -> Sub msg
+    , onMessage : Model -> (Delta -> Value -> msg) -> Sub msg
+    , asyncError : Model -> (Delta -> Error -> msg) -> Sub msg
     }
 
 
@@ -400,7 +400,7 @@ publishTransient pt (Private model) payload rt =
 onMessage :
     (Procedure.Program.Msg msg -> msg)
     -> Model
-    -> (Value -> msg)
+    -> (Delta -> Value -> msg)
     -> Sub msg
 onMessage pt (Private model) rt =
     let
@@ -410,7 +410,7 @@ onMessage pt (Private model) rt =
     case model.state of
         RunningState _ ->
             (\val -> momentoApi.onMessage (always val))
-                rt
+                (rt identity)
 
         _ ->
             Sub.none
@@ -419,7 +419,7 @@ onMessage pt (Private model) rt =
 asyncError :
     (Procedure.Program.Msg msg -> msg)
     -> Model
-    -> (Error -> msg)
+    -> (Delta -> Error -> msg)
     -> Sub msg
 asyncError pt (Private model) rt =
     let
@@ -428,7 +428,11 @@ asyncError pt (Private model) rt =
     in
     case model.state of
         RunningState state ->
-            momentoApi.asyncError (\err -> MomentoError err |> rt)
+            momentoApi.asyncError
+                (\err ->
+                    MomentoError err
+                        |> rt ({ model | state = MomentoError err |> Failed } |> Private |> always)
+                )
 
         _ ->
             Sub.none

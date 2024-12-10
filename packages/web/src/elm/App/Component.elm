@@ -23,8 +23,8 @@ type Msg
     = ProcedureMsg (Procedure.Program.Msg Msg)
     | RealtimeDelta (Result Error Realtime.Delta)
     | JoinedChannel (Result Error Realtime.Model)
-    | OnMessage Value
-    | AsyncError Realtime.Error
+    | OnMessage Realtime.Delta Value
+    | AsyncError Realtime.Delta Realtime.Error
 
 
 type alias Model =
@@ -122,13 +122,14 @@ update protocol msg component =
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 
-        OnMessage payload ->
+        OnMessage delta payload ->
             let
                 stringPayload =
                     Encode.encode 2 payload
             in
             { model
-                | log =
+                | realtime = delta model.realtime
+                , log =
                     ("Message: "
                         ++ String.slice 0 200 stringPayload
                         ++ (if String.length stringPayload > 200 then
@@ -145,8 +146,11 @@ update protocol msg component =
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 
-        AsyncError err ->
-            { model | log = ("Error: " ++ Realtime.errorToString err) :: model.log }
+        AsyncError delta err ->
+            { model
+                | realtime = delta model.realtime
+                , log = ("Error: " ++ Realtime.errorToString err) :: model.log
+            }
                 |> U2.pure
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
