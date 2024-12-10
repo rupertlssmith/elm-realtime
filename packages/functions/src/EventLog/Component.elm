@@ -53,6 +53,18 @@ type alias Component a =
     }
 
 
+setModel : Component a -> Model -> Component a
+setModel m x =
+    { m | eventLog = x }
+
+
+switchState : (a -> Model) -> a -> ( Model, Cmd Msg )
+switchState cons state =
+    ( cons state
+    , Cmd.none
+    )
+
+
 init : (Msg -> msg) -> ( Model, Cmd msg )
 init toMsg =
     U2.pure {}
@@ -138,18 +150,6 @@ update protocol msg component =
         _ ->
             U2.pure component
                 |> protocol.onUpdate
-
-
-setModel : Component a -> Model -> Component a
-setModel m x =
-    { m | eventLog = x }
-
-
-switchState : (a -> Model) -> a -> ( Model, Cmd Msg )
-switchState cons state =
-    ( cons state
-    , Cmd.none
-    )
 
 
 randomize : StartState -> ( StartState, Cmd Msg )

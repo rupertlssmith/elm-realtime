@@ -1,23 +1,17 @@
 module EventLog.JoinChannel exposing (..)
 
-import AWS.Dynamo as Dynamo exposing (Error(..))
+import AWS.Dynamo as Dynamo exposing (Order(..))
 import DB.EventLogTable as EventLogTable
-import Dict
 import EventLog.Apis as Apis
 import EventLog.ErrorFormat as ErrorFormat exposing (ErrorFormat)
 import EventLog.Model exposing (Model(..), ReadyState)
 import EventLog.Msg exposing (Msg(..))
 import EventLog.Names as Names
-import EventLog.OpenMomentoCache as OpenMomentoCache
 import EventLog.Route exposing (Route)
-import Json.Decode as Decode exposing (Decoder, Value)
-import Json.Decode.Extra as DE
-import Json.Encode as Encode
-import Momento exposing (CacheItem, Error, MomentoSessionKey)
+import Json.Encode as Encode exposing (Value)
 import Procedure
 import Serverless.HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Serverless.Response as Response exposing (Response)
-import Time
 import Update2 as U2
 
 
@@ -43,11 +37,9 @@ switchState cons state =
 
 {-| Join a Channel:
 
-    * Obtain a connection to the cache.
-    * Read the saved events from the cache list.
-    * Save the events to the dynamodb event log.
-    * Remove the saved events from the cache list.
-    * Publish the saved event to the model topic.
+    * Look up the latest snapshot of the named channel, if any.
+    * Look up the saved events for the named channel, if any.
+    * Return the snapshot, and any saved events coming after it.
 
 -}
 joinChannel :
@@ -62,10 +54,10 @@ joinChannel session state apiRequest channelName component =
         procedure : Procedure.Procedure Response Response Msg
         procedure =
             Procedure.provide channelName
-                |> Procedure.andThen (OpenMomentoCache.openMomentoCache component)
-                |> Procedure.andThen (drainSaveList component channelName)
+                -- |>  Procedure.andThen (fetchLatestSnapshot ...)
+                |> Procedure.andThen (fetchSavedEventsSince component 1)
                 |> Procedure.mapError (Debug.log "error" >> ErrorFormat.encodeErrorFormat >> Response.err500json)
-                |> Procedure.map (Response.ok200json Encode.null |> always)
+                |> Procedure.map (\events -> Response.ok200json (Encode.list encodeEvent events))
     in
     ( state
     , Procedure.try ProcedureMsg (HttpResponse session) procedure
@@ -74,306 +66,36 @@ joinChannel session state apiRequest channelName component =
         |> Tuple.mapFirst (setModel component)
 
 
-{-| Pops a single event from the save list, saves it to the database with a unique and contiguous sequence
-number, then repeats until there are no more events to pop from the save list.
--}
-drainSaveList :
+
+-- fetchLatestSnapshot
+
+
+fetchSavedEventsSince :
     JoinChannel a
+    -> Int
     -> String
-    -> MomentoSessionKey
-    -> Procedure.Procedure ErrorFormat () Msg
-drainSaveList component channelName sessionKey =
-    Procedure.provide sessionKey
-        |> Procedure.andThen (tryReadEvent component channelName)
-        |> Procedure.andThen
-            (\state ->
-                case state.unsavedEvent of
-                    Nothing ->
-                        Procedure.provide ()
-
-                    Just event ->
-                        Procedure.provide { sessionKey = sessionKey, unsavedEvent = event }
-                            |> Procedure.andThen (recordEventWithUniqueSeqNo component channelName)
-                            |> Procedure.andThen (publishEvent component channelName)
-                            |> Procedure.map (always sessionKey)
-                            |> Procedure.andThen (drainSaveList component channelName)
-            )
-
-
-type alias UnsavedEvent =
-    { rt : String
-    , client : String
-    , payload : Value
-    }
-
-
-decodeNoticeEvent : Decoder UnsavedEvent
-decodeNoticeEvent =
-    Decode.succeed UnsavedEvent
-        |> DE.andMap (Decode.field "rt" Decode.string)
-        |> DE.andMap (Decode.field "client" Decode.string)
-        |> DE.andMap (Decode.field "payload" Decode.value)
-
-
-{-| Tries to pop one event from the save list. If no event can be found Nothing will be retured in the
-`unsavedEvent` field. This is an expected condition and not an error.
--}
-tryReadEvent :
-    JoinChannel a
-    -> String
-    -> MomentoSessionKey
-    ->
-        Procedure.Procedure ErrorFormat
-            { sessionKey : MomentoSessionKey
-            , unsavedEvent : Maybe UnsavedEvent
-            }
-            Msg
-tryReadEvent component channelName sessionKey =
-    Apis.momentoApi.popList
-        sessionKey
-        { list = Names.saveListName channelName
-        }
-        |> Procedure.fetchResult
-        |> Procedure.mapError Momento.errorToDetails
-        |> Procedure.andThen
-            (\maybeCacheItem ->
-                case maybeCacheItem of
-                    Just cacheItem ->
-                        case Decode.decodeValue decodeNoticeEvent cacheItem.payload of
-                            Ok unsavedEvent ->
-                                { sessionKey = sessionKey
-                                , unsavedEvent = Just unsavedEvent
-                                }
-                                    |> Procedure.provide
-
-                            Err err ->
-                                { message = Decode.errorToString err
-                                , details = Encode.null
-                                }
-                                    |> Procedure.break
-
-                    Nothing ->
-                        { sessionKey = sessionKey
-                        , unsavedEvent = Nothing
-                        }
-                            |> Procedure.provide
-            )
-
-
-{-| Runs a loop of attempts to store the event against a unique and contiguous sequence number at the end
-of the event log, until this completes successfuly.
-
-    1. The assigned sequence number is created optimistically by adding one to the last value stored. More
-       than one process can end up with the same number because of this.
-
-    2. The event and the plus oned sequence number are written as a transaction with conditions to check
-       that the sequence number has not been updated by another process.
-
-    3. If the transaction fails due to the condition check not passing, the process goes back to step 1
-       and tries again, until it does pass.
-
--}
-recordEventWithUniqueSeqNo :
-    JoinChannel a
-    -> String
-    ->
-        { sessionKey : MomentoSessionKey
-        , unsavedEvent : UnsavedEvent
-        }
-    ->
-        Procedure.Procedure ErrorFormat
-            { sessionKey : MomentoSessionKey
-            , lastSeqNo : Int
-            , txSuccess : Bool
-            , unsavedEvent : UnsavedEvent
-            }
-            Msg
-recordEventWithUniqueSeqNo component channelName state =
-    Procedure.provide state
-        |> Procedure.andThen (getEventsLogMetaData component channelName)
-        |> Procedure.andThen (recordEventsAndMetadata component channelName)
-        |> Procedure.andThen
-            (\stateAfterTxAttempt ->
-                if stateAfterTxAttempt.txSuccess then
-                    Procedure.provide stateAfterTxAttempt
-
-                else
-                    recordEventWithUniqueSeqNo component
-                        channelName
-                        { sessionKey = stateAfterTxAttempt.sessionKey
-                        , unsavedEvent = stateAfterTxAttempt.unsavedEvent
-                        }
-            )
-
-
-{-| Fetches the event log metadata for the channel. This provides the last event sequence number stored
-for that channel. This can be bumped by one to get the next sequence number, but this will be optimistic -
-another process could get the same number.
--}
-getEventsLogMetaData :
-    JoinChannel a
-    -> String
-    ->
-        { sessionKey : MomentoSessionKey
-        , unsavedEvent : UnsavedEvent
-        }
-    ->
-        Procedure.Procedure ErrorFormat
-            { sessionKey : MomentoSessionKey
-            , unsavedEvent : UnsavedEvent
-            , lastSeqNo : Int
-            }
-            Msg
-getEventsLogMetaData component channelName state =
+    -> Procedure.Procedure ErrorFormat (List EventLogTable.Record) Msg
+fetchSavedEventsSince component startSeq channelName =
     let
-        key =
-            { id = Names.metadataKeyName channelName
-            , seq = 0
+        match =
+            Dynamo.partitionKeyEquals "id" channelName
+                |> Dynamo.rangeKeyGreaterThanOrEqual "seq" (Dynamo.int startSeq)
+                |> Dynamo.orderResults Forward
+
+        query =
+            { tableName = component.eventLogTable
+            , match = match
             }
     in
-    Apis.eventLogTableMetadataApi.get
-        { tableName = component.eventLogTable
-        , key = key
-        }
+    Apis.eventLogTableApi.query query
         |> Procedure.fetchResult
         |> Procedure.mapError Dynamo.errorToDetails
-        |> Procedure.andThen
-            (\maybeMetaData ->
-                case maybeMetaData of
-                    Just metadata ->
-                        { sessionKey = state.sessionKey
-                        , unsavedEvent = state.unsavedEvent
-                        , lastSeqNo = metadata.lastId
-                        }
-                            |> Procedure.provide
-
-                    Nothing ->
-                        { message = "No EventLog metadata record found for channel: " ++ channelName
-                        , details = Encode.null
-                        }
-                            |> Procedure.break
-            )
 
 
-{-| Records the event in the event log table AND updates the metadata in a write transaction so that the
-sequence number is bumped by one.
-
-If more than one process attempts to do this at the same time, it can fail because the sequence number is
-already taken. If the transaction fails to write the `txSuccess` flag returned will be `False`.
-
--}
-recordEventsAndMetadata :
-    JoinChannel a
-    -> String
-    ->
-        { sessionKey : MomentoSessionKey
-        , lastSeqNo : Int
-        , unsavedEvent : UnsavedEvent
-        }
-    ->
-        Procedure.Procedure ErrorFormat
-            { sessionKey : MomentoSessionKey
-            , lastSeqNo : Int
-            , txSuccess : Bool
-            , unsavedEvent : UnsavedEvent
-            }
-            Msg
-recordEventsAndMetadata component channelName state =
-    Procedure.fromTask Time.now
-        |> Procedure.andThen
-            (\timestamp ->
-                let
-                    assignedSeqNo =
-                        state.lastSeqNo + 1
-
-                    eventRecord =
-                        { id = channelName
-                        , seq = assignedSeqNo
-                        , updatedAt = timestamp
-                        , event = state.unsavedEvent.payload
-                        }
-
-                    seqUpdate =
-                        Dynamo.updateCommand
-                            EventLogTable.encodeKey
-                            { tableName = component.eventLogTable
-                            , key = { id = Names.metadataKeyName channelName, seq = 0 }
-                            , updateExpression = "SET lastId = lastId + :incr"
-                            , conditionExpression = Just "lastId = :current_id"
-                            , expressionAttributeNames = Dict.empty
-                            , expressionAttributeValues =
-                                [ ( ":incr", Dynamo.int 1 )
-                                , ( ":current_id", Dynamo.int state.lastSeqNo )
-                                ]
-                                    |> Dict.fromList
-                            , returnConsumedCapacity = Nothing
-                            , returnItemCollectionMetrics = Nothing
-                            , returnValues = Nothing
-                            , returnValuesOnConditionCheckFailure = Nothing
-                            }
-
-                    eventPut =
-                        Dynamo.putCommand
-                            EventLogTable.encodeRecord
-                            { tableName = component.eventLogTable
-                            , item = eventRecord
-                            }
-                in
-                Apis.eventLogTableMetadataApi.writeTx
-                    { tableName = component.eventLogTable
-                    , commands = [ seqUpdate, eventPut ]
-                    }
-                    |> Procedure.fetchResult
-                    |> Procedure.map
-                        (always
-                            { sessionKey = state.sessionKey
-                            , lastSeqNo = assignedSeqNo
-                            , txSuccess = True
-                            , unsavedEvent = state.unsavedEvent
-                            }
-                        )
-                    |> Procedure.catch
-                        (\error ->
-                            case error of
-                                ConditionCheckFailed _ ->
-                                    { sessionKey = state.sessionKey
-                                    , lastSeqNo = assignedSeqNo
-                                    , txSuccess = False
-                                    , unsavedEvent = state.unsavedEvent
-                                    }
-                                        |> Procedure.provide
-
-                                _ ->
-                                    Dynamo.errorToDetails error |> Procedure.break
-                        )
-            )
-
-
-publishEvent :
-    JoinChannel a
-    -> String
-    ->
-        { x
-            | sessionKey : MomentoSessionKey
-            , lastSeqNo : Int
-            , unsavedEvent : UnsavedEvent
-        }
-    -> Procedure.Procedure ErrorFormat () Msg
-publishEvent component channelName state =
-    let
-        payload =
-            [ ( "rt", Encode.string "P" )
-            , ( "client", Encode.string state.unsavedEvent.client )
-            , ( "seq", Encode.int state.lastSeqNo )
-            , ( "payload", state.unsavedEvent.payload )
-            ]
-                |> Encode.object
-    in
-    Apis.momentoApi.publish
-        state.sessionKey
-        { topic = Names.modelTopicName channelName
-        , payload = payload
-        }
-        |> Procedure.fetchResult
-        |> Procedure.map (always ())
-        |> Procedure.mapError Momento.errorToDetails
+encodeEvent : EventLogTable.Record -> Value
+encodeEvent record =
+    [ ( "rt", Encode.string "P" )
+    , ( "seq", Encode.int record.seq )
+    , ( "payload", record.event )
+    ]
+        |> Encode.object
