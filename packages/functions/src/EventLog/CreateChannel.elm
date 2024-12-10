@@ -19,7 +19,7 @@ import Time
 import Update2 as U2
 
 
-type alias Component a =
+type alias CreateChannel a =
     { a
         | momentoApiKey : String
         , channelApiUrl : String
@@ -29,7 +29,7 @@ type alias Component a =
     }
 
 
-setModel : Component a -> Model -> Component a
+setModel : CreateChannel a -> Model -> CreateChannel a
 setModel m x =
     { m | eventLog = x }
 
@@ -56,7 +56,7 @@ switchState cons state =
 -- Create a new realtime channel
 
 
-createChannel : HttpSessionKey -> ReadyState -> Component a -> ( Component a, Cmd Msg )
+createChannel : HttpSessionKey -> ReadyState -> CreateChannel a -> ( CreateChannel a, Cmd Msg )
 createChannel session state component =
     let
         ( channelName, nextSeed ) =
@@ -82,7 +82,7 @@ createChannel session state component =
 
 
 setupChannelWebhook :
-    Component a
+    CreateChannel a
     -> String
     -> MomentoSessionKey
     -> Procedure.Procedure ErrorFormat MomentoSessionKey Msg
@@ -98,7 +98,7 @@ setupChannelWebhook component channelName sessionKey =
 
 
 recordEventsLogMetaData :
-    Component a
+    CreateChannel a
     -> String
     -> MomentoSessionKey
     -> Procedure.Procedure ErrorFormat MomentoSessionKey Msg
@@ -125,7 +125,7 @@ recordEventsLogMetaData component channelName sessionKey =
 
 
 recordChannel :
-    Component a
+    CreateChannel a
     -> String
     -> MomentoSessionKey
     -> Procedure.Procedure ErrorFormat ChannelTable.Record Msg

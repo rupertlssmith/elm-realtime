@@ -14,17 +14,14 @@ import Serverless.Response as Response exposing (Response)
 import Update2 as U2
 
 
-type alias Component a =
+type alias GetAvailableChannel a =
     { a
-        | momentoApiKey : String
-        , channelApiUrl : String
-        , channelTable : String
-        , eventLogTable : String
+        | channelTable : String
         , eventLog : Model
     }
 
 
-setModel : Component a -> Model -> Component a
+setModel : GetAvailableChannel a -> Model -> GetAvailableChannel a
 setModel m x =
     { m | eventLog = x }
 
@@ -47,8 +44,8 @@ switchState cons state =
 getAvailableChannel :
     HttpSessionKey
     -> ReadyState
-    -> Component a
-    -> ( Component a, Cmd Msg )
+    -> GetAvailableChannel a
+    -> ( GetAvailableChannel a, Cmd Msg )
 getAvailableChannel session state component =
     let
         procedure : Procedure.Procedure Response Response Msg
@@ -76,7 +73,7 @@ getAvailableChannel session state component =
 
 
 findAvailableChannel :
-    Component a
+    GetAvailableChannel a
     -> ()
     -> Procedure.Procedure ErrorFormat (Maybe ChannelTable.Record) Msg
 findAvailableChannel component _ =

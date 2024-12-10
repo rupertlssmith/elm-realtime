@@ -21,17 +21,15 @@ import Time
 import Update2 as U2
 
 
-type alias Component a =
+type alias SaveChannel a =
     { a
         | momentoApiKey : String
-        , channelApiUrl : String
-        , channelTable : String
         , eventLogTable : String
         , eventLog : Model
     }
 
 
-setModel : Component a -> Model -> Component a
+setModel : SaveChannel a -> Model -> SaveChannel a
 setModel m x =
     { m | eventLog = x }
 
@@ -80,8 +78,8 @@ saveChannel :
     -> ReadyState
     -> ApiRequest Route
     -> String
-    -> Component a
-    -> ( Component a, Cmd Msg )
+    -> SaveChannel a
+    -> ( SaveChannel a, Cmd Msg )
 saveChannel session state apiRequest channelName component =
     let
         procedure : Procedure.Procedure Response Response Msg
@@ -103,7 +101,7 @@ saveChannel session state apiRequest channelName component =
 number, then repeats until there are no more events to pop from the save list.
 -}
 drainSaveList :
-    Component a
+    SaveChannel a
     -> String
     -> MomentoSessionKey
     -> Procedure.Procedure ErrorFormat () Msg
@@ -144,7 +142,7 @@ decodeNoticeEvent =
 `unsavedEvent` field. This is an expected condition and not an error.
 -}
 tryReadEvent :
-    Component a
+    SaveChannel a
     -> String
     -> MomentoSessionKey
     ->
@@ -199,7 +197,7 @@ of the event log, until this completes successfuly.
 
 -}
 recordEventWithUniqueSeqNo :
-    Component a
+    SaveChannel a
     -> String
     ->
         { sessionKey : MomentoSessionKey
@@ -236,7 +234,7 @@ for that channel. This can be bumped by one to get the next sequence number, but
 another process could get the same number.
 -}
 getEventsLogMetaData :
-    Component a
+    SaveChannel a
     -> String
     ->
         { sessionKey : MomentoSessionKey
@@ -288,7 +286,7 @@ already taken. If the transaction fails to write the `txSuccess` flag returned w
 
 -}
 recordEventsAndMetadata :
-    Component a
+    SaveChannel a
     -> String
     ->
         { sessionKey : MomentoSessionKey
@@ -375,7 +373,7 @@ recordEventsAndMetadata component channelName state =
 
 
 publishEvent :
-    Component a
+    SaveChannel a
     -> String
     ->
         { x
