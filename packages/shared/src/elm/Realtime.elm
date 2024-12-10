@@ -49,7 +49,7 @@ type alias RealtimeApi msg =
     , join : Model -> (Result Error Model -> msg) -> Cmd msg
     , publishPersisted : Model -> Value -> (Result Error Delta -> msg) -> Cmd msg
     , publishTransient : Model -> Value -> (Result Error Delta -> msg) -> Cmd msg
-    , onMessage : Model -> (Delta -> Value -> msg) -> Sub msg
+    , onMessage : Model -> (Delta -> RTMessage -> msg) -> (Delta -> Error -> msg) -> Sub msg
     , asyncError : Model -> (Delta -> Error -> msg) -> Sub msg
     }
 
@@ -137,6 +137,7 @@ buildMomentoApi pt =
 type Error
     = HttpError Http.Error
     | MomentoError Momento.Error
+    | DecodeError Decode.Error
 
 
 errorToString : Error -> String
@@ -148,6 +149,9 @@ errorToString err =
         MomentoError momentoErr ->
             Momento.errorToString momentoErr
 
+        DecodeError decodeErr ->
+            Decode.errorToString decodeErr
+
 
 errorToDetails : Error -> { message : String, details : Value }
 errorToDetails err =
@@ -157,6 +161,9 @@ errorToDetails err =
 
         MomentoError momentoErr ->
             Momento.errorToDetails momentoErr
+
+        DecodeError decodeErr ->
+            { message = Decode.errorToString decodeErr, details = Encode.null }
 
 
 
@@ -400,17 +407,26 @@ publishTransient pt (Private model) payload rt =
 onMessage :
     (Procedure.Program.Msg msg -> msg)
     -> Model
-    -> (Delta -> Value -> msg)
+    -> (Delta -> RTMessage -> msg)
+    -> (Delta -> Error -> msg)
     -> Sub msg
-onMessage pt (Private model) rt =
+onMessage pt (Private model) rt et =
     let
         momentoApi =
             buildMomentoApi pt
+
+        modfn val =
+            case Decode.decodeValue rtMessageDecoder val of
+                Ok rtm ->
+                    rt identity rtm
+
+                Err err ->
+                    DecodeError err |> et identity
     in
     case model.state of
         RunningState _ ->
-            (\val -> momentoApi.onMessage (always val))
-                (rt identity)
+            (\fn -> momentoApi.onMessage (\_ -> fn))
+                modfn
 
         _ ->
             Sub.none
@@ -450,10 +466,13 @@ rtMessageDecoder =
             (\ctor ->
                 case ctor of
                     "P" ->
-                        Decode.map2 Persisted (Decode.field "0" DE.parseInt) (Decode.field "1" Decode.value)
+                        Decode.map2 Persisted
+                            (Decode.field "seq" Decode.int)
+                            (Decode.field "payload" Decode.value)
 
                     "T" ->
-                        Decode.map Transient (Decode.field "0" Decode.value)
+                        Decode.map Transient
+                            (Decode.field "payload" Decode.value)
 
                     _ ->
                         Decode.fail "Unrecognized constructor"

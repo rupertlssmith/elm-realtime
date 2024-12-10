@@ -11,7 +11,7 @@ module App.Component exposing
 import Html.Styled as Html exposing (Html)
 import Json.Encode as Encode exposing (Value)
 import Procedure.Program
-import Realtime exposing (Error)
+import Realtime exposing (Error, RTMessage(..))
 import Update2 as U2
 
 
@@ -23,7 +23,7 @@ type Msg
     = ProcedureMsg (Procedure.Program.Msg Msg)
     | RealtimeDelta (Result Error Realtime.Delta)
     | JoinedChannel (Result Error Realtime.Model)
-    | OnMessage Realtime.Delta Value
+    | OnMessage Realtime.Delta RTMessage
     | AsyncError Realtime.Delta Realtime.Error
 
 
@@ -76,7 +76,7 @@ subscriptions protocol component =
             component.app
     in
     [ Procedure.Program.subscriptions model.procedure
-    , realtimeApi.onMessage model.realtime OnMessage
+    , realtimeApi.onMessage model.realtime OnMessage AsyncError
     , realtimeApi.asyncError model.realtime AsyncError
     ]
         |> Sub.batch
@@ -122,7 +122,7 @@ update protocol msg component =
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 
-        OnMessage delta payload ->
+        OnMessage delta (Transient payload) ->
             let
                 stringPayload =
                     Encode.encode 2 payload
@@ -130,7 +130,33 @@ update protocol msg component =
             { model
                 | realtime = delta model.realtime
                 , log =
-                    ("Message: "
+                    ("Transient: "
+                        ++ String.slice 0 200 stringPayload
+                        ++ (if String.length stringPayload > 200 then
+                                "..."
+
+                            else
+                                ""
+                           )
+                    )
+                        :: model.log
+            }
+                |> U2.pure
+                |> Tuple.mapFirst (setModel component)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
+        OnMessage delta (Persisted seq payload) ->
+            let
+                stringPayload =
+                    Encode.encode 2 payload
+            in
+            { model
+                | realtime = delta model.realtime
+                , log =
+                    ("Persisted: "
+                        ++ String.fromInt seq
+                        ++ " "
                         ++ String.slice 0 200 stringPayload
                         ++ (if String.length stringPayload > 200 then
                                 "..."
