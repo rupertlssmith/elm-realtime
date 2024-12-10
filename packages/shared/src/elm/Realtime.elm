@@ -84,8 +84,16 @@ type alias Delta =
 
 type State
     = StartState
+    | JoiningState JoiningProps
     | RunningState RunningProps
-    | Failed Error
+    | FailedState Error
+
+
+type alias JoiningProps =
+    { sessionKey : MomentoSessionKey
+    , seed : Random.Seed
+    , channel : Channel
+    }
 
 
 type alias RunningProps =
@@ -447,7 +455,7 @@ asyncError pt (Private model) rt =
             momentoApi.asyncError
                 (\err ->
                     MomentoError err
-                        |> rt ({ model | state = MomentoError err |> Failed } |> Private |> always)
+                        |> rt ({ model | state = MomentoError err |> FailedState } |> Private |> always)
                 )
 
         _ ->
