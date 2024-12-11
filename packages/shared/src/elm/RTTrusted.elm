@@ -22,7 +22,9 @@ type Error
 
 
 program :
-    -- Should these be subscriptions?
+    -- These should be subscriptions and commands.
+    -- Sub: new message, new snapshot request
+    -- Cmd: publish messages, new snapshot
     { compact : List RTMessage -> Snapshot -> Snapshot
     , stream : Snapshot -> RTMessage -> Result Error (List RTMessage)
     }
