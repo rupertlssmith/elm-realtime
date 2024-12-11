@@ -159,7 +159,7 @@ errorToString : Error -> String
 errorToString err =
     case err of
         HttpError _ ->
-            ""
+            Debug.todo "HttpError"
 
         MomentoError momentoErr ->
             Momento.errorToString momentoErr
@@ -172,7 +172,7 @@ errorToDetails : Error -> { message : String, details : Value }
 errorToDetails err =
     case err of
         HttpError _ ->
-            { message = "", details = Encode.null }
+            Debug.todo "HttpError"
 
         MomentoError momentoErr ->
             Momento.errorToDetails momentoErr
@@ -435,6 +435,7 @@ publishPersisted pt (Private model) payload tag =
                 |> Procedure.try pt (momentoResultToDelta state tag)
 
         _ ->
+            -- TODO: Error? Or pending message if not in error state.
             Cmd.none
 
 
@@ -493,6 +494,7 @@ publishTransient pt (Private model) payload tag =
                 |> Procedure.try pt (momentoResultToDelta state tag)
 
         _ ->
+            -- TODO: Error? Or pending message if not in error state.
             Cmd.none
 
 
