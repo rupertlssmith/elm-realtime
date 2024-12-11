@@ -11,7 +11,7 @@ module App.Component exposing
 import Html.Styled as Html exposing (Html)
 import Json.Encode as Encode exposing (Value)
 import Procedure.Program
-import Realtime exposing (Error, RTMessage(..))
+import Realtime exposing (AsyncEvent(..), Delta, Error, RTMessage(..))
 import Update2 as U2
 
 
@@ -21,10 +21,9 @@ type alias Component a =
 
 type Msg
     = ProcedureMsg (Procedure.Program.Msg Msg)
-    | RealtimeDelta (Result Error Realtime.Delta)
     | JoinedChannel (Result Error Realtime.Model)
-    | OnMessage Realtime.Delta RTMessage
-    | AsyncError Realtime.Delta Realtime.Error
+    | PublishAck (Delta (Maybe Error))
+    | OnAsyncEvent (Delta AsyncEvent)
 
 
 type alias Model =
@@ -76,8 +75,7 @@ subscriptions protocol component =
             component.app
     in
     [ Procedure.Program.subscriptions model.procedure
-    , realtimeApi.onMessage model.realtime OnMessage AsyncError
-    , realtimeApi.asyncError model.realtime AsyncError
+    , realtimeApi.subscribe model.realtime OnAsyncEvent
     ]
         |> Sub.batch
         |> Sub.map protocol.toMsg
@@ -100,13 +98,6 @@ update protocol msg component =
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 
-        RealtimeDelta (Ok delta) ->
-            { model | realtime = delta model.realtime }
-                |> U2.pure
-                |> Tuple.mapFirst (setModel component)
-                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.onUpdate
-
         JoinedChannel (Ok realtime) ->
             let
                 hello =
@@ -114,73 +105,93 @@ update protocol msg component =
             in
             ( { model | realtime = realtime }
             , Cmd.batch
-                [ realtimeApi.publishTransient realtime hello RealtimeDelta
-                , realtimeApi.publishPersisted realtime hello RealtimeDelta
+                [ realtimeApi.publishTransient realtime hello PublishAck
+                , realtimeApi.publishPersisted realtime hello PublishAck
                 ]
             )
                 |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 
-        OnMessage delta (Transient payload) ->
-            let
-                stringPayload =
-                    Encode.encode 2 payload
-            in
-            { model
-                | realtime = delta model.realtime
-                , log =
-                    ("Transient: "
-                        ++ String.slice 0 200 stringPayload
-                        ++ (if String.length stringPayload > 200 then
-                                "..."
+        PublishAck delta ->
+            case Realtime.next delta model.realtime of
+                ( nextRealtime, _ ) ->
+                    { model | realtime = nextRealtime }
+                        |> U2.pure
+                        |> Tuple.mapFirst (setModel component)
+                        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                        |> protocol.onUpdate
 
-                            else
-                                ""
-                           )
-                    )
-                        :: model.log
-            }
-                |> U2.pure
-                |> Tuple.mapFirst (setModel component)
-                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.onUpdate
+        OnAsyncEvent delta ->
+            case Realtime.next delta model.realtime of
+                ( nextRealtime, Internal ) ->
+                    { model
+                        | realtime = nextRealtime
+                    }
+                        |> U2.pure
+                        |> Tuple.mapFirst (setModel component)
+                        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                        |> protocol.onUpdate
 
-        OnMessage delta (Persisted seq payload) ->
-            let
-                stringPayload =
-                    Encode.encode 2 payload
-            in
-            { model
-                | realtime = delta model.realtime
-                , log =
-                    ("Persisted: "
-                        ++ String.fromInt seq
-                        ++ " "
-                        ++ String.slice 0 200 stringPayload
-                        ++ (if String.length stringPayload > 200 then
-                                "..."
+                ( nextRealtime, OnMessage (Transient payload) ) ->
+                    let
+                        stringPayload =
+                            Encode.encode 2 payload
+                    in
+                    { model
+                        | realtime = nextRealtime
+                        , log =
+                            ("Transient: "
+                                ++ String.slice 0 200 stringPayload
+                                ++ (if String.length stringPayload > 200 then
+                                        "..."
 
-                            else
-                                ""
-                           )
-                    )
-                        :: model.log
-            }
-                |> U2.pure
-                |> Tuple.mapFirst (setModel component)
-                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.onUpdate
+                                    else
+                                        ""
+                                   )
+                            )
+                                :: model.log
+                    }
+                        |> U2.pure
+                        |> Tuple.mapFirst (setModel component)
+                        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                        |> protocol.onUpdate
 
-        AsyncError delta err ->
-            { model
-                | realtime = delta model.realtime
-                , log = ("Error: " ++ Realtime.errorToString err) :: model.log
-            }
-                |> U2.pure
-                |> Tuple.mapFirst (setModel component)
-                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.onUpdate
+                ( nextRealtime, OnMessage (Persisted seq payload) ) ->
+                    let
+                        stringPayload =
+                            Encode.encode 2 payload
+                    in
+                    { model
+                        | realtime = nextRealtime
+                        , log =
+                            ("Persisted: "
+                                ++ String.fromInt seq
+                                ++ " "
+                                ++ String.slice 0 200 stringPayload
+                                ++ (if String.length stringPayload > 200 then
+                                        "..."
+
+                                    else
+                                        ""
+                                   )
+                            )
+                                :: model.log
+                    }
+                        |> U2.pure
+                        |> Tuple.mapFirst (setModel component)
+                        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                        |> protocol.onUpdate
+
+                ( nextRealtime, AsyncError err ) ->
+                    { model
+                        | realtime = nextRealtime
+                        , log = ("Error: " ++ Realtime.errorToString err) :: model.log
+                    }
+                        |> U2.pure
+                        |> Tuple.mapFirst (setModel component)
+                        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                        |> protocol.onUpdate
 
         _ ->
             U2.pure component

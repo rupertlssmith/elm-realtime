@@ -1,5 +1,6 @@
 module Realtime exposing
-    ( Config
+    ( AsyncEvent(..)
+    , Config
     , Delta
     , Error
     , Model
@@ -7,6 +8,7 @@ module Realtime exposing
     , RealtimeApi
     , errorToDetails
     , errorToString
+    , next
     , realtimeApi
     )
 
@@ -47,10 +49,9 @@ type alias Config =
 type alias RealtimeApi msg =
     { init : Config -> Model
     , join : Model -> (Result Error Model -> msg) -> Cmd msg
-    , publishPersisted : Model -> Value -> (Result Error Delta -> msg) -> Cmd msg
-    , publishTransient : Model -> Value -> (Result Error Delta -> msg) -> Cmd msg
-    , onMessage : Model -> (Delta -> RTMessage -> msg) -> (Delta -> Error -> msg) -> Sub msg
-    , asyncError : Model -> (Delta -> Error -> msg) -> Sub msg
+    , publishPersisted : Model -> Value -> (Delta (Maybe Error) -> msg) -> Cmd msg
+    , publishTransient : Model -> Value -> (Delta (Maybe Error) -> msg) -> Cmd msg
+    , subscribe : Model -> (Delta AsyncEvent -> msg) -> Sub msg
     }
 
 
@@ -60,9 +61,13 @@ realtimeApi pt =
     , join = join pt
     , publishPersisted = publishPersisted pt
     , publishTransient = publishTransient pt
-    , onMessage = onMessage pt
-    , asyncError = asyncError pt
+    , subscribe = subscribe pt
     }
+
+
+next : Delta a -> Model -> ( Model, a )
+next (Delta delta) model =
+    delta model
 
 
 type RTMessage
@@ -75,11 +80,12 @@ type Model
         { rtChannelApiUrl : String
         , momentoApiKey : String
         , state : State
+        , nonRunningEvents : List RTMessage
         }
 
 
-type alias Delta =
-    Model -> Model
+type Delta a
+    = Delta (Model -> ( Model, a ))
 
 
 type State
@@ -93,6 +99,7 @@ type alias JoiningProps =
     { sessionKey : MomentoSessionKey
     , seed : Random.Seed
     , channel : Channel
+    , joinEvents : List RTMessage
     }
 
 
@@ -185,6 +192,7 @@ init props =
     { rtChannelApiUrl = props.rtChannelApiUrl
     , momentoApiKey = props.momentoApiKey
     , state = StartState
+    , nonRunningEvents = []
     }
         |> Private
 
@@ -194,6 +202,9 @@ init props =
     * Fetches the channel details from the Channel API.
     * Opens a connection to Momento.
     * Subscribes to the model topic for the channel.
+    * Keeps any persisted events on the model topic in a temporary buffer.
+    * Invokes the join API to request a snapshot + later persisted events.
+    * Checks that the snapshot and later events are all contiguous.
 
 -}
 join :
@@ -214,11 +225,15 @@ join pt (Private model) rt =
                 |> Procedure.andThen (getChannelDetails (Private model))
                 |> Procedure.andThen (openMomentoCache (Private model) momentoApi)
                 |> Procedure.andThen (subscribeModelTopic momentoApi)
+                --|> Procedure.andThen (joinChannel (Private model))
                 |> Procedure.map
                     (\state ->
                         { rtChannelApiUrl = model.rtChannelApiUrl
                         , momentoApiKey = model.momentoApiKey
+
+                        --, state = JoiningState state
                         , state = RunningState state
+                        , nonRunningEvents = model.nonRunningEvents
                         }
                             |> Private
                     )
@@ -277,7 +292,13 @@ openMomentoCache :
         { seed : Random.Seed
         , channel : Channel
         }
-    -> Procedure.Procedure Error RunningProps msg
+    ->
+        Procedure.Procedure Error
+            { sessionKey : MomentoSessionKey
+            , seed : Random.Seed
+            , channel : Channel
+            }
+            msg
 openMomentoCache (Private model) momentoApi state =
     let
         _ =
@@ -300,8 +321,18 @@ openMomentoCache (Private model) momentoApi state =
 
 subscribeModelTopic :
     Momento.MomentoApi msg
-    -> RunningProps
-    -> Procedure.Procedure Error RunningProps msg
+    ->
+        { sessionKey : MomentoSessionKey
+        , seed : Random.Seed
+        , channel : Channel
+        }
+    ->
+        Procedure.Procedure Error
+            { sessionKey : MomentoSessionKey
+            , seed : Random.Seed
+            , channel : Channel
+            }
+            msg
 subscribeModelTopic momentoApi state =
     let
         _ =
@@ -316,6 +347,57 @@ subscribeModelTopic momentoApi state =
             (\sessionKey -> { state | sessionKey = sessionKey })
 
 
+joinChannel :
+    Model
+    ->
+        { sessionKey : MomentoSessionKey
+        , seed : Random.Seed
+        , channel : Channel
+        }
+    ->
+        Procedure Error
+            { sessionKey : MomentoSessionKey
+            , seed : Random.Seed
+            , channel : Channel
+            , joinEvents : List RTMessage
+            }
+            msg
+joinChannel (Private model) state =
+    let
+        _ =
+            Debug.log "Realtime.joinChannel" "called"
+    in
+    (\rt ->
+        Http.get
+            { url = model.rtChannelApiUrl ++ "/v1/channel/" ++ state.channel.id ++ "/join"
+            , expect = Http.expectJson rt joinDecoder
+            }
+    )
+        |> Procedure.fetch
+        |> Procedure.andThen
+            (\getResult ->
+                case getResult of
+                    Ok joinEvents ->
+                        Procedure.provide joinEvents
+
+                    Err err ->
+                        HttpError err |> Procedure.break
+            )
+        |> Procedure.map
+            (\joinEvents ->
+                { seed = state.seed
+                , channel = state.channel
+                , sessionKey = state.sessionKey
+                , joinEvents = joinEvents
+                }
+            )
+
+
+joinDecoder : Decoder (List RTMessage)
+joinDecoder =
+    Decode.list rtMessageDecoder
+
+
 
 -- Send realtime messages on the channel.
 
@@ -327,9 +409,9 @@ publishPersisted :
     (Procedure.Program.Msg msg -> msg)
     -> Model
     -> Value
-    -> (Result Error Delta -> msg)
+    -> (Delta (Maybe Error) -> msg)
     -> Cmd msg
-publishPersisted pt (Private model) payload rt =
+publishPersisted pt (Private model) payload tag =
     let
         _ =
             Debug.log "Realtime.publishPersisted" "called"
@@ -350,21 +432,38 @@ publishPersisted pt (Private model) payload rt =
                             }
                             |> Procedure.fetchResult
                     )
-                |> Procedure.map
-                    (\nextSessionKey (Private innerModel) ->
-                        case innerModel.state of
-                            RunningState innerState ->
-                                { innerModel | state = { innerState | sessionKey = nextSessionKey } |> RunningState }
-                                    |> Private
-
-                            _ ->
-                                innerModel |> Private
-                    )
                 |> Procedure.mapError MomentoError
-                |> Procedure.try pt rt
+                |> Procedure.try pt (momentoResultToDelta state tag)
 
         _ ->
             Cmd.none
+
+
+momentoResultToDelta : RunningProps -> (Delta (Maybe Error) -> msg) -> Result Error MomentoSessionKey -> msg
+momentoResultToDelta state tag res =
+    case res of
+        Ok nextSessionKey ->
+            (\(Private m) ->
+                ( { m
+                    | state =
+                        { state | sessionKey = nextSessionKey }
+                            |> RunningState
+                  }
+                    |> Private
+                , Nothing
+                )
+            )
+                |> Delta
+                |> tag
+
+        Err err ->
+            (\(Private m) ->
+                ( { m | state = err |> FailedState } |> Private
+                , err |> Just
+                )
+            )
+                |> Delta
+                |> tag
 
 
 {-| Sends a transient message. This message will be forwarded to all clients on the same channel, but will
@@ -374,9 +473,9 @@ publishTransient :
     (Procedure.Program.Msg msg -> msg)
     -> Model
     -> Value
-    -> (Result Error Delta -> msg)
+    -> (Delta (Maybe Error) -> msg)
     -> Cmd msg
-publishTransient pt (Private model) payload rt =
+publishTransient pt (Private model) payload tag =
     let
         _ =
             Debug.log "Realtime.publishTransient" "called"
@@ -391,18 +490,8 @@ publishTransient pt (Private model) payload rt =
                 , payload = encodeTransient payload
                 }
                 |> Procedure.fetchResult
-                |> Procedure.map
-                    (\sk (Private innerModel) ->
-                        case innerModel.state of
-                            RunningState innerState ->
-                                { innerModel | state = { innerState | sessionKey = sk } |> RunningState }
-                                    |> Private
-
-                            _ ->
-                                innerModel |> Private
-                    )
                 |> Procedure.mapError MomentoError
-                |> Procedure.try pt rt
+                |> Procedure.try pt (momentoResultToDelta state tag)
 
         _ ->
             Cmd.none
@@ -412,13 +501,18 @@ publishTransient pt (Private model) payload rt =
 -- Receive messages from the channel.
 
 
-onMessage :
+type AsyncEvent
+    = OnMessage RTMessage
+    | AsyncError Error
+    | Internal
+
+
+subscribe :
     (Procedure.Program.Msg msg -> msg)
     -> Model
-    -> (Delta -> RTMessage -> msg)
-    -> (Delta -> Error -> msg)
+    -> (Delta AsyncEvent -> msg)
     -> Sub msg
-onMessage pt (Private model) rt et =
+subscribe pt (Private model) tag =
     let
         momentoApi =
             buildMomentoApi pt
@@ -426,37 +520,34 @@ onMessage pt (Private model) rt et =
         modfn val =
             case Decode.decodeValue rtMessageDecoder val of
                 Ok rtm ->
-                    rt identity rtm
+                    (\m -> ( m, OnMessage rtm )) |> Delta |> tag
 
                 Err err ->
-                    DecodeError err |> et identity
+                    (\(Private m) ->
+                        ( { m | state = DecodeError err |> FailedState } |> Private
+                        , DecodeError err |> AsyncError
+                        )
+                    )
+                        |> Delta
+                        |> tag
+
+        errfn err =
+            (\(Private m) ->
+                ( { m | state = MomentoError err |> FailedState } |> Private
+                , MomentoError err |> AsyncError
+                )
+            )
+                |> Delta
+                |> tag
     in
     case model.state of
         RunningState _ ->
-            (\fn -> momentoApi.onMessage (\_ -> fn))
+            [ (\fn -> momentoApi.onMessage (\_ -> fn))
                 modfn
-
-        _ ->
-            Sub.none
-
-
-asyncError :
-    (Procedure.Program.Msg msg -> msg)
-    -> Model
-    -> (Delta -> Error -> msg)
-    -> Sub msg
-asyncError pt (Private model) rt =
-    let
-        momentoApi =
-            buildMomentoApi pt
-    in
-    case model.state of
-        RunningState state ->
-            momentoApi.asyncError
-                (\err ->
-                    MomentoError err
-                        |> rt ({ model | state = MomentoError err |> FailedState } |> Private |> always)
-                )
+            , momentoApi.asyncError
+                errfn
+            ]
+                |> Sub.batch
 
         _ ->
             Sub.none
