@@ -23,11 +23,23 @@ type Error
 
 program :
     -- These should be subscriptions and commands.
-    -- Sub: new message, new snapshot request
-    -- Cmd: publish messages, new snapshot
-    { compact : List RTMessage -> Snapshot -> Snapshot
-    , stream : Snapshot -> RTMessage -> Result Error (List RTMessage)
+    { init : flags -> ( model, Cmd msg )
+    , update : msg -> model -> ( model, Cmd msg )
+    , subscriptions : model -> Sub msg
     }
     -> Platform.Program flags model msg
 program =
-    Debug.todo ""
+    Platform.worker
+
+
+
+-- Do the Value pass through thing on this. Will be wrapping this in some NodeJS that will invoke it
+-- with events and compaction requests, and wait for it to respond.
+-- Sub: new message, new snapshot request
+-- Cmd: publish messages, new snapshot
+
+
+compact : List RTMessage -> Snapshot -> Snapshot
+
+
+stream : Snapshot -> RTMessage -> Result Error (List RTMessage)
