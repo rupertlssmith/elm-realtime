@@ -48,7 +48,7 @@ type alias Config =
 
 type alias RealtimeApi msg =
     { init : Config -> Model
-    , join : Model -> (Result Error Model -> msg) -> Cmd msg
+    , join : Model -> (Delta (Result Error (List RTMessage)) -> msg) -> Cmd msg
     , publishPersisted : Model -> Value -> (Delta (Maybe Error) -> msg) -> Cmd msg
     , publishTransient : Model -> Value -> (Delta (Maybe Error) -> msg) -> Cmd msg
     , subscribe : Model -> (Delta AsyncEvent -> msg) -> Sub msg
@@ -80,7 +80,7 @@ type Model
         { rtChannelApiUrl : String
         , momentoApiKey : String
         , state : State
-        , nonRunningEvents : List RTMessage
+        , preJoinEvents : List RTMessage
         }
 
 
@@ -192,7 +192,7 @@ init props =
     { rtChannelApiUrl = props.rtChannelApiUrl
     , momentoApiKey = props.momentoApiKey
     , state = StartState
-    , nonRunningEvents = []
+    , preJoinEvents = []
     }
         |> Private
 
@@ -210,7 +210,7 @@ init props =
 join :
     (Procedure.Program.Msg msg -> msg)
     -> Model
-    -> (Result Error Model -> msg)
+    -> (Delta (Result Error (List RTMessage)) -> msg)
     -> Cmd msg
 join pt (Private model) rt =
     let
@@ -225,21 +225,20 @@ join pt (Private model) rt =
                 |> Procedure.andThen (getChannelDetails (Private model))
                 |> Procedure.andThen (openMomentoCache (Private model) momentoApi)
                 |> Procedure.andThen (subscribeModelTopic momentoApi)
-                --|> Procedure.andThen (joinChannel (Private model))
+                -- Message flow may have started here
+                |> Procedure.andThen (joinChannel (Private model))
                 |> Procedure.map
                     (\state ->
                         { rtChannelApiUrl = model.rtChannelApiUrl
                         , momentoApiKey = model.momentoApiKey
-
-                        --, state = JoiningState state
-                        , state = RunningState state
-                        , nonRunningEvents = model.nonRunningEvents
+                        , state = JoiningState state
+                        , preJoinEvents = model.preJoinEvents
                         }
                             |> Private
                     )
     in
     initProcedure
-        |> Procedure.try pt rt
+        |> Procedure.try pt (\res -> (\(Private m) -> ( m |> Private, [] |> Ok )) |> Delta |> rt)
 
 
 randomize : Procedure e Random.Seed msg
@@ -550,7 +549,28 @@ subscribe pt (Private model) tag =
                 |> Sub.batch
 
         _ ->
-            Sub.none
+            -- Accumulate any events which happen prior to completing the join
+            (\val ->
+                case Decode.decodeValue rtMessageDecoder val of
+                    Ok rtm ->
+                        (\(Private m) ->
+                            ( { m | preJoinEvents = rtm :: m.preJoinEvents } |> Private
+                            , Internal
+                            )
+                        )
+                            |> Delta
+                            |> tag
+
+                    Err err ->
+                        (\(Private m) ->
+                            ( { m | state = DecodeError err |> FailedState } |> Private
+                            , DecodeError err |> AsyncError
+                            )
+                        )
+                            |> Delta
+                            |> tag
+            )
+                |> (\fn -> momentoApi.onMessage (\_ -> fn))
 
 
 cacheName : String -> String

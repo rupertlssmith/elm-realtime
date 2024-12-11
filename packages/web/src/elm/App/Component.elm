@@ -21,7 +21,7 @@ type alias Component a =
 
 type Msg
     = ProcedureMsg (Procedure.Program.Msg Msg)
-    | JoinedChannel (Result Error Realtime.Model)
+    | JoinedChannel (Delta (Result Error (List RTMessage)))
     | PublishAck (Delta (Maybe Error))
     | OnAsyncEvent (Delta AsyncEvent)
 
@@ -98,20 +98,32 @@ update protocol msg component =
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 
-        JoinedChannel (Ok realtime) ->
-            let
-                hello =
-                    [ ( "message", Encode.string "hello" ) ] |> Encode.object
-            in
-            ( { model | realtime = realtime }
-            , Cmd.batch
-                [ realtimeApi.publishTransient realtime hello PublishAck
-                , realtimeApi.publishPersisted realtime hello PublishAck
-                ]
-            )
-                |> Tuple.mapFirst (setModel component)
-                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.onUpdate
+        JoinedChannel delta ->
+            case Realtime.next delta model.realtime of
+                ( nextRealtime, Ok realtime ) ->
+                    let
+                        hello =
+                            [ ( "message", Encode.string "hello" ) ] |> Encode.object
+                    in
+                    ( { model | realtime = nextRealtime }
+                    , Cmd.batch
+                        [ realtimeApi.publishTransient nextRealtime hello PublishAck
+                        , realtimeApi.publishPersisted nextRealtime hello PublishAck
+                        ]
+                    )
+                        |> Tuple.mapFirst (setModel component)
+                        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                        |> protocol.onUpdate
+
+                ( nextRealtime, Err err ) ->
+                    { model
+                        | realtime = nextRealtime
+                        , log = ("Error: " ++ Realtime.errorToString err) :: model.log
+                    }
+                        |> U2.pure
+                        |> Tuple.mapFirst (setModel component)
+                        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                        |> protocol.onUpdate
 
         PublishAck delta ->
             case Realtime.next delta model.realtime of
@@ -125,9 +137,7 @@ update protocol msg component =
         OnAsyncEvent delta ->
             case Realtime.next delta model.realtime of
                 ( nextRealtime, Internal ) ->
-                    { model
-                        | realtime = nextRealtime
-                    }
+                    { model | realtime = nextRealtime }
                         |> U2.pure
                         |> Tuple.mapFirst (setModel component)
                         |> Tuple.mapSecond (Cmd.map protocol.toMsg)
@@ -192,10 +202,6 @@ update protocol msg component =
                         |> Tuple.mapFirst (setModel component)
                         |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                         |> protocol.onUpdate
-
-        _ ->
-            U2.pure component
-                |> protocol.onUpdate
 
 
 view : Component a -> Html msg
