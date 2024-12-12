@@ -1,4 +1,4 @@
-module RTTrusted exposing (..)
+module RTTrusted exposing (program)
 
 {-| RTTrusted is an Elm program type for implementing trusted realtime nodes.
 
@@ -10,11 +10,7 @@ The trusted node is responsible for generating model snapshots from event logs.
 
 -}
 
-import Realtime exposing (RTMessage)
-
-
-type Snapshot
-    = Snapshot
+import Realtime exposing (RTMessage, Snapshot)
 
 
 type Error
@@ -39,7 +35,7 @@ program =
 -- Cmd: publish messages, new snapshot
 
 
-compact : List RTMessage -> Snapshot -> Snapshot
+compact : List RTMessage -> Snapshot a -> Snapshot a
 
 
-stream : Snapshot -> RTMessage -> Result Error (List RTMessage)
+stream : Snapshot a -> RTMessage -> Result Error (List RTMessage)

@@ -6,6 +6,7 @@ module Realtime exposing
     , Model
     , RTMessage(..)
     , RealtimeApi
+    , Snapshot
     , errorToDetails
     , errorToString
     , next
@@ -68,6 +69,12 @@ realtimeApi pt =
 next : Delta a -> Model -> ( Model, a )
 next (Delta delta) model =
     delta model
+
+
+type alias Snapshot a =
+    { seq : Int
+    , model : a
+    }
 
 
 type RTMessage

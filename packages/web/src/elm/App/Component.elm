@@ -9,9 +9,10 @@ module App.Component exposing
     )
 
 import Html.Styled as Html exposing (Html)
+import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
 import Procedure.Program
-import Realtime exposing (AsyncEvent(..), Delta, Error, RTMessage(..))
+import Realtime exposing (AsyncEvent(..), Delta, Error, RTMessage(..), Snapshot)
 import Update2 as U2
 
 
@@ -30,6 +31,7 @@ type alias Model =
     { procedure : Procedure.Program.Model Msg
     , realtime : Realtime.Model
     , log : List String
+    , sharedModel : SharedModel
     }
 
 
@@ -62,6 +64,7 @@ init flags toMsg =
     ( { procedure = Procedure.Program.init
       , realtime = realtime
       , log = [ "Started" ]
+      , sharedModel = initSharedModel
       }
     , realtimeApi.join realtime JoinedChannel
     )
@@ -105,22 +108,13 @@ update protocol msg component =
                         hello =
                             [ ( "message", Encode.string "hello" ) ] |> Encode.object
 
-                        log =
-                            List.foldl
-                                (\evt acc ->
-                                    case evt of
-                                        Persisted seq payload ->
-                                            printPersistedEvent seq payload :: acc
-
-                                        _ ->
-                                            acc
-                                )
-                                model.log
-                                events
+                        sharedModel =
+                            compact events initSharedModel
                     in
                     ( { model
                         | realtime = nextRealtime
-                        , log = log
+                        , log = printSharedModel sharedModel :: model.log
+                        , sharedModel = sharedModel
                       }
                     , Cmd.batch
                         [ realtimeApi.publishTransient nextRealtime hello PublishAck
@@ -161,22 +155,16 @@ update protocol msg component =
 
                 ( nextRealtime, OnMessage (Transient payload) ) ->
                     let
-                        stringPayload =
-                            Encode.encode 2 payload
+                        nextSharedModel =
+                            compact [ Transient payload ] model.sharedModel
                     in
                     { model
                         | realtime = nextRealtime
                         , log =
-                            ("Transient: "
-                                ++ String.slice 0 200 stringPayload
-                                ++ (if String.length stringPayload > 200 then
-                                        "..."
-
-                                    else
-                                        ""
-                                   )
-                            )
+                            printSharedModel nextSharedModel
+                                :: printTransientEvent payload
                                 :: model.log
+                        , sharedModel = nextSharedModel
                     }
                         |> U2.pure
                         |> Tuple.mapFirst (setModel component)
@@ -184,11 +172,17 @@ update protocol msg component =
                         |> protocol.onUpdate
 
                 ( nextRealtime, OnMessage (Persisted seq payload) ) ->
+                    let
+                        nextSharedModel =
+                            compact [ Persisted seq payload ] model.sharedModel
+                    in
                     { model
                         | realtime = nextRealtime
                         , log =
-                            printPersistedEvent seq payload
+                            printSharedModel nextSharedModel
+                                :: printPersistedEvent seq payload
                                 :: model.log
+                        , sharedModel = nextSharedModel
                     }
                         |> U2.pure
                         |> Tuple.mapFirst (setModel component)
@@ -204,6 +198,66 @@ update protocol msg component =
                         |> Tuple.mapFirst (setModel component)
                         |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                         |> protocol.onUpdate
+
+
+type alias SharedModel =
+    Snapshot { message : String }
+
+
+initSharedModel =
+    { seq = 0, model = { message = "start" } }
+
+
+compact : List RTMessage -> SharedModel -> SharedModel
+compact events sm =
+    let
+        messageDecoder =
+            Decode.field "message" Decode.string
+
+        apply payload m =
+            case Decode.decodeValue messageDecoder payload of
+                Ok message ->
+                    { m | model = { message = message } }
+
+                Err err ->
+                    m
+
+        doOne evt m =
+            case evt of
+                Transient payload ->
+                    apply payload m
+
+                Persisted seq payload ->
+                    apply payload { m | seq = seq }
+    in
+    List.foldl
+        doOne
+        sm
+        events
+
+
+printSharedModel : SharedModel -> String
+printSharedModel sm =
+    "SharedModel: "
+        ++ String.fromInt sm.seq
+        ++ " "
+        ++ sm.model.message
+
+
+printTransientEvent : Value -> String
+printTransientEvent payload =
+    let
+        stringPayload =
+            Encode.encode 2 payload
+    in
+    "Transient: "
+        ++ String.slice 0 200 stringPayload
+        ++ (if String.length stringPayload > 200 then
+                "..."
+
+            else
+                ""
+           )
 
 
 printPersistedEvent : Int -> Value -> String
