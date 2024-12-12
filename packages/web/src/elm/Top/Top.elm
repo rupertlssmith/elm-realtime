@@ -131,7 +131,9 @@ fullBody model =
                 [ Top.Style.rawCssStyle
                 , Top.Style.style Config.config |> Css.Global.global
                 , leftMenu
-                , App.view model
+                , HS.div [ HA.class "log" ]
+                    [ App.view model
+                    ]
                 ]
 
         Nothing ->

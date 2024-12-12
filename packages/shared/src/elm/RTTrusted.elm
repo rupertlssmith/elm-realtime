@@ -10,6 +10,7 @@ The trusted node is responsible for generating model snapshots from event logs.
 
 -}
 
+import Json.Decode exposing (Value)
 import Realtime exposing (RTMessage, Snapshot)
 
 
@@ -28,14 +29,18 @@ program =
     Platform.worker
 
 
-
--- Do the Value pass through thing on this. Will be wrapping this in some NodeJS that will invoke it
--- with events and compaction requests, and wait for it to respond.
--- Sub: new message, new snapshot request
--- Cmd: publish messages, new snapshot
-
-
-compact : List RTMessage -> Snapshot a -> Snapshot a
-
-
-stream : Snapshot a -> RTMessage -> Result Error (List RTMessage)
+type alias RTTrustedAPI a msg =
+    { compact :
+        ({ session : Value
+         , snapshot : Maybe (Snapshot a)
+         , events : List RTMessage
+         }
+         -> msg
+        )
+        -> Sub msg
+    , compacted :
+        { session : Value
+        , snapshot : Snapshot a
+        }
+        -> Cmd msg
+    }

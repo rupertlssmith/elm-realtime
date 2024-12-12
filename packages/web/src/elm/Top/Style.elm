@@ -68,6 +68,10 @@ style config =
         [ Css.px 6 |> Css.marginTop
         , Css.px 10 |> Css.marginBottom
         ]
+    , Css.Global.class "log"
+        [ Css.overflow Css.auto
+        , Css.pct 100 |> Css.width
+        ]
     , Css.Global.class "noselect"
         [ Css.property "user-select" "none"
         , Css.property "-moz-user-select" "none"
