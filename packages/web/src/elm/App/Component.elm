@@ -110,10 +110,20 @@ update protocol msg component =
 
                         sharedModel =
                             compact events initSharedModel
+
+                        prettyEvents =
+                            List.foldl
+                                (\evt acc -> printRTMessage evt :: acc)
+                                []
+                                events
                     in
                     ( { model
                         | realtime = nextRealtime
-                        , log = printSharedModel sharedModel :: model.log
+                        , log =
+                            printSharedModel sharedModel
+                                :: (prettyEvents
+                                        ++ model.log
+                                   )
                         , sharedModel = sharedModel
                       }
                     , Cmd.batch
@@ -242,6 +252,16 @@ printSharedModel sm =
         ++ String.fromInt sm.seq
         ++ " "
         ++ sm.model.message
+
+
+printRTMessage : RTMessage -> String
+printRTMessage msg =
+    case msg of
+        Persisted seq payload ->
+            printPersistedEvent seq payload
+
+        Transient payload ->
+            printTransientEvent payload
 
 
 printTransientEvent : Value -> String
