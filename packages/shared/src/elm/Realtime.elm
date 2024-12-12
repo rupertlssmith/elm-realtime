@@ -12,7 +12,7 @@ module Realtime exposing
     , realtimeApi
     )
 
-import Http
+import Http exposing (Error(..))
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Extra as DE
 import Json.Encode as Encode exposing (Value)
@@ -76,12 +76,15 @@ type RTMessage
 
 
 type Model
-    = Private
-        { rtChannelApiUrl : String
-        , momentoApiKey : String
-        , state : State
-        , preJoinEvents : List RTMessage
-        }
+    = Private Implementation
+
+
+type alias Implementation =
+    { rtChannelApiUrl : String
+    , momentoApiKey : String
+    , state : State
+    , preJoinEvents : List RTMessage
+    }
 
 
 type Delta a
@@ -90,7 +93,6 @@ type Delta a
 
 type State
     = StartState
-    | JoiningState JoiningProps
     | RunningState RunningProps
     | FailedState Error
 
@@ -153,19 +155,42 @@ type Error
     = HttpError Http.Error
     | MomentoError Momento.Error
     | DecodeError Decode.Error
+    | JoinError String
+
+
+httpErrorToString : Http.Error -> String
+httpErrorToString err =
+    case err of
+        BadUrl val ->
+            "Bad Url: " ++ val
+
+        Timeout ->
+            "HTTP Timeout"
+
+        NetworkError ->
+            "Network Error"
+
+        BadStatus status ->
+            "BadStatus: " ++ String.fromInt status
+
+        BadBody val ->
+            "Bad Body: " ++ val
 
 
 errorToString : Error -> String
 errorToString err =
     case err of
-        HttpError _ ->
-            Debug.todo "HttpError"
+        HttpError httpError ->
+            httpErrorToString httpError
 
         MomentoError momentoErr ->
             Momento.errorToString momentoErr
 
         DecodeError decodeErr ->
             Decode.errorToString decodeErr
+
+        JoinError msg ->
+            msg
 
 
 errorToDetails : Error -> { message : String, details : Value }
@@ -179,6 +204,9 @@ errorToDetails err =
 
         DecodeError decodeErr ->
             { message = Decode.errorToString decodeErr, details = Encode.null }
+
+        JoinError msg ->
+            { message = msg, details = Encode.null }
 
 
 
@@ -220,25 +248,54 @@ join pt (Private model) rt =
         momentoApi =
             buildMomentoApi pt
 
+        initProcedure : Procedure Error JoiningProps msg
         initProcedure =
             randomize
                 |> Procedure.andThen (getChannelDetails (Private model))
                 |> Procedure.andThen (openMomentoCache (Private model) momentoApi)
                 |> Procedure.andThen (subscribeModelTopic momentoApi)
-                -- Message flow may have started here
+                -- Message flow may have started here.
                 |> Procedure.andThen (joinChannel (Private model))
-                |> Procedure.map
-                    (\state ->
-                        { rtChannelApiUrl = model.rtChannelApiUrl
-                        , momentoApiKey = model.momentoApiKey
-                        , state = JoiningState state
-                        , preJoinEvents = model.preJoinEvents
-                        }
-                            |> Private
+    in
+    initProcedure |> Procedure.try pt (combine >> rt)
+
+
+combine : Result Error JoiningProps -> Delta (Result Error (List RTMessage))
+combine res =
+    let
+        joiner joinProps ((Private ({ state } as impl)) as mdl) =
+            case state of
+                StartState ->
+                    let
+                        runningState =
+                            RunningState
+                                { sessionKey = joinProps.sessionKey
+                                , seed = joinProps.seed
+                                , channel = joinProps.channel
+                                }
+
+                        startEvents =
+                            joinProps.joinEvents ++ impl.preJoinEvents
+                    in
+                    ( { impl | state = runningState } |> Private
+                    , Ok startEvents
+                    )
+
+                _ ->
+                    let
+                        joinError =
+                            JoinError "Join against non start state."
+                    in
+                    ( { impl | state = FailedState joinError } |> Private
+                    , joinError |> Err
                     )
     in
-    initProcedure
-        |> Procedure.try pt (\res -> (\(Private m) -> ( m |> Private, [] |> Ok )) |> Delta |> rt)
+    case res of
+        Err err ->
+            errError err
+
+        Ok joinProps ->
+            joiner joinProps |> Delta
 
 
 randomize : Procedure e Random.Seed msg
@@ -435,35 +492,7 @@ publishPersisted pt (Private model) payload tag =
                 |> Procedure.try pt (momentoResultToDelta state tag)
 
         _ ->
-            -- TODO: Error? Or pending message if not in error state.
             Cmd.none
-
-
-momentoResultToDelta : RunningProps -> (Delta (Maybe Error) -> msg) -> Result Error MomentoSessionKey -> msg
-momentoResultToDelta state tag res =
-    case res of
-        Ok nextSessionKey ->
-            (\(Private m) ->
-                ( { m
-                    | state =
-                        { state | sessionKey = nextSessionKey }
-                            |> RunningState
-                  }
-                    |> Private
-                , Nothing
-                )
-            )
-                |> Delta
-                |> tag
-
-        Err err ->
-            (\(Private m) ->
-                ( { m | state = err |> FailedState } |> Private
-                , err |> Just
-                )
-            )
-                |> Delta
-                |> tag
 
 
 {-| Sends a transient message. This message will be forwarded to all clients on the same channel, but will
@@ -494,8 +523,20 @@ publishTransient pt (Private model) payload tag =
                 |> Procedure.try pt (momentoResultToDelta state tag)
 
         _ ->
-            -- TODO: Error? Or pending message if not in error state.
             Cmd.none
+
+
+momentoResultToDelta : RunningProps -> (Delta (Maybe Error) -> msg) -> Result Error MomentoSessionKey -> msg
+momentoResultToDelta state tag res =
+    case res of
+        Ok nextSessionKey ->
+            makeDeltaFn
+                (\m -> { m | state = { state | sessionKey = nextSessionKey } |> RunningState })
+                Nothing
+                |> tag
+
+        Err err ->
+            err |> justError |> tag
 
 
 
@@ -524,24 +565,13 @@ subscribe pt (Private model) tag =
                     (\m -> ( m, OnMessage rtm )) |> Delta |> tag
 
                 Err err ->
-                    (\(Private m) ->
-                        ( { m | state = DecodeError err |> FailedState } |> Private
-                        , DecodeError err |> AsyncError
-                        )
-                    )
-                        |> Delta
-                        |> tag
+                    DecodeError err |> asyncError |> tag
 
         errfn err =
-            (\(Private m) ->
-                ( { m | state = MomentoError err |> FailedState } |> Private
-                , MomentoError err |> AsyncError
-                )
-            )
-                |> Delta
-                |> tag
+            MomentoError err |> asyncError |> tag
     in
     case model.state of
+        -- In Running state, forward all events to the application.
         RunningState _ ->
             [ (\fn -> momentoApi.onMessage (\_ -> fn))
                 modfn
@@ -550,29 +580,53 @@ subscribe pt (Private model) tag =
             ]
                 |> Sub.batch
 
-        _ ->
-            -- Accumulate any events which happen prior to completing the join
+        StartState ->
+            -- In Start state, accumulate any events which may happen prior to completing the join.
             (\val ->
                 case Decode.decodeValue rtMessageDecoder val of
                     Ok rtm ->
-                        (\(Private m) ->
-                            ( { m | preJoinEvents = rtm :: m.preJoinEvents } |> Private
-                            , Internal
-                            )
-                        )
-                            |> Delta
+                        makeDeltaFn (\m -> { m | preJoinEvents = rtm :: m.preJoinEvents })
+                            Internal
                             |> tag
 
                     Err err ->
-                        (\(Private m) ->
-                            ( { m | state = DecodeError err |> FailedState } |> Private
-                            , DecodeError err |> AsyncError
-                            )
-                        )
-                            |> Delta
-                            |> tag
+                        asyncError (DecodeError err) |> tag
             )
                 |> (\fn -> momentoApi.onMessage (\_ -> fn))
+
+        _ ->
+            Sub.none
+
+
+errError : Error -> Delta (Result Error a)
+errError err =
+    makeDeltaFn
+        (\m -> { m | state = err |> FailedState })
+        (Err err)
+
+
+justError : Error -> Delta (Maybe Error)
+justError err =
+    makeDeltaFn
+        (\m -> { m | state = err |> FailedState })
+        (Just err)
+
+
+asyncError : Error -> Delta AsyncEvent
+asyncError err =
+    makeDeltaFn
+        (\m -> { m | state = err |> FailedState })
+        (AsyncError err)
+
+
+makeDeltaFn : (Implementation -> Implementation) -> a -> Delta a
+makeDeltaFn stepFn res =
+    (\(Private m) ->
+        ( stepFn m |> Private
+        , res
+        )
+    )
+        |> Delta
 
 
 cacheName : String -> String

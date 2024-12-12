@@ -100,12 +100,28 @@ update protocol msg component =
 
         JoinedChannel delta ->
             case Realtime.next delta model.realtime of
-                ( nextRealtime, Ok realtime ) ->
+                ( nextRealtime, Ok events ) ->
                     let
                         hello =
                             [ ( "message", Encode.string "hello" ) ] |> Encode.object
+
+                        log =
+                            List.foldl
+                                (\evt acc ->
+                                    case evt of
+                                        Persisted seq payload ->
+                                            printPersistedEvent seq payload :: acc
+
+                                        _ ->
+                                            acc
+                                )
+                                model.log
+                                events
                     in
-                    ( { model | realtime = nextRealtime }
+                    ( { model
+                        | realtime = nextRealtime
+                        , log = log
+                      }
                     , Cmd.batch
                         [ realtimeApi.publishTransient nextRealtime hello PublishAck
                         , realtimeApi.publishPersisted nextRealtime hello PublishAck
@@ -168,24 +184,10 @@ update protocol msg component =
                         |> protocol.onUpdate
 
                 ( nextRealtime, OnMessage (Persisted seq payload) ) ->
-                    let
-                        stringPayload =
-                            Encode.encode 2 payload
-                    in
                     { model
                         | realtime = nextRealtime
                         , log =
-                            ("Persisted: "
-                                ++ String.fromInt seq
-                                ++ " "
-                                ++ String.slice 0 200 stringPayload
-                                ++ (if String.length stringPayload > 200 then
-                                        "..."
-
-                                    else
-                                        ""
-                                   )
-                            )
+                            printPersistedEvent seq payload
                                 :: model.log
                     }
                         |> U2.pure
@@ -202,6 +204,24 @@ update protocol msg component =
                         |> Tuple.mapFirst (setModel component)
                         |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                         |> protocol.onUpdate
+
+
+printPersistedEvent : Int -> Value -> String
+printPersistedEvent seq payload =
+    let
+        stringPayload =
+            Encode.encode 2 payload
+    in
+    "Persisted: "
+        ++ String.fromInt seq
+        ++ " "
+        ++ String.slice 0 200 stringPayload
+        ++ (if String.length stringPayload > 200 then
+                "..."
+
+            else
+                ""
+           )
 
 
 view : Component a -> Html msg
