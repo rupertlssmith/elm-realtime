@@ -5,6 +5,10 @@ module AWS.Dynamo exposing
     , WriteTx
     , Get
     , Delete
+    , BatchPut
+    , BatchGet
+    , Put
+    , Update
     , updateCommand, putCommand
     , Match, Order(..), partitionKeyEquals, limitResults, orderResults
     , rangeKeyEquals, rangeKeyLessThan, rangeKeyLessThanOrEqual, rangeKeyGreaterThan
@@ -34,6 +38,8 @@ module AWS.Dynamo exposing
 @docs Delete
 @docs BatchPut
 @docs BatchGet
+@docs Put
+@docs Update
 
 
 # Write Transaction Commands
@@ -66,6 +72,8 @@ import Procedure.Program
 import Result.Extra
 
 
+{-| The ports that need to be wired up to dynamo.js
+-}
 type alias Ports msg =
     { get : { id : String, req : Value } -> Cmd msg
     , put : { id : String, req : Value } -> Cmd msg
@@ -80,6 +88,8 @@ type alias Ports msg =
     }
 
 
+{-| The DynamoDB API over untyped Values.
+-}
 type alias DynamoApi msg =
     { get : Get Value -> (Result Error (Maybe Value) -> msg) -> Cmd msg
     , put : Put Value -> (Result Error () -> msg) -> Cmd msg
@@ -94,6 +104,8 @@ type alias DynamoApi msg =
     }
 
 
+{-| The DynamoDB API over typed values with JSON encoders and decoders.
+-}
 type alias DynamoTypedApi k v msg =
     { get : Get k -> (Result Error (Maybe v) -> msg) -> Cmd msg
     , put : Put v -> (Result Error () -> msg) -> Cmd msg
@@ -108,6 +120,8 @@ type alias DynamoTypedApi k v msg =
     }
 
 
+{-| Creates an instance of the untyped DynamoDB API.
+-}
 dynamoApi : (Procedure.Program.Msg msg -> msg) -> Ports msg -> DynamoApi msg
 dynamoApi pt ports =
     { get = get pt ports identity Decode.value
@@ -123,6 +137,8 @@ dynamoApi pt ports =
     }
 
 
+{-| Creates an instance of the typed DynamoDB API.
+-}
 dynamoTypedApi :
     (k -> Value)
     -> (v -> Value)
@@ -154,12 +170,16 @@ type WriteCommand
 -- Database operations
 
 
+{-| Possible errors arising from DynamoDB operations.
+-}
 type Error
     = ConditionCheckFailed { message : String, details : Value }
     | Error { message : String, details : Value }
     | DecodeError Decode.Error
 
 
+{-| Turns DynamoDB errors into strings.
+-}
 errorToString : Error -> String
 errorToString error =
     case error of
@@ -173,6 +193,12 @@ errorToString error =
             "AWS.Dynamo: " ++ Decode.errorToString err
 
 
+{-| Turns DynamoDB into a format with a message and further details as JSON.
+
+The details should provide some way to trace the error, such as a stacktrace
+or parameters and so on.
+
+-}
 errorToDetails : Error -> { message : String, details : Value }
 errorToDetails error =
     case error of
@@ -221,6 +247,8 @@ errorDecoder =
 ---- Put a document in DynamoDB
 
 
+{-| Parameters for the Put operation.
+-}
 type alias Put v =
     { tableName : String
     , item : v
@@ -282,6 +310,8 @@ putResponseDecoder val =
 ---- Update a document in DynamoDB
 
 
+{-| Parameters for the Update operation.
+-}
 type alias Update k =
     { tableName : String
     , key : k
@@ -465,6 +495,8 @@ updateResponseDecoder valDecoder val =
 ---- Write transactions
 
 
+{-| Parameters for the WriteTx operation.
+-}
 type alias WriteTx =
     { tableName : String
     , commands : List WriteCommand
@@ -532,6 +564,8 @@ writeTxResponseDecoder val =
 ---- Get a document from DynamoDB
 
 
+{-| Parameters for the Get operation.
+-}
 type alias Get k =
     { tableName : String
     , key : k
@@ -590,6 +624,8 @@ getResponseDecoder valDecoder val =
 ---- Delete
 
 
+{-| Parameters for the Delete operation.
+-}
 type alias Delete k =
     { tableName : String
     , key : k
@@ -643,6 +679,8 @@ deleteResponseDecoder val =
 ---- Batch Put
 
 
+{-| Parameters for the BatchPut operation.
+-}
 type alias BatchPut v =
     { tableName : String
     , items : List v
@@ -747,6 +785,8 @@ batchPutResponseDecoder val =
 ---- Batch Get
 
 
+{-| Parameters for the BatchGet operation.
+-}
 type alias BatchGet k =
     { tableName : String
     , keys : List k
@@ -818,6 +858,8 @@ batchGetResponseDecoder valDecoder tableName val =
 ---- Scans
 
 
+{-| Parameters for the Scan operation.
+-}
 type alias Scan =
     { tableName : String
     , exclusiveStartKey : Maybe Value
@@ -895,6 +937,8 @@ type KeyCondition
     | Between String AttributeValue AttributeValue
 
 
+{-| Results ordering.
+-}
 type Order
     = Forward
     | Reverse
@@ -988,11 +1032,15 @@ keyConditionAsStringAndAttrs keyConditions =
         |> Tuple.mapSecond List.concat
 
 
+{-| An int attribute value.
+-}
 int : Int -> AttributeValue
 int val =
     NumberAttr val
 
 
+{-| A string attribute value.
+-}
 string : String -> AttributeValue
 string val =
     StringAttr val
@@ -1012,6 +1060,8 @@ encodeAttr attr =
             Encode.int val
 
 
+{-| Match only where the partition key is equal to some value.
+-}
 partitionKeyEquals : String -> String -> Match
 partitionKeyEquals key val =
     { partitionKeyName = key
@@ -1023,41 +1073,57 @@ partitionKeyEquals key val =
     }
 
 
+{-| Match only where the range key exactly equals some value.
+-}
 rangeKeyEquals : String -> AttributeValue -> Match -> Match
 rangeKeyEquals keyName attr q =
     { q | rangeKeyCondition = Equals keyName attr |> Just }
 
 
+{-| Match only where the range key is less than some value.
+-}
 rangeKeyLessThan : String -> AttributeValue -> Match -> Match
 rangeKeyLessThan keyName attr q =
     { q | rangeKeyCondition = LessThan keyName attr |> Just }
 
 
+{-| Match only where the range key is less than or equal to some value.
+-}
 rangeKeyLessThanOrEqual : String -> AttributeValue -> Match -> Match
 rangeKeyLessThanOrEqual keyName attr q =
     { q | rangeKeyCondition = LessThenOrEqual keyName attr |> Just }
 
 
+{-| Match only where the range key is greater than some value.
+-}
 rangeKeyGreaterThan : String -> AttributeValue -> Match -> Match
 rangeKeyGreaterThan keyName attr q =
     { q | rangeKeyCondition = GreaterThan keyName attr |> Just }
 
 
+{-| Match only where the range key is greater than or equal to some value.
+-}
 rangeKeyGreaterThanOrEqual : String -> AttributeValue -> Match -> Match
 rangeKeyGreaterThanOrEqual keyName attr q =
     { q | rangeKeyCondition = GreaterThanOrEqual keyName attr |> Just }
 
 
+{-| Match only where the range key is between two values
+-}
 rangeKeyBetween : String -> AttributeValue -> AttributeValue -> Match -> Match
 rangeKeyBetween keyName lowAttr highAttr q =
     { q | rangeKeyCondition = Between keyName lowAttr highAttr |> Just }
 
 
+{-| Can be used to order the results returned.
+-}
 orderResults : Order -> Match -> Match
 orderResults ord q =
     { q | order = ord }
 
 
+{-| Can be used to limit the number of results returned.
+-}
 limitResults : Int -> Match -> Match
 limitResults limit q =
     { q | limit = Just limit }
