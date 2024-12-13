@@ -32,34 +32,50 @@ import Serverless.Response as Response exposing (Response)
 import Url exposing (Url)
 
 
+{-| An HTTP Request to an API endpoint.
+-}
 type alias ApiRequest route =
     { route : route
     , request : Request.Request
     }
 
 
+{-| An "session key" that spans an entire HTTP request.
+
+A request will arrive with a session key, and outgoing responses must provide that same
+key when responding in order to link the request and response together.
+
+-}
 type HttpSessionKey
     = HttpSessionKey Value -- This actually holds the `callback` in an util.promisify()
 
 
+{-| The ports that need to be wired up to elm-serverless bridge/index.js.
+-}
 type alias Ports msg =
     { request : ({ session : Value, req : Value } -> msg) -> Sub msg
     , response : { session : Value, res : Value } -> Cmd msg
     }
 
 
+{-| A protocol defining the ports and route parser neede to build the HttpServer API.
+-}
 type alias Protocol msg route =
     { ports : Ports msg
     , parseRoute : Url -> Maybe route
     }
 
 
+{-| The HttpServer API.
+-}
 type alias HttpServerApi msg route =
     { request : (HttpSessionKey -> Result Error (ApiRequest route) -> msg) -> Sub msg
     , response : HttpSessionKey -> Response -> Cmd msg
     }
 
 
+{-| Builds an instance of the HttpServer API.
+-}
 httpServerApi : Protocol msg route -> HttpServerApi msg route
 httpServerApi protocol =
     { request = requestSub protocol
@@ -67,11 +83,15 @@ httpServerApi protocol =
     }
 
 
+{-| Possible errors arising from HttpServer operations.
+-}
 type Error
     = NoMatchingRoute String
     | InvalidRequestFormat Decode.Error
 
 
+{-| Turns HttpServer errors into strings.
+-}
 errorToString : Error -> String
 errorToString error =
     case error of
@@ -82,6 +102,12 @@ errorToString error =
             "Problem decoding the request: " ++ Decode.errorToString decodeError
 
 
+{-| Turns HttpServer errors into a format with a message and further details as JSON.
+
+The details should provide some way to trace the error, such as a stacktrace
+or parameters and so on.
+
+-}
 errorToDetails : Error -> { message : String, details : Value }
 errorToDetails error =
     case error of

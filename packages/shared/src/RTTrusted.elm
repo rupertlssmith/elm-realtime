@@ -8,6 +8,8 @@ The trusted node can examine and operate on any realtime events, that pass throu
 
 The trusted node is responsible for generating model snapshots from event logs.
 
+@docs program
+
 -}
 
 import Json.Decode exposing (Value)
@@ -18,6 +20,8 @@ type Error
     = Error
 
 
+{-| The program type for the trusted node.
+-}
 program :
     -- These should be subscriptions and commands.
     { init : flags -> ( model, Cmd msg )
@@ -29,6 +33,8 @@ program =
     Platform.worker
 
 
+{-| An API for events to be processed by the realtime node.
+-}
 type alias RTTrustedAPI a msg =
     { compact :
         ({ session : Value

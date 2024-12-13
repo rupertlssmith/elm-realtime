@@ -1,27 +1,10 @@
 module Realtime exposing
-    ( AsyncEvent(..)
-    , Config
-    , Delta
-    , Error
-    , Model
-    , RTMessage(..)
-    , RealtimeApi
-    , Snapshot
-    , errorToDetails
-    , errorToString
-    , next
-    , realtimeApi
+    ( Config
+    , Model, Delta
+    , RealtimeApi, realtimeApi
+    , AsyncEvent(..), RTMessage(..), Snapshot, next
+    , Error, errorToDetails, errorToString
     )
-
-import Http exposing (Error(..))
-import Json.Decode as Decode exposing (Decoder)
-import Json.Decode.Extra as DE
-import Json.Encode as Encode exposing (Value)
-import Momento exposing (Error, MomentoSessionKey, OpenParams, SubscribeParams)
-import Procedure exposing (Procedure)
-import Procedure.Program
-import Random
-
 
 {-| Realtime channels.
 
@@ -35,6 +18,7 @@ import Random
 # The Realtime API
 
 @docs RealtimeApi, realtimeApi
+@docs AsyncEvent, RTMessage, Snapshot, next
 
 
 # Error reporting
@@ -42,10 +26,27 @@ import Random
 @docs Error, errorToDetails, errorToString
 
 -}
+
+import Http exposing (Error(..))
+import Json.Decode as Decode exposing (Decoder)
+import Json.Decode.Extra as DE
+import Json.Encode as Encode exposing (Value)
+import Momento exposing (Error, MomentoSessionKey, OpenParams, SubscribeParams)
+import Procedure exposing (Procedure)
+import Procedure.Program
+import Random
+
+
+{-| Configuration parameters.
+-}
 type alias Config =
-    { rtChannelApiUrl : String, momentoApiKey : String }
+    { rtChannelApiUrl : String
+    , momentoApiKey : String
+    }
 
 
+{-| The Realtime API.
+-}
 type alias RealtimeApi msg =
     { init : Config -> Model
     , join : Model -> (Delta (Result Error (List RTMessage)) -> msg) -> Cmd msg
@@ -55,6 +56,8 @@ type alias RealtimeApi msg =
     }
 
 
+{-| Provides an instance of the Realtime API.
+-}
 realtimeApi : (Procedure.Program.Msg msg -> msg) -> Momento.Ports msg -> RealtimeApi msg
 realtimeApi pt ports =
     { init = init
@@ -65,22 +68,34 @@ realtimeApi pt ports =
     }
 
 
+{-| Applied a Delta to the Model to derive a new Model and a data element.
+-}
 next : Delta a -> Model -> ( Model, a )
 next (Delta delta) model =
     delta model
 
 
+{-| A Snapshot of a realtime distributed data model.
+
+The seq number will match the sequence number of the persisted event in the event log that can be interpreted to
+reach this snapshot state.
+
+-}
 type alias Snapshot a =
     { seq : Int
     , model : a
     }
 
 
+{-| A Realtime message.
+-}
 type RTMessage
     = Persisted Int Value
     | Transient Value
 
 
+{-| The Realtime model tracking the state of the messaging system.
+-}
 type Model
     = Private Implementation
 
@@ -93,6 +108,8 @@ type alias Implementation =
     }
 
 
+{-| A Delta represents a change that can be applied to the Model and will also provide a data element when it is.
+-}
 type Delta a
     = Delta (Model -> ( Model, a ))
 
@@ -157,6 +174,8 @@ buildMomentoApi pt ports =
 -- Error reporting.
 
 
+{-| Possible errors arising from Realtime operations.
+-}
 type Error
     = HttpError Http.Error
     | MomentoError Momento.Error
@@ -183,6 +202,8 @@ httpErrorToString err =
             "Bad Body: " ++ val
 
 
+{-| Turns Realtime errors into strings.
+-}
 errorToString : Error -> String
 errorToString err =
     case err of
@@ -199,6 +220,12 @@ errorToString err =
             msg
 
 
+{-| Turns Realtime errors into a format with a message and further details as JSON.
+
+The details should provide some way to trace the error, such as a stacktrace
+or parameters and so on.
+
+-}
 errorToDetails : Error -> { message : String, details : Value }
 errorToDetails err =
     case err of
@@ -552,6 +579,8 @@ momentoResultToDelta state tag res =
 -- Receive messages from the channel.
 
 
+{-| Events that can be reported asychronously through a Realtime subscription.
+-}
 type AsyncEvent
     = OnMessage RTMessage
     | AsyncError Error

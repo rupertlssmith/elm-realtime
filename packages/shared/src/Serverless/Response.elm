@@ -134,12 +134,16 @@ contentType { body, charset } =
         ++ Charset.toString charset
 
 
+{-| An HTTP 200 ok message as a string.
+-}
 ok200 : String -> Response
 ok200 msg =
     init
         |> setBody (Body.text msg)
 
 
+{-| An HTTP 500 error message as a string.
+-}
 err500 : String -> Response
 err500 err =
     init
@@ -147,12 +151,16 @@ err500 err =
         |> setStatus 500
 
 
+{-| An HTTP 200 ok message as a JSON.
+-}
 ok200json : Value -> Response
 ok200json msg =
     init
         |> setBody (Body.json msg)
 
 
+{-| An HTTP 500 error message as a JSON.
+-}
 err500json : Value -> Response
 err500json err =
     init
@@ -160,6 +168,8 @@ err500json err =
         |> setStatus 500
 
 
+{-| An HTTP 400 not found message as a JSON.
+-}
 notFound400json : Value -> Response
 notFound400json err =
     init
