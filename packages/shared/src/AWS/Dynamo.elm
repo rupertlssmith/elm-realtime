@@ -193,7 +193,7 @@ errorToString error =
             "AWS.Dynamo: " ++ Decode.errorToString err
 
 
-{-| Turns DynamoDB into a format with a message and further details as JSON.
+{-| Turns DynamoDB errors into a format with a message and further details as JSON.
 
 The details should provide some way to trace the error, such as a stacktrace
 or parameters and so on.

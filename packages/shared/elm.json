@@ -13,7 +13,6 @@
         "Serverless.Charset",
         "Serverless.HttpServer",
         "Serverless.IpAddress",
-        "Serverless.KeyValueList",
         "Serverless.Request",
         "Serverless.Response"
     ],

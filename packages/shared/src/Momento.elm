@@ -1,12 +1,12 @@
 module Momento exposing
     ( Ports
     , MomentoApi, momentoApi
+    , CacheItem
     , OpenParams, MomentoSessionKey
     , PushListParams
     , WebhookParams
     , SubscribeParams, PublishParams
     , Error, errorToDetails, errorToString
-    , CacheItem
     )
 
 {-| A wrapper around the GoMomento serverless cache API.
@@ -20,6 +20,7 @@ module Momento exposing
 # Packaged API
 
 @docs MomentoApi, momentoApi
+@docs CacheItem
 
 
 # Synchronous operations
@@ -50,6 +51,8 @@ import Procedure.Program
 -- API
 
 
+{-| The ports that need to be wired up to momento.js
+-}
 type alias Ports msg =
     { open : { id : String, cache : String, apiKey : String } -> Cmd msg
     , close : { id : String, session : Value } -> Cmd msg
@@ -64,6 +67,8 @@ type alias Ports msg =
     }
 
 
+{-| The Momento API.
+-}
 type alias MomentoApi msg =
     { open : OpenParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
     , subscribe : MomentoSessionKey -> SubscribeParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
@@ -76,6 +81,8 @@ type alias MomentoApi msg =
     }
 
 
+{-| Creates an instance of the Momento API.
+-}
 momentoApi : (Procedure.Program.Msg msg -> msg) -> Ports msg -> MomentoApi msg
 momentoApi pt ports =
     { open = open pt ports
@@ -89,47 +96,73 @@ momentoApi pt ports =
     }
 
 
+{-| A key containing session details that must be passed to all Momento operations after opening a Cache.
+-}
 type MomentoSessionKey
     = MomentoSessionKey Value
 
 
+{-| Parameters for the Cache Open operation
+-}
 type alias OpenParams =
     { cache : String, apiKey : String }
 
 
+{-| Parameters for the Topic Subscribe operation
+-}
 type alias SubscribeParams =
     { topic : String }
 
 
+{-| Parameters for the Topic Publish operation
+-}
 type alias PublishParams =
     { topic : String, payload : Value }
 
 
+{-| Parameters for the PushList operation
+-}
 type alias PushListParams =
     { list : String, payload : Value }
 
 
+{-| Parameters for the PopList operation
+-}
 type alias PopListParams =
     { list : String }
 
 
+{-| A JSON item in the Momento cache.
+-}
 type alias CacheItem =
     { payload : Value }
 
 
+{-| Parameters for the Topic CreateWebhook operation.
+-}
 type alias WebhookParams =
     { name : String, topic : String, url : String }
 
 
+{-| Possible errors arising from Momento operations.
+-}
 type Error
     = MomentoError { message : String, details : Value }
 
 
+{-| Turns Momento errors into strings.
+-}
 errorToString : Error -> String
 errorToString _ =
     "Momento Error"
 
 
+{-| Turns Momento errors into a format with a message and further details as JSON.
+
+The details should provide some way to trace the error, such as a stacktrace
+or parameters and so on.
+
+-}
 errorToDetails : Error -> { message : String, details : Value }
 errorToDetails (MomentoError err) =
     err
