@@ -11,6 +11,8 @@ module App.Component exposing
 import Html.Styled as Html exposing (Html)
 import Json.Decode as Decode
 import Json.Encode as Encode exposing (Value)
+import Momento
+import Ports
 import Procedure.Program
 import Realtime exposing (AsyncEvent(..), Delta, Error, RTMessage(..), Snapshot)
 import Update2 as U2
@@ -45,9 +47,24 @@ type alias Protocol submodel msg model =
     }
 
 
+momentoPorts : Momento.Ports msg
+momentoPorts =
+    { open = Ports.mmOpen
+    , close = Ports.mmClose
+    , subscribe = Ports.mmSubscribe
+    , publish = Ports.mmPublish
+    , onMessage = Ports.mmOnMessage
+    , pushList = Ports.mmPushList
+    , popList = Ports.mmPopList
+    , createWebhook = Ports.mmCreateWebhook
+    , response = Ports.mmResponse
+    , asyncError = Ports.mmAsyncError
+    }
+
+
 realtimeApi : Realtime.RealtimeApi Msg
 realtimeApi =
-    Realtime.realtimeApi ProcedureMsg
+    Realtime.realtimeApi ProcedureMsg momentoPorts
 
 
 init :
