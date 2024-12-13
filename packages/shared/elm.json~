@@ -1,0 +1,27 @@
+{
+    "type": "package",
+    "name": "the-sett/elm-realtime",
+    "summary": "Realtime distributed Elm applications",
+    "license": "BSD-3-Clause",
+    "version": "1.0.0",
+    "exposed-modules": [
+	"Momento",
+	"Realtime",
+	"RTTrusted",
+	"AWS/Dynamo",
+	"Serverless/Body",
+	"Serverless/Charset",
+	"Serverless/HttpServer",
+	"Serverless/IpAddress",
+	"Serverless/KeyValueList",
+	"Serverless/Request",
+	"Serverless/Response"
+    ],
+    "elm-version": "0.19.0 <= v < 0.20.0",
+    "dependencies": {
+        "elm/core": "1.0.0 <= v < 2.0.0"
+    },
+    "test-dependencies": {
+        "elm-explorations/test": "1.2.2 <= v < 2.0.0"
+    }
+}

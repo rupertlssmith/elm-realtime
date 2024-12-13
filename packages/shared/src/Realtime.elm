@@ -18,7 +18,6 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Extra as DE
 import Json.Encode as Encode exposing (Value)
 import Momento exposing (Error, MomentoSessionKey, OpenParams, SubscribeParams)
-import Ports
 import Procedure exposing (Procedure)
 import Procedure.Program
 import Random
@@ -56,13 +55,13 @@ type alias RealtimeApi msg =
     }
 
 
-realtimeApi : (Procedure.Program.Msg msg -> msg) -> RealtimeApi msg
-realtimeApi pt =
+realtimeApi : (Procedure.Program.Msg msg -> msg) -> Momento.Ports msg -> RealtimeApi msg
+realtimeApi pt ports =
     { init = init
-    , join = join pt
-    , publishPersisted = publishPersisted pt
-    , publishTransient = publishTransient pt
-    , subscribe = subscribe pt
+    , join = join pt ports
+    , publishPersisted = publishPersisted pt ports
+    , publishTransient = publishTransient pt ports
+    , subscribe = subscribe pt ports
     }
 
 
@@ -138,18 +137,18 @@ channelDecoder =
         |> DE.andMap (Decode.field "webhook" Decode.string)
 
 
-buildMomentoApi : (Procedure.Program.Msg msg -> msg) -> Momento.MomentoApi msg
-buildMomentoApi pt =
-    { open = Ports.mmOpen
-    , close = Ports.mmClose
-    , subscribe = Ports.mmSubscribe
-    , publish = Ports.mmPublish
-    , onMessage = Ports.mmOnMessage
-    , pushList = Ports.mmPushList
-    , popList = Ports.mmPopList
-    , createWebhook = Ports.mmCreateWebhook
-    , response = Ports.mmResponse
-    , asyncError = Ports.mmAsyncError
+buildMomentoApi : (Procedure.Program.Msg msg -> msg) -> Momento.Ports msg -> Momento.MomentoApi msg
+buildMomentoApi pt ports =
+    { open = ports.open
+    , close = ports.close
+    , subscribe = ports.subscribe
+    , publish = ports.publish
+    , onMessage = ports.onMessage
+    , pushList = ports.pushList
+    , popList = ports.popList
+    , createWebhook = ports.createWebhook
+    , response = ports.response
+    , asyncError = ports.asyncError
     }
         |> Momento.momentoApi pt
 
@@ -244,16 +243,17 @@ init props =
 -}
 join :
     (Procedure.Program.Msg msg -> msg)
+    -> Momento.Ports msg
     -> Model
     -> (Delta (Result Error (List RTMessage)) -> msg)
     -> Cmd msg
-join pt (Private model) rt =
+join pt ports (Private model) rt =
     let
         _ =
             Debug.log "Realtime.join" "called"
 
         momentoApi =
-            buildMomentoApi pt
+            buildMomentoApi pt ports
 
         initProcedure : Procedure Error JoiningProps msg
         initProcedure =
@@ -470,17 +470,18 @@ saved into an event log, before being forwarded to all clients on the same chann
 -}
 publishPersisted :
     (Procedure.Program.Msg msg -> msg)
+    -> Momento.Ports msg
     -> Model
     -> Value
     -> (Delta (Maybe Error) -> msg)
     -> Cmd msg
-publishPersisted pt (Private model) payload tag =
+publishPersisted pt ports (Private model) payload tag =
     let
         _ =
             Debug.log "Realtime.publishPersisted" "called"
 
         momentoApi =
-            buildMomentoApi pt
+            buildMomentoApi pt ports
     in
     case model.state of
         RunningState state ->
@@ -507,17 +508,18 @@ not be saved.
 -}
 publishTransient :
     (Procedure.Program.Msg msg -> msg)
+    -> Momento.Ports msg
     -> Model
     -> Value
     -> (Delta (Maybe Error) -> msg)
     -> Cmd msg
-publishTransient pt (Private model) payload tag =
+publishTransient pt ports (Private model) payload tag =
     let
         _ =
             Debug.log "Realtime.publishTransient" "called"
 
         momentoApi =
-            buildMomentoApi pt
+            buildMomentoApi pt ports
     in
     case model.state of
         RunningState state ->
@@ -558,13 +560,14 @@ type AsyncEvent
 
 subscribe :
     (Procedure.Program.Msg msg -> msg)
+    -> Momento.Ports msg
     -> Model
     -> (Delta AsyncEvent -> msg)
     -> Sub msg
-subscribe pt (Private model) tag =
+subscribe pt ports (Private model) tag =
     let
         momentoApi =
-            buildMomentoApi pt
+            buildMomentoApi pt ports
 
         modfn val =
             case Decode.decodeValue rtMessageDecoder val of
