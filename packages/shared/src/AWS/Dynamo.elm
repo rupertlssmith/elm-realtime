@@ -14,7 +14,7 @@ module AWS.Dynamo exposing
     , rangeKeyEquals, rangeKeyLessThan, rangeKeyLessThanOrEqual, rangeKeyGreaterThan
     , rangeKeyGreaterThanOrEqual, rangeKeyBetween
     , int, string
-    , Error(..), errorToString, errorToDetails
+    , Error, errorToString, errorToDetails
     )
 
 {-| A wrapper around the AWS DynamoDB Document API.
