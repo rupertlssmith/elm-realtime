@@ -1,4 +1,4 @@
-module Serverless.HttpServer exposing
+module HttpServer exposing
     ( Ports, Protocol
     , HttpServerApi, httpServerApi
     , HttpSessionKey, ApiRequest

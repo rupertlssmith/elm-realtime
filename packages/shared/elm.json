@@ -8,10 +8,10 @@
         "Momento",
         "Realtime",
         "RTTrusted",
+        "HttpServer",
         "AWS.Dynamo",
         "Serverless.Body",
         "Serverless.Charset",
-        "Serverless.HttpServer",
         "Serverless.IpAddress",
         "Serverless.Request",
         "Serverless.Response"

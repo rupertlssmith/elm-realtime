@@ -11,9 +11,9 @@ import DB.ChannelTable as ChannelTable
 import DB.EventLogTable as EventLogTable
 import EventLog.Msg exposing (Msg(..))
 import EventLog.Route as Route exposing (Route(..))
+import HttpServer as HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Momento exposing (CacheItem, Error, MomentoSessionKey)
 import Ports
-import Serverless.HttpServer as HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 
 
 dynamoPorts : Dynamo.Ports Msg
