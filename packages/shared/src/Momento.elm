@@ -71,12 +71,12 @@ type alias Ports msg =
 -}
 type alias MomentoApi msg =
     { open : OpenParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
-    , subscribe : MomentoSessionKey -> SubscribeParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
-    , pushList : MomentoSessionKey -> PushListParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
+    , subscribe : MomentoSessionKey -> SubscribeParams -> (Result Error () -> msg) -> Cmd msg
+    , pushList : MomentoSessionKey -> PushListParams -> (Result Error () -> msg) -> Cmd msg
     , popList : MomentoSessionKey -> PopListParams -> (Result Error (Maybe CacheItem) -> msg) -> Cmd msg
-    , webhook : MomentoSessionKey -> WebhookParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
-    , publish : MomentoSessionKey -> PublishParams -> (Result Error MomentoSessionKey -> msg) -> Cmd msg
-    , onMessage : (MomentoSessionKey -> Value -> msg) -> Sub msg
+    , webhook : MomentoSessionKey -> WebhookParams -> (Result Error () -> msg) -> Cmd msg
+    , publish : MomentoSessionKey -> PublishParams -> (Result Error () -> msg) -> Cmd msg
+    , onMessage : (Value -> msg) -> Sub msg
     , asyncError : (Error -> msg) -> Sub msg
     }
 
@@ -172,8 +172,29 @@ errorToDetails (MomentoError err) =
 -- Implementation
 
 
-decodeResponse : { a | type_ : String, response : Value } -> Result Error MomentoSessionKey
+decodeResponse : { a | type_ : String, response : Value } -> Result Error ()
 decodeResponse res =
+    case res.type_ of
+        "Ok" ->
+            Ok ()
+
+        "Error" ->
+            MomentoError
+                { message = "MomentoError"
+                , details = res.response
+                }
+                |> Err
+
+        _ ->
+            MomentoError
+                { message = "Momento Unknown response type: " ++ res.type_
+                , details = Encode.null
+                }
+                |> Err
+
+
+decodeResponseWithSessionKey : { a | type_ : String, response : Value } -> Result Error MomentoSessionKey
+decodeResponseWithSessionKey res =
     case res.type_ of
         "Ok" ->
             MomentoSessionKey res.response |> Ok
@@ -228,7 +249,7 @@ open pt ports openParams dt =
         |> Channel.connect ports.response
         |> Channel.filter (\key { id } -> id == key)
         |> Channel.acceptOne
-        |> Procedure.run pt (\res -> decodeResponse res |> dt)
+        |> Procedure.run pt (\res -> decodeResponseWithSessionKey res |> dt)
 
 
 subscribe :
@@ -236,7 +257,7 @@ subscribe :
     -> Ports msg
     -> MomentoSessionKey
     -> SubscribeParams
-    -> (Result Error MomentoSessionKey -> msg)
+    -> (Result Error () -> msg)
     -> Cmd msg
 subscribe pt ports (MomentoSessionKey sessionKey) subscribeParams dt =
     Channel.open (\key -> ports.subscribe { id = key, session = sessionKey, topic = subscribeParams.topic })
@@ -253,7 +274,7 @@ pushList :
     -> Ports msg
     -> MomentoSessionKey
     -> PushListParams
-    -> (Result Error MomentoSessionKey -> msg)
+    -> (Result Error () -> msg)
     -> Cmd msg
 pushList pt ports (MomentoSessionKey sessionKey) { list, payload } dt =
     Channel.open (\key -> ports.pushList { id = key, session = sessionKey, list = list, payload = payload })
@@ -285,7 +306,7 @@ webhook :
     -> Ports msg
     -> MomentoSessionKey
     -> WebhookParams
-    -> (Result Error MomentoSessionKey -> msg)
+    -> (Result Error () -> msg)
     -> Cmd msg
 webhook pt ports (MomentoSessionKey sessionKey) { name, topic, url } dt =
     Channel.open (\key -> ports.createWebhook { id = key, session = sessionKey, name = name, topic = topic, url = url })
@@ -303,7 +324,7 @@ publish :
     -> Ports msg
     -> MomentoSessionKey
     -> PublishParams
-    -> (Result Error MomentoSessionKey -> msg)
+    -> (Result Error () -> msg)
     -> Cmd msg
 publish pt ports (MomentoSessionKey sessionKey) { topic, payload } dt =
     --ports.publish { id = "", session = sessionKey, topic = topic, payload = payload }
@@ -317,7 +338,7 @@ publish pt ports (MomentoSessionKey sessionKey) { topic, payload } dt =
 
 {-| Receives new incoming messages on a topic subscription.
 -}
-onMessage : Ports msg -> (MomentoSessionKey -> Value -> msg) -> Sub msg
+onMessage : Ports msg -> (Value -> msg) -> Sub msg
 onMessage ports dt =
     ports.onMessage
         (\{ session, payload } ->
@@ -325,7 +346,7 @@ onMessage ports dt =
                 _ =
                     Debug.log "Momento.onMessage" "called"
             in
-            dt (MomentoSessionKey session) payload
+            dt payload
         )
 
 

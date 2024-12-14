@@ -89,6 +89,7 @@ setupChannelWebhook component channelName sessionKey =
         }
         |> Procedure.fetchResult
         |> Procedure.mapError Momento.errorToDetails
+        |> Procedure.map (always sessionKey)
 
 
 recordEventsLogMetaData :

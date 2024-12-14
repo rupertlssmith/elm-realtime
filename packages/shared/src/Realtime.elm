@@ -326,7 +326,7 @@ combine res =
     in
     case res of
         Err err ->
-            errError err
+            resultError err
 
         Ok joinProps ->
             joiner joinProps |> Delta
@@ -433,8 +433,7 @@ subscribeModelTopic momentoApi state =
         { topic = state.channel.modelTopic }
         |> Procedure.fetchResult
         |> Procedure.mapError MomentoError
-        |> Procedure.map
-            (\sessionKey -> { state | sessionKey = sessionKey })
+        |> Procedure.map (always state)
 
 
 joinChannel :
@@ -516,8 +515,8 @@ publishPersisted pt ports (Private model) payload tag =
                 { list = state.channel.saveList, payload = encodeUnsaved payload }
                 |> Procedure.fetchResult
                 |> Procedure.andThen
-                    (\nextSessionKey ->
-                        momentoApi.publish nextSessionKey
+                    (\_ ->
+                        momentoApi.publish state.sessionKey
                             { topic = state.channel.saveTopic
                             , payload = encodeNotice
                             }
@@ -562,12 +561,12 @@ publishTransient pt ports (Private model) payload tag =
             Cmd.none
 
 
-momentoResultToDelta : RunningProps -> (Delta (Maybe Error) -> msg) -> Result Error MomentoSessionKey -> msg
+momentoResultToDelta : RunningProps -> (Delta (Maybe Error) -> msg) -> Result Error () -> msg
 momentoResultToDelta state tag res =
     case res of
-        Ok nextSessionKey ->
+        Ok () ->
             makeDeltaFn
-                (\m -> { m | state = { state | sessionKey = nextSessionKey } |> RunningState })
+                (\m -> { m | state = state |> RunningState })
                 Nothing
                 |> tag
 
@@ -612,10 +611,8 @@ subscribe pt ports (Private model) tag =
     case model.state of
         -- In Running state, forward all events to the application.
         RunningState _ ->
-            [ (\fn -> momentoApi.onMessage (\_ -> fn))
-                modfn
-            , momentoApi.asyncError
-                errfn
+            [ momentoApi.onMessage modfn
+            , momentoApi.asyncError errfn
             ]
                 |> Sub.batch
 
@@ -631,14 +628,14 @@ subscribe pt ports (Private model) tag =
                     Err err ->
                         asyncError (DecodeError err) |> tag
             )
-                |> (\fn -> momentoApi.onMessage (\_ -> fn))
+                |> momentoApi.onMessage
 
         _ ->
             Sub.none
 
 
-errError : Error -> Delta (Result Error a)
-errError err =
+resultError : Error -> Delta (Result Error a)
+resultError err =
     makeDeltaFn
         (\m -> { m | state = err |> FailedState })
         (Err err)
