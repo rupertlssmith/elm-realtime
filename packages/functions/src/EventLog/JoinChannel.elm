@@ -10,7 +10,7 @@ import EventLog.Route exposing (Route)
 import HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Json.Encode as Encode exposing (Value)
 import Procedure
-import Serverless.Response as Response exposing (Response)
+import Http.Response as Response exposing (Response)
 import Update2 as U2
 
 

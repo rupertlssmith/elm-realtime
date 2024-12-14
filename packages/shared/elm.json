@@ -10,11 +10,11 @@
         "RTTrusted",
         "HttpServer",
         "AWS.Dynamo",
-        "Serverless.Body",
-        "Serverless.Charset",
-        "Serverless.IpAddress",
-        "Serverless.Request",
-        "Serverless.Response"
+        "Http.Body",
+        "Http.Charset",
+        "Http.IpAddress",
+        "Http.Request",
+        "Http.Response"
     ],
     "elm-version": "0.19.0 <= v < 0.20.0",
     "dependencies": {

@@ -1,4 +1,4 @@
-module Serverless.Response exposing
+module Http.Response exposing
     ( Response, Status
     , addHeader, setBody, updateBody, setStatus
     , init, encode
@@ -23,9 +23,9 @@ module Serverless.Response exposing
 
 import Json.Decode exposing (Value)
 import Json.Encode as Encode
-import Serverless.Body as Body exposing (Body, text)
-import Serverless.Charset as Charset exposing (Charset)
-import Serverless.KeyValueList as KeyValueList
+import Http.Body as Body exposing (Body, text)
+import Http.Charset as Charset exposing (Charset)
+import Http.KeyValueList as KeyValueList
 
 
 {-| An HTTP response.

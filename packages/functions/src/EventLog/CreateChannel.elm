@@ -14,7 +14,7 @@ import HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Momento exposing (CacheItem, Error, MomentoSessionKey)
 import Procedure
 import Random
-import Serverless.Response as Response exposing (Response)
+import Http.Response as Response exposing (Response)
 import Time
 import Update2 as U2
 

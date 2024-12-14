@@ -1,4 +1,4 @@
-module Serverless.Body exposing
+module Http.Body exposing
     ( Body
     , text, json, binary, empty
     , asJson, asText, isEmpty, contentType

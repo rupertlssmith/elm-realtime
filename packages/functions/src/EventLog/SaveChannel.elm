@@ -16,7 +16,7 @@ import Json.Decode.Extra as DE
 import Json.Encode as Encode
 import Momento exposing (CacheItem, Error, MomentoSessionKey)
 import Procedure
-import Serverless.Response as Response exposing (Response)
+import Http.Response as Response exposing (Response)
 import Time
 import Update2 as U2
 

@@ -1,4 +1,4 @@
-module Serverless.Request exposing
+module Http.Request exposing
     ( Request, Method(..), Scheme(..)
     , url, method, path, queryString
     , body
@@ -50,9 +50,9 @@ unit tests.
 import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder, andThen)
 import Json.Decode.Pipeline exposing (hardcoded, required)
-import Serverless.Body as Body exposing (Body)
-import Serverless.IpAddress as IpAddress exposing (IpAddress)
-import Serverless.KeyValueList as KeyValueList
+import Http.Body as Body exposing (Body)
+import Http.IpAddress as IpAddress exposing (IpAddress)
+import Http.KeyValueList as KeyValueList
 
 
 {-| An HTTP request.
@@ -64,7 +64,7 @@ type Request
 {-| HTTP request method.
 
     -- to use shorthand notation
-    import Serverless.Conn.Request exposing (Method(..))
+    import Http.Conn.Request exposing (Method(..))
 
 -}
 type Method
@@ -115,7 +115,7 @@ methodToString meth =
 {-| Request scheme (a.k.a. protocol).
 
     -- to use shorthand notation
-    import Serverless.Conn.Request exposing (Scheme(..))
+    import Http.Conn.Request exposing (Scheme(..))
 
 -}
 type Scheme
@@ -265,7 +265,7 @@ remoteIp (Request request) =
     request.remoteIp
 
 
-{-| Serverless deployment stage.
+{-| Http deployment stage.
 
 See <https://serverless.com/framework/docs/providers/aws/guide/deploying/>
 

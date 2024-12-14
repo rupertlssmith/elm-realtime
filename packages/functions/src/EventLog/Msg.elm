@@ -5,7 +5,7 @@ import HttpServer as HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Momento exposing (CacheItem, Error, MomentoSessionKey)
 import Procedure.Program
 import Random
-import Serverless.Response exposing (Response)
+import Http.Response exposing (Response)
 
 
 type Msg
