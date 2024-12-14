@@ -578,7 +578,7 @@ momentoResultToDelta state tag res =
 -- Receive messages from the channel.
 
 
-{-| Events that can be reported asychronously through a Realtime subscription.
+{-| Events that can be reported asynchronously through a Realtime subscription.
 -}
 type AsyncEvent
     = OnMessage RTMessage
