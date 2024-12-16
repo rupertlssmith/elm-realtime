@@ -1,6 +1,9 @@
 module EventLog.SaveChannel exposing (saveChannel)
 
+import AWS.Config exposing (Region)
+import AWS.Credentials exposing (Credentials)
 import AWS.Dynamo as Dynamo exposing (Error(..))
+import AWS.Http exposing (Error(..))
 import AWS.Sqs as Sqs
 import DB.EventLogTable as EventLogTable
 import Dict
@@ -24,8 +27,13 @@ import Update2 as U2
 
 type alias SaveChannel a =
     { a
-        | momentoApiKey : String
+        | awsRegion : String
+        , awsAccessKeyId : String
+        , awsSecretAccessKey : String
+        , awsSessionToken : String
+        , momentoApiKey : String
         , eventLogTable : String
+        , snapshotQueueUrl : String
         , eventLog : Model
     }
 
@@ -387,7 +395,41 @@ notifyCompactor :
     -> ()
     -> Procedure.Procedure ErrorFormat () Msg
 notifyCompactor component channelName _ =
-    Debug.todo ""
+    let
+        notice =
+            Sqs.sendMessage
+                { delaySeconds = Nothing
+                , messageAttributes = Nothing
+                , messageBody = "test"
+                , messageDeduplicationId = Nothing
+                , messageGroupId = Nothing
+                , messageSystemAttributes = Nothing
+                , queueUrl = component.snapshotQueueUrl
+                }
+
+        credentials =
+            AWS.Credentials.fromAccessKeys
+                component.awsAccessKeyId
+                component.awsSecretAccessKey
+                |> AWS.Credentials.withSessionToken component.awsSessionToken
+
+        notifyCmd =
+            notice
+                |> AWS.Http.send (Sqs.service component.awsRegion) credentials
+    in
+    Procedure.fromTask notifyCmd
+        |> Procedure.mapError awsErrorToDetails
+        |> Procedure.map (always ())
+
+
+awsErrorToDetails : AWS.Http.Error AWS.Http.AWSAppError -> ErrorFormat
+awsErrorToDetails err =
+    case err of
+        HttpError hterr ->
+            { message = "Http.Error: " ++ Debug.toString hterr, details = Encode.null }
+
+        AWSError _ ->
+            { message = "AWSError", details = Encode.null }
 
 
 {-| Decide whether to trigger a compaction notification based on the timestamp of the last compaction

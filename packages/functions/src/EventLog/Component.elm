@@ -19,13 +19,13 @@ import EventLog.Model as Model exposing (Model(..), ReadyState, StartState)
 import EventLog.Msg as Msg exposing (Msg(..))
 import EventLog.Route exposing (Route(..))
 import EventLog.SaveChannel as SaveChannel
+import Http.Request as Request exposing (Method(..))
+import Http.Response as Response exposing (Response)
 import HttpServer as HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Momento exposing (CacheItem, Error, MomentoSessionKey)
 import Procedure.Program
 import Random
 import Result.Extra
-import Http.Request as Request exposing (Method(..))
-import Http.Response as Response exposing (Response)
 import Update2 as U2
 
 
@@ -45,10 +45,15 @@ type alias Protocol submodel msg model =
 
 type alias Component a =
     { a
-        | momentoApiKey : String
+        | awsRegion : String
+        , awsAccessKeyId : String
+        , awsSecretAccessKey : String
+        , awsSessionToken : String
+        , momentoApiKey : String
         , channelApiUrl : String
         , channelTable : String
         , eventLogTable : String
+        , snapshotQueueUrl : String
         , eventLog : Model
     }
 

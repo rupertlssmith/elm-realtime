@@ -2456,6 +2456,282 @@ function _Url_percentDecode(string)
 	{
 		return $elm$core$Maybe$Nothing;
 	}
+}
+
+// CREATE
+
+var _Regex_never = /.^/;
+
+var _Regex_fromStringWith = F2(function(options, string)
+{
+	var flags = 'g';
+	if (options.multiline) { flags += 'm'; }
+	if (options.caseInsensitive) { flags += 'i'; }
+
+	try
+	{
+		return $elm$core$Maybe$Just(new RegExp(string, flags));
+	}
+	catch(error)
+	{
+		return $elm$core$Maybe$Nothing;
+	}
+});
+
+
+// USE
+
+var _Regex_contains = F2(function(re, string)
+{
+	return string.match(re) !== null;
+});
+
+
+var _Regex_findAtMost = F3(function(n, re, str)
+{
+	var out = [];
+	var number = 0;
+	var string = str;
+	var lastIndex = re.lastIndex;
+	var prevLastIndex = -1;
+	var result;
+	while (number++ < n && (result = re.exec(string)))
+	{
+		if (prevLastIndex == re.lastIndex) break;
+		var i = result.length - 1;
+		var subs = new Array(i);
+		while (i > 0)
+		{
+			var submatch = result[i];
+			subs[--i] = submatch
+				? $elm$core$Maybe$Just(submatch)
+				: $elm$core$Maybe$Nothing;
+		}
+		out.push(A4($elm$regex$Regex$Match, result[0], result.index, number, _List_fromArray(subs)));
+		prevLastIndex = re.lastIndex;
+	}
+	re.lastIndex = lastIndex;
+	return _List_fromArray(out);
+});
+
+
+var _Regex_replaceAtMost = F4(function(n, re, replacer, string)
+{
+	var count = 0;
+	function jsReplacer(match)
+	{
+		if (count++ >= n)
+		{
+			return match;
+		}
+		var i = arguments.length - 3;
+		var submatches = new Array(i);
+		while (i > 0)
+		{
+			var submatch = arguments[i];
+			submatches[--i] = submatch
+				? $elm$core$Maybe$Just(submatch)
+				: $elm$core$Maybe$Nothing;
+		}
+		return replacer(A4($elm$regex$Regex$Match, match, arguments[arguments.length - 2], count, _List_fromArray(submatches)));
+	}
+	return string.replace(re, jsReplacer);
+});
+
+var _Regex_splitAtMost = F3(function(n, re, str)
+{
+	var string = str;
+	var out = [];
+	var start = re.lastIndex;
+	var restoreLastIndex = re.lastIndex;
+	while (n--)
+	{
+		var result = re.exec(string);
+		if (!result) break;
+		out.push(string.slice(start, result.index));
+		start = re.lastIndex;
+	}
+	out.push(string.slice(start));
+	re.lastIndex = restoreLastIndex;
+	return _List_fromArray(out);
+});
+
+var _Regex_infinity = Infinity;
+
+
+
+// SEND REQUEST
+
+var _Http_toTask = F3(function(router, toTask, request)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		function done(response) {
+			callback(toTask(request.expect.a(response)));
+		}
+
+		var xhr = new XMLHttpRequest();
+		xhr.addEventListener('error', function() { done($elm$http$Http$NetworkError_); });
+		xhr.addEventListener('timeout', function() { done($elm$http$Http$Timeout_); });
+		xhr.addEventListener('load', function() { done(_Http_toResponse(request.expect.b, xhr)); });
+		$elm$core$Maybe$isJust(request.tracker) && _Http_track(router, xhr, request.tracker.a);
+
+		try {
+			xhr.open(request.method, request.url, true);
+		} catch (e) {
+			return done($elm$http$Http$BadUrl_(request.url));
+		}
+
+		_Http_configureRequest(xhr, request);
+
+		request.body.a && xhr.setRequestHeader('Content-Type', request.body.a);
+		xhr.send(request.body.b);
+
+		return function() { xhr.c = true; xhr.abort(); };
+	});
+});
+
+
+// CONFIGURE
+
+function _Http_configureRequest(xhr, request)
+{
+	for (var headers = request.headers; headers.b; headers = headers.b) // WHILE_CONS
+	{
+		xhr.setRequestHeader(headers.a.a, headers.a.b);
+	}
+	xhr.timeout = request.timeout.a || 0;
+	xhr.responseType = request.expect.d;
+	xhr.withCredentials = request.allowCookiesFromOtherDomains;
+}
+
+
+// RESPONSES
+
+function _Http_toResponse(toBody, xhr)
+{
+	return A2(
+		200 <= xhr.status && xhr.status < 300 ? $elm$http$Http$GoodStatus_ : $elm$http$Http$BadStatus_,
+		_Http_toMetadata(xhr),
+		toBody(xhr.response)
+	);
+}
+
+
+// METADATA
+
+function _Http_toMetadata(xhr)
+{
+	return {
+		url: xhr.responseURL,
+		statusCode: xhr.status,
+		statusText: xhr.statusText,
+		headers: _Http_parseHeaders(xhr.getAllResponseHeaders())
+	};
+}
+
+
+// HEADERS
+
+function _Http_parseHeaders(rawHeaders)
+{
+	if (!rawHeaders)
+	{
+		return $elm$core$Dict$empty;
+	}
+
+	var headers = $elm$core$Dict$empty;
+	var headerPairs = rawHeaders.split('\r\n');
+	for (var i = headerPairs.length; i--; )
+	{
+		var headerPair = headerPairs[i];
+		var index = headerPair.indexOf(': ');
+		if (index > 0)
+		{
+			var key = headerPair.substring(0, index);
+			var value = headerPair.substring(index + 2);
+
+			headers = A3($elm$core$Dict$update, key, function(oldValue) {
+				return $elm$core$Maybe$Just($elm$core$Maybe$isJust(oldValue)
+					? value + ', ' + oldValue.a
+					: value
+				);
+			}, headers);
+		}
+	}
+	return headers;
+}
+
+
+// EXPECT
+
+var _Http_expect = F3(function(type, toBody, toValue)
+{
+	return {
+		$: 0,
+		d: type,
+		b: toBody,
+		a: toValue
+	};
+});
+
+var _Http_mapExpect = F2(function(func, expect)
+{
+	return {
+		$: 0,
+		d: expect.d,
+		b: expect.b,
+		a: function(x) { return func(expect.a(x)); }
+	};
+});
+
+function _Http_toDataView(arrayBuffer)
+{
+	return new DataView(arrayBuffer);
+}
+
+
+// BODY and PARTS
+
+var _Http_emptyBody = { $: 0 };
+var _Http_pair = F2(function(a, b) { return { $: 0, a: a, b: b }; });
+
+function _Http_toFormData(parts)
+{
+	for (var formData = new FormData(); parts.b; parts = parts.b) // WHILE_CONS
+	{
+		var part = parts.a;
+		formData.append(part.a, part.b);
+	}
+	return formData;
+}
+
+var _Http_bytesToBlob = F2(function(mime, bytes)
+{
+	return new Blob([bytes], { type: mime });
+});
+
+
+// PROGRESS
+
+function _Http_track(router, xhr, tracker)
+{
+	// TODO check out lengthComputable on loadstart event
+
+	xhr.upload.addEventListener('progress', function(event) {
+		if (xhr.c) { return; }
+		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Sending({
+			sent: event.loaded,
+			size: event.total
+		}))));
+	});
+	xhr.addEventListener('progress', function(event) {
+		if (xhr.c) { return; }
+		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Receiving({
+			received: event.loaded,
+			size: event.lengthComputable ? $elm$core$Maybe$Just(event.total) : $elm$core$Maybe$Nothing
+		}))));
+	});
 }var $elm$core$List$cons = _List_cons;
 var $elm$core$Elm$JsArray$foldr = _JsArray_foldr;
 var $elm$core$Array$foldr = F3(
@@ -3188,7 +3464,7 @@ var $author$project$API$init = function (flags) {
 	var eventLogMdl = _v0.a;
 	var eventLogCmds = _v0.b;
 	return _Utils_Tuple2(
-		{channelApiUrl: flags.channelApiUrl, channelTable: flags.channelTable, eventLog: eventLogMdl, eventLogTable: flags.eventLogTable, momentoApiKey: flags.momentoSecret.apiKey},
+		{awsAccessKeyId: flags.awsAccessKeyId, awsRegion: flags.awsRegion, awsSecretAccessKey: flags.awsSecretAccessKey, awsSessionToken: flags.awsSessionToken, channelApiUrl: flags.channelApiUrl, channelTable: flags.channelTable, eventLog: eventLogMdl, eventLogTable: flags.eventLogTable, momentoApiKey: flags.momentoSecret.apiKey, snapshotQueueUrl: flags.snapshotQueueUrl},
 		$elm$core$Platform$Cmd$batch(
 			_List_fromArray(
 				[eventLogCmds])));
@@ -8156,15 +8432,3437 @@ var $author$project$EventLog$SaveChannel$drainSaveList = F3(
 				A2($author$project$EventLog$SaveChannel$tryReadEvent, component, channelName),
 				$brian_watkins$elm_procedure$Procedure$provide(sessionKey)));
 	});
-var $elm$core$Debug$todo = _Debug_todo;
+var $elm$core$Debug$toString = _Debug_toString;
+var $author$project$EventLog$SaveChannel$awsErrorToDetails = function (err) {
+	if (err.$ === 'HttpError') {
+		var hterr = err.a;
+		return {
+			details: $elm$json$Json$Encode$null,
+			message: 'Http.Error: ' + $elm$core$Debug$toString(hterr)
+		};
+	} else {
+		return {details: $elm$json$Json$Encode$null, message: 'AWSError'};
+	}
+};
+var $the_sett$elm_aws_core$AWS$Credentials$fromAccessKeys = F2(
+	function (keyId, secretKey) {
+		return {accessKeyId: keyId, secretAccessKey: secretKey, sessionToken: $elm$core$Maybe$Nothing};
+	});
+var $elm$http$Http$BadBody = function (a) {
+	return {$: 'BadBody', a: a};
+};
+var $the_sett$elm_aws_core$AWS$Internal$Error$HttpError = function (a) {
+	return {$: 'HttpError', a: a};
+};
+var $the_sett$elm_aws_core$AWS$Http$addHeaders = F2(
+	function (headers, req) {
+		return _Utils_update(
+			req,
+			{
+				headers: A2($elm$core$List$append, req.headers, headers)
+			});
+	});
+var $the_sett$elm_aws_core$AWS$Http$AWSError = function (a) {
+	return {$: 'AWSError', a: a};
+};
+var $the_sett$elm_aws_core$AWS$Http$HttpError = function (a) {
+	return {$: 'HttpError', a: a};
+};
+var $the_sett$elm_aws_core$AWS$Http$internalErrToErr = function (error) {
+	if (error.$ === 'HttpError') {
+		var err = error.a;
+		return $the_sett$elm_aws_core$AWS$Http$HttpError(err);
+	} else {
+		var err = error.a;
+		return $the_sett$elm_aws_core$AWS$Http$AWSError(err);
+	}
+};
+var $elm$core$Task$mapError = F2(
+	function (convert, task) {
+		return A2(
+			$elm$core$Task$onError,
+			A2($elm$core$Basics$composeL, $elm$core$Task$fail, convert),
+			task);
+	});
+var $the_sett$elm_aws_core$AWS$Internal$Error$AWSError = function (a) {
+	return {$: 'AWSError', a: a};
+};
+var $elm$http$Http$BadUrl = function (a) {
+	return {$: 'BadUrl', a: a};
+};
+var $elm$http$Http$NetworkError = {$: 'NetworkError'};
+var $elm$http$Http$Timeout = {$: 'Timeout'};
+var $the_sett$elm_aws_core$AWS$Internal$V4$algorithm = 'AWS4-HMAC-SHA256';
+var $the_sett$elm_aws_core$AWS$Internal$Canonical$joinHeader = function (_v0) {
+	var key = _v0.a;
+	var val = _v0.b;
+	return key + (':' + val);
+};
+var $the_sett$elm_aws_core$AWS$Internal$Canonical$mergeSameHeaders = F2(
+	function (_v0, acc) {
+		var key1 = _v0.a;
+		var val1 = _v0.b;
+		if (acc.b) {
+			var _v2 = acc.a;
+			var key0 = _v2.a;
+			var val0 = _v2.b;
+			var rest = acc.b;
+			return _Utils_eq(key0, key1) ? A2(
+				$elm$core$List$cons,
+				_Utils_Tuple2(key0, val0 + (',' + val1)),
+				rest) : A2(
+				$elm$core$List$cons,
+				_Utils_Tuple2(key1, val1),
+				A2(
+					$elm$core$List$cons,
+					_Utils_Tuple2(key0, val0),
+					rest));
+		} else {
+			return A2(
+				$elm$core$List$cons,
+				_Utils_Tuple2(key1, val1),
+				acc);
+		}
+	});
+var $elm$regex$Regex$Match = F4(
+	function (match, index, number, submatches) {
+		return {index: index, match: match, number: number, submatches: submatches};
+	});
+var $elm$regex$Regex$fromStringWith = _Regex_fromStringWith;
+var $elm$regex$Regex$fromString = function (string) {
+	return A2(
+		$elm$regex$Regex$fromStringWith,
+		{caseInsensitive: false, multiline: false},
+		string);
+};
+var $elm$regex$Regex$never = _Regex_never;
+var $elm$regex$Regex$replace = _Regex_replaceAtMost(_Regex_infinity);
+var $the_sett$elm_aws_core$AWS$Internal$Canonical$normalizeHeader = function (_v0) {
+	var key = _v0.a;
+	var val = _v0.b;
+	return _Utils_Tuple2(
+		$elm$core$String$toLower(key),
+		A3(
+			$elm$regex$Regex$replace,
+			A2(
+				$elm$core$Maybe$withDefault,
+				$elm$regex$Regex$never,
+				$elm$regex$Regex$fromString('\\s{2,}')),
+			function (_v3) {
+				return ' ';
+			},
+			A3(
+				$elm$regex$Regex$replace,
+				A2(
+					$elm$core$Maybe$withDefault,
+					$elm$regex$Regex$never,
+					$elm$regex$Regex$fromString('(^\\s*|\\s*$)')),
+				function (_v2) {
+					return '';
+				},
+				A3(
+					$elm$regex$Regex$replace,
+					A2(
+						$elm$core$Maybe$withDefault,
+						$elm$regex$Regex$never,
+						$elm$regex$Regex$fromString('\\s*?\n\\s*')),
+					function (_v1) {
+						return ',';
+					},
+					val))));
+};
+var $elm$core$List$sortBy = _List_sortBy;
+var $elm$core$List$sort = function (xs) {
+	return A2($elm$core$List$sortBy, $elm$core$Basics$identity, xs);
+};
+var $the_sett$elm_aws_core$AWS$Internal$Canonical$canonicalHeaders = function (headers) {
+	return A2(
+		$elm$core$String$join,
+		'\n',
+		$elm$core$List$sort(
+			A2(
+				$elm$core$List$map,
+				$the_sett$elm_aws_core$AWS$Internal$Canonical$joinHeader,
+				A3(
+					$elm$core$List$foldl,
+					$the_sett$elm_aws_core$AWS$Internal$Canonical$mergeSameHeaders,
+					_List_Nil,
+					A2($elm$core$List$map, $the_sett$elm_aws_core$AWS$Internal$Canonical$normalizeHeader, headers)))));
+};
+var $ktonon$elm_crypto$Crypto$SHA$Alg$SHA256 = {$: 'SHA256'};
+var $ktonon$elm_crypto$Crypto$SHA$Types$WorkingVars = F8(
+	function (a, b, c, d, e, f, g, h) {
+		return {a: a, b: b, c: c, d: d, e: e, f: f, g: g, h: h};
+	});
+var $ktonon$elm_word$Word$D = F2(
+	function (a, b) {
+		return {$: 'D', a: a, b: b};
+	});
+var $ktonon$elm_word$Word$Mismatch = {$: 'Mismatch'};
+var $ktonon$elm_word$Word$W = function (a) {
+	return {$: 'W', a: a};
+};
+var $ktonon$elm_word$Word$low31mask = 2147483647;
+var $ktonon$elm_word$Word$carry32 = F2(
+	function (x, y) {
+		var _v0 = (x >>> 31) + (y >>> 31);
+		switch (_v0) {
+			case 0:
+				return 0;
+			case 2:
+				return 1;
+			default:
+				return (1 === ((($ktonon$elm_word$Word$low31mask & x) + ($ktonon$elm_word$Word$low31mask & y)) >>> 31)) ? 1 : 0;
+		}
+	});
+var $elm$core$Basics$modBy = _Basics_modBy;
+var $elm$core$Basics$pow = _Basics_pow;
+var $ktonon$elm_word$Word$mod32 = function (val) {
+	return A2(
+		$elm$core$Basics$modBy,
+		A2($elm$core$Basics$pow, 2, 32),
+		val);
+};
+var $ktonon$elm_word$Word$add = F2(
+	function (wx, wy) {
+		var _v0 = _Utils_Tuple2(wx, wy);
+		_v0$2:
+		while (true) {
+			switch (_v0.a.$) {
+				case 'W':
+					if (_v0.b.$ === 'W') {
+						var x = _v0.a.a;
+						var y = _v0.b.a;
+						return $ktonon$elm_word$Word$W(
+							$ktonon$elm_word$Word$mod32(x + y));
+					} else {
+						break _v0$2;
+					}
+				case 'D':
+					if (_v0.b.$ === 'D') {
+						var _v1 = _v0.a;
+						var xh = _v1.a;
+						var xl = _v1.b;
+						var _v2 = _v0.b;
+						var yh = _v2.a;
+						var yl = _v2.b;
+						var zl = xl + yl;
+						var zh = (xh + yh) + A2($ktonon$elm_word$Word$carry32, xl, yl);
+						return A2(
+							$ktonon$elm_word$Word$D,
+							$ktonon$elm_word$Word$mod32(zh),
+							$ktonon$elm_word$Word$mod32(zl));
+					} else {
+						break _v0$2;
+					}
+				default:
+					break _v0$2;
+			}
+		}
+		return $ktonon$elm_word$Word$Mismatch;
+	});
+var $ktonon$elm_crypto$Crypto$SHA$Types$addWorkingVars = F2(
+	function (x, y) {
+		return A8(
+			$ktonon$elm_crypto$Crypto$SHA$Types$WorkingVars,
+			A2($ktonon$elm_word$Word$add, x.a, y.a),
+			A2($ktonon$elm_word$Word$add, x.b, y.b),
+			A2($ktonon$elm_word$Word$add, x.c, y.c),
+			A2($ktonon$elm_word$Word$add, x.d, y.d),
+			A2($ktonon$elm_word$Word$add, x.e, y.e),
+			A2($ktonon$elm_word$Word$add, x.f, y.f),
+			A2($ktonon$elm_word$Word$add, x.g, y.g),
+			A2($ktonon$elm_word$Word$add, x.h, y.h));
+	});
+var $ktonon$elm_word$Word$and = F2(
+	function (wx, wy) {
+		var _v0 = _Utils_Tuple2(wx, wy);
+		_v0$2:
+		while (true) {
+			switch (_v0.a.$) {
+				case 'W':
+					if (_v0.b.$ === 'W') {
+						var x = _v0.a.a;
+						var y = _v0.b.a;
+						return $ktonon$elm_word$Word$W(x & y);
+					} else {
+						break _v0$2;
+					}
+				case 'D':
+					if (_v0.b.$ === 'D') {
+						var _v1 = _v0.a;
+						var xh = _v1.a;
+						var xl = _v1.b;
+						var _v2 = _v0.b;
+						var yh = _v2.a;
+						var yl = _v2.b;
+						return A2($ktonon$elm_word$Word$D, xh & yh, xl & yl);
+					} else {
+						break _v0$2;
+					}
+				default:
+					break _v0$2;
+			}
+		}
+		return $ktonon$elm_word$Word$Mismatch;
+	});
+var $elm$core$Bitwise$complement = _Bitwise_complement;
+var $ktonon$elm_word$Word$complement = function (word) {
+	switch (word.$) {
+		case 'W':
+			var x = word.a;
+			return $ktonon$elm_word$Word$W(~x);
+		case 'D':
+			var xh = word.a;
+			var xl = word.b;
+			return A2($ktonon$elm_word$Word$D, ~xh, ~xl);
+		default:
+			return $ktonon$elm_word$Word$Mismatch;
+	}
+};
+var $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512 = {$: 'SHA512'};
+var $ktonon$elm_word$Word$Helpers$lowMask = function (n) {
+	switch (n) {
+		case 0:
+			return 0;
+		case 1:
+			return 1;
+		case 2:
+			return 3;
+		case 3:
+			return 7;
+		case 4:
+			return 15;
+		case 5:
+			return 31;
+		case 6:
+			return 63;
+		case 7:
+			return 127;
+		case 8:
+			return 255;
+		case 9:
+			return 511;
+		case 10:
+			return 1023;
+		case 11:
+			return 2047;
+		case 12:
+			return 4095;
+		case 13:
+			return 8191;
+		case 14:
+			return 16383;
+		case 15:
+			return 32767;
+		case 16:
+			return 65535;
+		case 17:
+			return 131071;
+		case 18:
+			return 262143;
+		case 19:
+			return 524287;
+		case 20:
+			return 1048575;
+		case 21:
+			return 2097151;
+		case 22:
+			return 4194303;
+		case 23:
+			return 8388607;
+		case 24:
+			return 16777215;
+		case 25:
+			return 33554431;
+		case 26:
+			return 67108863;
+		case 27:
+			return 134217727;
+		case 28:
+			return 268435455;
+		case 29:
+			return 536870911;
+		case 30:
+			return 1073741823;
+		case 31:
+			return 2147483647;
+		default:
+			return 4294967295;
+	}
+};
+var $ktonon$elm_word$Word$Helpers$safeShiftRightZfBy = F2(
+	function (n, val) {
+		return (n >= 32) ? 0 : (val >>> n);
+	});
+var $elm$core$Bitwise$shiftLeftBy = _Bitwise_shiftLeftBy;
+var $ktonon$elm_word$Word$dShiftRightZfBy = F2(
+	function (n, _v0) {
+		var xh = _v0.a;
+		var xl = _v0.b;
+		return (n > 32) ? _Utils_Tuple2(
+			0,
+			A2($ktonon$elm_word$Word$Helpers$safeShiftRightZfBy, n - 32, xh)) : _Utils_Tuple2(
+			A2($ktonon$elm_word$Word$Helpers$safeShiftRightZfBy, n, xh),
+			A2($ktonon$elm_word$Word$Helpers$safeShiftRightZfBy, n, xl) + (($ktonon$elm_word$Word$Helpers$lowMask(n) & xh) << (32 - n)));
+	});
+var $ktonon$elm_word$Word$Helpers$rotatedLowBits = F2(
+	function (n, val) {
+		return $elm$core$Basics$add(
+			($ktonon$elm_word$Word$Helpers$lowMask(n) & val) << (32 - n));
+	});
+var $ktonon$elm_word$Word$rotateRightBy = F2(
+	function (unboundN, word) {
+		switch (word.$) {
+			case 'W':
+				var x = word.a;
+				var n = A2($elm$core$Basics$modBy, 32, unboundN);
+				return $ktonon$elm_word$Word$W(
+					A3(
+						$ktonon$elm_word$Word$Helpers$rotatedLowBits,
+						n,
+						x,
+						A2($ktonon$elm_word$Word$Helpers$safeShiftRightZfBy, n, x)));
+			case 'D':
+				var xh = word.a;
+				var xl = word.b;
+				var n = A2($elm$core$Basics$modBy, 64, unboundN);
+				if (n > 32) {
+					var n_ = n - 32;
+					var _v1 = A2(
+						$ktonon$elm_word$Word$dShiftRightZfBy,
+						n_,
+						_Utils_Tuple2(xl, xh));
+					var zh = _v1.a;
+					var zl = _v1.b;
+					return A2(
+						$ktonon$elm_word$Word$D,
+						A3($ktonon$elm_word$Word$Helpers$rotatedLowBits, n_, xh, zh),
+						zl);
+				} else {
+					var _v2 = A2(
+						$ktonon$elm_word$Word$dShiftRightZfBy,
+						n,
+						_Utils_Tuple2(xh, xl));
+					var zh = _v2.a;
+					var zl = _v2.b;
+					return A2(
+						$ktonon$elm_word$Word$D,
+						A3($ktonon$elm_word$Word$Helpers$rotatedLowBits, n, xl, zh),
+						zl);
+				}
+			default:
+				return $ktonon$elm_word$Word$Mismatch;
+		}
+	});
+var $ktonon$elm_word$Word$xor = F2(
+	function (wx, wy) {
+		var _v0 = _Utils_Tuple2(wx, wy);
+		_v0$2:
+		while (true) {
+			switch (_v0.a.$) {
+				case 'W':
+					if (_v0.b.$ === 'W') {
+						var x = _v0.a.a;
+						var y = _v0.b.a;
+						return $ktonon$elm_word$Word$W(x ^ y);
+					} else {
+						break _v0$2;
+					}
+				case 'D':
+					if (_v0.b.$ === 'D') {
+						var _v1 = _v0.a;
+						var xh = _v1.a;
+						var xl = _v1.b;
+						var _v2 = _v0.b;
+						var yh = _v2.a;
+						var yl = _v2.b;
+						return A2($ktonon$elm_word$Word$D, xh ^ yh, xl ^ yl);
+					} else {
+						break _v0$2;
+					}
+				default:
+					break _v0$2;
+			}
+		}
+		return $ktonon$elm_word$Word$Mismatch;
+	});
+var $ktonon$elm_crypto$Crypto$SHA$Process$sum0 = F2(
+	function (alg, word) {
+		sum0:
+		while (true) {
+			switch (alg.$) {
+				case 'SHA224':
+					var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA256,
+						$temp$word = word;
+					alg = $temp$alg;
+					word = $temp$word;
+					continue sum0;
+				case 'SHA384':
+					var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512,
+						$temp$word = word;
+					alg = $temp$alg;
+					word = $temp$word;
+					continue sum0;
+				case 'SHA256':
+					return A2(
+						$ktonon$elm_word$Word$xor,
+						A2($ktonon$elm_word$Word$rotateRightBy, 22, word),
+						A2(
+							$ktonon$elm_word$Word$xor,
+							A2($ktonon$elm_word$Word$rotateRightBy, 13, word),
+							A2($ktonon$elm_word$Word$rotateRightBy, 2, word)));
+				case 'SHA512':
+					return A2(
+						$ktonon$elm_word$Word$xor,
+						A2($ktonon$elm_word$Word$rotateRightBy, 39, word),
+						A2(
+							$ktonon$elm_word$Word$xor,
+							A2($ktonon$elm_word$Word$rotateRightBy, 34, word),
+							A2($ktonon$elm_word$Word$rotateRightBy, 28, word)));
+				case 'SHA512_224':
+					var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512,
+						$temp$word = word;
+					alg = $temp$alg;
+					word = $temp$word;
+					continue sum0;
+				default:
+					var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512,
+						$temp$word = word;
+					alg = $temp$alg;
+					word = $temp$word;
+					continue sum0;
+			}
+		}
+	});
+var $ktonon$elm_crypto$Crypto$SHA$Process$sum1 = F2(
+	function (alg, word) {
+		sum1:
+		while (true) {
+			switch (alg.$) {
+				case 'SHA224':
+					var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA256,
+						$temp$word = word;
+					alg = $temp$alg;
+					word = $temp$word;
+					continue sum1;
+				case 'SHA384':
+					var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512,
+						$temp$word = word;
+					alg = $temp$alg;
+					word = $temp$word;
+					continue sum1;
+				case 'SHA256':
+					return A2(
+						$ktonon$elm_word$Word$xor,
+						A2($ktonon$elm_word$Word$rotateRightBy, 25, word),
+						A2(
+							$ktonon$elm_word$Word$xor,
+							A2($ktonon$elm_word$Word$rotateRightBy, 11, word),
+							A2($ktonon$elm_word$Word$rotateRightBy, 6, word)));
+				case 'SHA512':
+					return A2(
+						$ktonon$elm_word$Word$xor,
+						A2($ktonon$elm_word$Word$rotateRightBy, 41, word),
+						A2(
+							$ktonon$elm_word$Word$xor,
+							A2($ktonon$elm_word$Word$rotateRightBy, 18, word),
+							A2($ktonon$elm_word$Word$rotateRightBy, 14, word)));
+				case 'SHA512_224':
+					var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512,
+						$temp$word = word;
+					alg = $temp$alg;
+					word = $temp$word;
+					continue sum1;
+				default:
+					var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512,
+						$temp$word = word;
+					alg = $temp$alg;
+					word = $temp$word;
+					continue sum1;
+			}
+		}
+	});
+var $ktonon$elm_crypto$Crypto$SHA$Process$compress = F3(
+	function (alg, _v0, _v1) {
+		var k = _v0.a;
+		var w = _v0.b;
+		var a = _v1.a;
+		var b = _v1.b;
+		var c = _v1.c;
+		var d = _v1.d;
+		var e = _v1.e;
+		var f = _v1.f;
+		var g = _v1.g;
+		var h = _v1.h;
+		var s1 = A2($ktonon$elm_crypto$Crypto$SHA$Process$sum1, alg, e);
+		var s0 = A2($ktonon$elm_crypto$Crypto$SHA$Process$sum0, alg, a);
+		var maj = A2(
+			$ktonon$elm_word$Word$xor,
+			A2($ktonon$elm_word$Word$and, b, c),
+			A2(
+				$ktonon$elm_word$Word$xor,
+				A2($ktonon$elm_word$Word$and, a, c),
+				A2($ktonon$elm_word$Word$and, a, b)));
+		var temp2 = A2($ktonon$elm_word$Word$add, s0, maj);
+		var ch = A2(
+			$ktonon$elm_word$Word$xor,
+			A2(
+				$ktonon$elm_word$Word$and,
+				g,
+				$ktonon$elm_word$Word$complement(e)),
+			A2($ktonon$elm_word$Word$and, e, f));
+		var temp1 = A2(
+			$ktonon$elm_word$Word$add,
+			w,
+			A2(
+				$ktonon$elm_word$Word$add,
+				k,
+				A2(
+					$ktonon$elm_word$Word$add,
+					ch,
+					A2($ktonon$elm_word$Word$add, s1, h))));
+		return A8(
+			$ktonon$elm_crypto$Crypto$SHA$Types$WorkingVars,
+			A2($ktonon$elm_word$Word$add, temp1, temp2),
+			a,
+			b,
+			c,
+			A2($ktonon$elm_word$Word$add, d, temp1),
+			e,
+			f,
+			g);
+	});
+var $ktonon$elm_crypto$Crypto$SHA$Constants$roundConstants = function (alg) {
+	roundConstants:
+	while (true) {
+		switch (alg.$) {
+			case 'SHA224':
+				var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA256;
+				alg = $temp$alg;
+				continue roundConstants;
+			case 'SHA256':
+				return _List_fromArray(
+					[
+						$ktonon$elm_word$Word$W(1116352408),
+						$ktonon$elm_word$Word$W(1899447441),
+						$ktonon$elm_word$Word$W(3049323471),
+						$ktonon$elm_word$Word$W(3921009573),
+						$ktonon$elm_word$Word$W(961987163),
+						$ktonon$elm_word$Word$W(1508970993),
+						$ktonon$elm_word$Word$W(2453635748),
+						$ktonon$elm_word$Word$W(2870763221),
+						$ktonon$elm_word$Word$W(3624381080),
+						$ktonon$elm_word$Word$W(310598401),
+						$ktonon$elm_word$Word$W(607225278),
+						$ktonon$elm_word$Word$W(1426881987),
+						$ktonon$elm_word$Word$W(1925078388),
+						$ktonon$elm_word$Word$W(2162078206),
+						$ktonon$elm_word$Word$W(2614888103),
+						$ktonon$elm_word$Word$W(3248222580),
+						$ktonon$elm_word$Word$W(3835390401),
+						$ktonon$elm_word$Word$W(4022224774),
+						$ktonon$elm_word$Word$W(264347078),
+						$ktonon$elm_word$Word$W(604807628),
+						$ktonon$elm_word$Word$W(770255983),
+						$ktonon$elm_word$Word$W(1249150122),
+						$ktonon$elm_word$Word$W(1555081692),
+						$ktonon$elm_word$Word$W(1996064986),
+						$ktonon$elm_word$Word$W(2554220882),
+						$ktonon$elm_word$Word$W(2821834349),
+						$ktonon$elm_word$Word$W(2952996808),
+						$ktonon$elm_word$Word$W(3210313671),
+						$ktonon$elm_word$Word$W(3336571891),
+						$ktonon$elm_word$Word$W(3584528711),
+						$ktonon$elm_word$Word$W(113926993),
+						$ktonon$elm_word$Word$W(338241895),
+						$ktonon$elm_word$Word$W(666307205),
+						$ktonon$elm_word$Word$W(773529912),
+						$ktonon$elm_word$Word$W(1294757372),
+						$ktonon$elm_word$Word$W(1396182291),
+						$ktonon$elm_word$Word$W(1695183700),
+						$ktonon$elm_word$Word$W(1986661051),
+						$ktonon$elm_word$Word$W(2177026350),
+						$ktonon$elm_word$Word$W(2456956037),
+						$ktonon$elm_word$Word$W(2730485921),
+						$ktonon$elm_word$Word$W(2820302411),
+						$ktonon$elm_word$Word$W(3259730800),
+						$ktonon$elm_word$Word$W(3345764771),
+						$ktonon$elm_word$Word$W(3516065817),
+						$ktonon$elm_word$Word$W(3600352804),
+						$ktonon$elm_word$Word$W(4094571909),
+						$ktonon$elm_word$Word$W(275423344),
+						$ktonon$elm_word$Word$W(430227734),
+						$ktonon$elm_word$Word$W(506948616),
+						$ktonon$elm_word$Word$W(659060556),
+						$ktonon$elm_word$Word$W(883997877),
+						$ktonon$elm_word$Word$W(958139571),
+						$ktonon$elm_word$Word$W(1322822218),
+						$ktonon$elm_word$Word$W(1537002063),
+						$ktonon$elm_word$Word$W(1747873779),
+						$ktonon$elm_word$Word$W(1955562222),
+						$ktonon$elm_word$Word$W(2024104815),
+						$ktonon$elm_word$Word$W(2227730452),
+						$ktonon$elm_word$Word$W(2361852424),
+						$ktonon$elm_word$Word$W(2428436474),
+						$ktonon$elm_word$Word$W(2756734187),
+						$ktonon$elm_word$Word$W(3204031479),
+						$ktonon$elm_word$Word$W(3329325298)
+					]);
+			case 'SHA384':
+				var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512;
+				alg = $temp$alg;
+				continue roundConstants;
+			case 'SHA512':
+				return _List_fromArray(
+					[
+						A2($ktonon$elm_word$Word$D, 1116352408, 3609767458),
+						A2($ktonon$elm_word$Word$D, 1899447441, 602891725),
+						A2($ktonon$elm_word$Word$D, 3049323471, 3964484399),
+						A2($ktonon$elm_word$Word$D, 3921009573, 2173295548),
+						A2($ktonon$elm_word$Word$D, 961987163, 4081628472),
+						A2($ktonon$elm_word$Word$D, 1508970993, 3053834265),
+						A2($ktonon$elm_word$Word$D, 2453635748, 2937671579),
+						A2($ktonon$elm_word$Word$D, 2870763221, 3664609560),
+						A2($ktonon$elm_word$Word$D, 3624381080, 2734883394),
+						A2($ktonon$elm_word$Word$D, 310598401, 1164996542),
+						A2($ktonon$elm_word$Word$D, 607225278, 1323610764),
+						A2($ktonon$elm_word$Word$D, 1426881987, 3590304994),
+						A2($ktonon$elm_word$Word$D, 1925078388, 4068182383),
+						A2($ktonon$elm_word$Word$D, 2162078206, 991336113),
+						A2($ktonon$elm_word$Word$D, 2614888103, 633803317),
+						A2($ktonon$elm_word$Word$D, 3248222580, 3479774868),
+						A2($ktonon$elm_word$Word$D, 3835390401, 2666613458),
+						A2($ktonon$elm_word$Word$D, 4022224774, 944711139),
+						A2($ktonon$elm_word$Word$D, 264347078, 2341262773),
+						A2($ktonon$elm_word$Word$D, 604807628, 2007800933),
+						A2($ktonon$elm_word$Word$D, 770255983, 1495990901),
+						A2($ktonon$elm_word$Word$D, 1249150122, 1856431235),
+						A2($ktonon$elm_word$Word$D, 1555081692, 3175218132),
+						A2($ktonon$elm_word$Word$D, 1996064986, 2198950837),
+						A2($ktonon$elm_word$Word$D, 2554220882, 3999719339),
+						A2($ktonon$elm_word$Word$D, 2821834349, 766784016),
+						A2($ktonon$elm_word$Word$D, 2952996808, 2566594879),
+						A2($ktonon$elm_word$Word$D, 3210313671, 3203337956),
+						A2($ktonon$elm_word$Word$D, 3336571891, 1034457026),
+						A2($ktonon$elm_word$Word$D, 3584528711, 2466948901),
+						A2($ktonon$elm_word$Word$D, 113926993, 3758326383),
+						A2($ktonon$elm_word$Word$D, 338241895, 168717936),
+						A2($ktonon$elm_word$Word$D, 666307205, 1188179964),
+						A2($ktonon$elm_word$Word$D, 773529912, 1546045734),
+						A2($ktonon$elm_word$Word$D, 1294757372, 1522805485),
+						A2($ktonon$elm_word$Word$D, 1396182291, 2643833823),
+						A2($ktonon$elm_word$Word$D, 1695183700, 2343527390),
+						A2($ktonon$elm_word$Word$D, 1986661051, 1014477480),
+						A2($ktonon$elm_word$Word$D, 2177026350, 1206759142),
+						A2($ktonon$elm_word$Word$D, 2456956037, 344077627),
+						A2($ktonon$elm_word$Word$D, 2730485921, 1290863460),
+						A2($ktonon$elm_word$Word$D, 2820302411, 3158454273),
+						A2($ktonon$elm_word$Word$D, 3259730800, 3505952657),
+						A2($ktonon$elm_word$Word$D, 3345764771, 106217008),
+						A2($ktonon$elm_word$Word$D, 3516065817, 3606008344),
+						A2($ktonon$elm_word$Word$D, 3600352804, 1432725776),
+						A2($ktonon$elm_word$Word$D, 4094571909, 1467031594),
+						A2($ktonon$elm_word$Word$D, 275423344, 851169720),
+						A2($ktonon$elm_word$Word$D, 430227734, 3100823752),
+						A2($ktonon$elm_word$Word$D, 506948616, 1363258195),
+						A2($ktonon$elm_word$Word$D, 659060556, 3750685593),
+						A2($ktonon$elm_word$Word$D, 883997877, 3785050280),
+						A2($ktonon$elm_word$Word$D, 958139571, 3318307427),
+						A2($ktonon$elm_word$Word$D, 1322822218, 3812723403),
+						A2($ktonon$elm_word$Word$D, 1537002063, 2003034995),
+						A2($ktonon$elm_word$Word$D, 1747873779, 3602036899),
+						A2($ktonon$elm_word$Word$D, 1955562222, 1575990012),
+						A2($ktonon$elm_word$Word$D, 2024104815, 1125592928),
+						A2($ktonon$elm_word$Word$D, 2227730452, 2716904306),
+						A2($ktonon$elm_word$Word$D, 2361852424, 442776044),
+						A2($ktonon$elm_word$Word$D, 2428436474, 593698344),
+						A2($ktonon$elm_word$Word$D, 2756734187, 3733110249),
+						A2($ktonon$elm_word$Word$D, 3204031479, 2999351573),
+						A2($ktonon$elm_word$Word$D, 3329325298, 3815920427),
+						A2($ktonon$elm_word$Word$D, 3391569614, 3928383900),
+						A2($ktonon$elm_word$Word$D, 3515267271, 566280711),
+						A2($ktonon$elm_word$Word$D, 3940187606, 3454069534),
+						A2($ktonon$elm_word$Word$D, 4118630271, 4000239992),
+						A2($ktonon$elm_word$Word$D, 116418474, 1914138554),
+						A2($ktonon$elm_word$Word$D, 174292421, 2731055270),
+						A2($ktonon$elm_word$Word$D, 289380356, 3203993006),
+						A2($ktonon$elm_word$Word$D, 460393269, 320620315),
+						A2($ktonon$elm_word$Word$D, 685471733, 587496836),
+						A2($ktonon$elm_word$Word$D, 852142971, 1086792851),
+						A2($ktonon$elm_word$Word$D, 1017036298, 365543100),
+						A2($ktonon$elm_word$Word$D, 1126000580, 2618297676),
+						A2($ktonon$elm_word$Word$D, 1288033470, 3409855158),
+						A2($ktonon$elm_word$Word$D, 1501505948, 4234509866),
+						A2($ktonon$elm_word$Word$D, 1607167915, 987167468),
+						A2($ktonon$elm_word$Word$D, 1816402316, 1246189591)
+					]);
+			case 'SHA512_224':
+				var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512;
+				alg = $temp$alg;
+				continue roundConstants;
+			default:
+				var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512;
+				alg = $temp$alg;
+				continue roundConstants;
+		}
+	}
+};
+var $ktonon$elm_crypto$Crypto$SHA$Process$compressLoop = F3(
+	function (alg, workingVars, messageSchedule) {
+		return A3(
+			$elm$core$List$foldl,
+			$ktonon$elm_crypto$Crypto$SHA$Process$compress(alg),
+			workingVars,
+			A3(
+				$elm$core$List$map2,
+				F2(
+					function (a, b) {
+						return _Utils_Tuple2(a, b);
+					}),
+				$ktonon$elm_crypto$Crypto$SHA$Constants$roundConstants(alg),
+				$elm$core$Array$toList(messageSchedule)));
+	});
+var $elm$core$Array$fromListHelp = F3(
+	function (list, nodeList, nodeListSize) {
+		fromListHelp:
+		while (true) {
+			var _v0 = A2($elm$core$Elm$JsArray$initializeFromList, $elm$core$Array$branchFactor, list);
+			var jsArray = _v0.a;
+			var remainingItems = _v0.b;
+			if (_Utils_cmp(
+				$elm$core$Elm$JsArray$length(jsArray),
+				$elm$core$Array$branchFactor) < 0) {
+				return A2(
+					$elm$core$Array$builderToArray,
+					true,
+					{nodeList: nodeList, nodeListSize: nodeListSize, tail: jsArray});
+			} else {
+				var $temp$list = remainingItems,
+					$temp$nodeList = A2(
+					$elm$core$List$cons,
+					$elm$core$Array$Leaf(jsArray),
+					nodeList),
+					$temp$nodeListSize = nodeListSize + 1;
+				list = $temp$list;
+				nodeList = $temp$nodeList;
+				nodeListSize = $temp$nodeListSize;
+				continue fromListHelp;
+			}
+		}
+	});
+var $elm$core$Array$fromList = function (list) {
+	if (!list.b) {
+		return $elm$core$Array$empty;
+	} else {
+		return A3($elm$core$Array$fromListHelp, list, _List_Nil, 0);
+	}
+};
+var $elm$core$Elm$JsArray$appendN = _JsArray_appendN;
+var $elm$core$Elm$JsArray$slice = _JsArray_slice;
+var $elm$core$Array$appendHelpBuilder = F2(
+	function (tail, builder) {
+		var tailLen = $elm$core$Elm$JsArray$length(tail);
+		var notAppended = ($elm$core$Array$branchFactor - $elm$core$Elm$JsArray$length(builder.tail)) - tailLen;
+		var appended = A3($elm$core$Elm$JsArray$appendN, $elm$core$Array$branchFactor, builder.tail, tail);
+		return (notAppended < 0) ? {
+			nodeList: A2(
+				$elm$core$List$cons,
+				$elm$core$Array$Leaf(appended),
+				builder.nodeList),
+			nodeListSize: builder.nodeListSize + 1,
+			tail: A3($elm$core$Elm$JsArray$slice, notAppended, tailLen, tail)
+		} : ((!notAppended) ? {
+			nodeList: A2(
+				$elm$core$List$cons,
+				$elm$core$Array$Leaf(appended),
+				builder.nodeList),
+			nodeListSize: builder.nodeListSize + 1,
+			tail: $elm$core$Elm$JsArray$empty
+		} : {nodeList: builder.nodeList, nodeListSize: builder.nodeListSize, tail: appended});
+	});
+var $elm$core$Array$bitMask = 4294967295 >>> (32 - $elm$core$Array$shiftStep);
+var $elm$core$Elm$JsArray$push = _JsArray_push;
+var $elm$core$Elm$JsArray$singleton = _JsArray_singleton;
+var $elm$core$Elm$JsArray$unsafeGet = _JsArray_unsafeGet;
+var $elm$core$Elm$JsArray$unsafeSet = _JsArray_unsafeSet;
+var $elm$core$Array$insertTailInTree = F4(
+	function (shift, index, tail, tree) {
+		var pos = $elm$core$Array$bitMask & (index >>> shift);
+		if (_Utils_cmp(
+			pos,
+			$elm$core$Elm$JsArray$length(tree)) > -1) {
+			if (shift === 5) {
+				return A2(
+					$elm$core$Elm$JsArray$push,
+					$elm$core$Array$Leaf(tail),
+					tree);
+			} else {
+				var newSub = $elm$core$Array$SubTree(
+					A4($elm$core$Array$insertTailInTree, shift - $elm$core$Array$shiftStep, index, tail, $elm$core$Elm$JsArray$empty));
+				return A2($elm$core$Elm$JsArray$push, newSub, tree);
+			}
+		} else {
+			var value = A2($elm$core$Elm$JsArray$unsafeGet, pos, tree);
+			if (value.$ === 'SubTree') {
+				var subTree = value.a;
+				var newSub = $elm$core$Array$SubTree(
+					A4($elm$core$Array$insertTailInTree, shift - $elm$core$Array$shiftStep, index, tail, subTree));
+				return A3($elm$core$Elm$JsArray$unsafeSet, pos, newSub, tree);
+			} else {
+				var newSub = $elm$core$Array$SubTree(
+					A4(
+						$elm$core$Array$insertTailInTree,
+						shift - $elm$core$Array$shiftStep,
+						index,
+						tail,
+						$elm$core$Elm$JsArray$singleton(value)));
+				return A3($elm$core$Elm$JsArray$unsafeSet, pos, newSub, tree);
+			}
+		}
+	});
+var $elm$core$Array$unsafeReplaceTail = F2(
+	function (newTail, _v0) {
+		var len = _v0.a;
+		var startShift = _v0.b;
+		var tree = _v0.c;
+		var tail = _v0.d;
+		var originalTailLen = $elm$core$Elm$JsArray$length(tail);
+		var newTailLen = $elm$core$Elm$JsArray$length(newTail);
+		var newArrayLen = len + (newTailLen - originalTailLen);
+		if (_Utils_eq(newTailLen, $elm$core$Array$branchFactor)) {
+			var overflow = _Utils_cmp(newArrayLen >>> $elm$core$Array$shiftStep, 1 << startShift) > 0;
+			if (overflow) {
+				var newShift = startShift + $elm$core$Array$shiftStep;
+				var newTree = A4(
+					$elm$core$Array$insertTailInTree,
+					newShift,
+					len,
+					newTail,
+					$elm$core$Elm$JsArray$singleton(
+						$elm$core$Array$SubTree(tree)));
+				return A4($elm$core$Array$Array_elm_builtin, newArrayLen, newShift, newTree, $elm$core$Elm$JsArray$empty);
+			} else {
+				return A4(
+					$elm$core$Array$Array_elm_builtin,
+					newArrayLen,
+					startShift,
+					A4($elm$core$Array$insertTailInTree, startShift, len, newTail, tree),
+					$elm$core$Elm$JsArray$empty);
+			}
+		} else {
+			return A4($elm$core$Array$Array_elm_builtin, newArrayLen, startShift, tree, newTail);
+		}
+	});
+var $elm$core$Array$appendHelpTree = F2(
+	function (toAppend, array) {
+		var len = array.a;
+		var tree = array.c;
+		var tail = array.d;
+		var itemsToAppend = $elm$core$Elm$JsArray$length(toAppend);
+		var notAppended = ($elm$core$Array$branchFactor - $elm$core$Elm$JsArray$length(tail)) - itemsToAppend;
+		var appended = A3($elm$core$Elm$JsArray$appendN, $elm$core$Array$branchFactor, tail, toAppend);
+		var newArray = A2($elm$core$Array$unsafeReplaceTail, appended, array);
+		if (notAppended < 0) {
+			var nextTail = A3($elm$core$Elm$JsArray$slice, notAppended, itemsToAppend, toAppend);
+			return A2($elm$core$Array$unsafeReplaceTail, nextTail, newArray);
+		} else {
+			return newArray;
+		}
+	});
+var $elm$core$Elm$JsArray$foldl = _JsArray_foldl;
+var $elm$core$Array$builderFromArray = function (_v0) {
+	var len = _v0.a;
+	var tree = _v0.c;
+	var tail = _v0.d;
+	var helper = F2(
+		function (node, acc) {
+			if (node.$ === 'SubTree') {
+				var subTree = node.a;
+				return A3($elm$core$Elm$JsArray$foldl, helper, acc, subTree);
+			} else {
+				return A2($elm$core$List$cons, node, acc);
+			}
+		});
+	return {
+		nodeList: A3($elm$core$Elm$JsArray$foldl, helper, _List_Nil, tree),
+		nodeListSize: (len / $elm$core$Array$branchFactor) | 0,
+		tail: tail
+	};
+};
+var $elm$core$Array$append = F2(
+	function (a, _v0) {
+		var aTail = a.d;
+		var bLen = _v0.a;
+		var bTree = _v0.c;
+		var bTail = _v0.d;
+		if (_Utils_cmp(bLen, $elm$core$Array$branchFactor * 4) < 1) {
+			var foldHelper = F2(
+				function (node, array) {
+					if (node.$ === 'SubTree') {
+						var tree = node.a;
+						return A3($elm$core$Elm$JsArray$foldl, foldHelper, array, tree);
+					} else {
+						var leaf = node.a;
+						return A2($elm$core$Array$appendHelpTree, leaf, array);
+					}
+				});
+			return A2(
+				$elm$core$Array$appendHelpTree,
+				bTail,
+				A3($elm$core$Elm$JsArray$foldl, foldHelper, a, bTree));
+		} else {
+			var foldHelper = F2(
+				function (node, builder) {
+					if (node.$ === 'SubTree') {
+						var tree = node.a;
+						return A3($elm$core$Elm$JsArray$foldl, foldHelper, builder, tree);
+					} else {
+						var leaf = node.a;
+						return A2($elm$core$Array$appendHelpBuilder, leaf, builder);
+					}
+				});
+			return A2(
+				$elm$core$Array$builderToArray,
+				true,
+				A2(
+					$elm$core$Array$appendHelpBuilder,
+					bTail,
+					A3(
+						$elm$core$Elm$JsArray$foldl,
+						foldHelper,
+						$elm$core$Array$builderFromArray(a),
+						bTree)));
+		}
+	});
+var $elm$core$Array$getHelp = F3(
+	function (shift, index, tree) {
+		getHelp:
+		while (true) {
+			var pos = $elm$core$Array$bitMask & (index >>> shift);
+			var _v0 = A2($elm$core$Elm$JsArray$unsafeGet, pos, tree);
+			if (_v0.$ === 'SubTree') {
+				var subTree = _v0.a;
+				var $temp$shift = shift - $elm$core$Array$shiftStep,
+					$temp$index = index,
+					$temp$tree = subTree;
+				shift = $temp$shift;
+				index = $temp$index;
+				tree = $temp$tree;
+				continue getHelp;
+			} else {
+				var values = _v0.a;
+				return A2($elm$core$Elm$JsArray$unsafeGet, $elm$core$Array$bitMask & index, values);
+			}
+		}
+	});
+var $elm$core$Array$tailIndex = function (len) {
+	return (len >>> 5) << 5;
+};
+var $elm$core$Array$get = F2(
+	function (index, _v0) {
+		var len = _v0.a;
+		var startShift = _v0.b;
+		var tree = _v0.c;
+		var tail = _v0.d;
+		return ((index < 0) || (_Utils_cmp(index, len) > -1)) ? $elm$core$Maybe$Nothing : ((_Utils_cmp(
+			index,
+			$elm$core$Array$tailIndex(len)) > -1) ? $elm$core$Maybe$Just(
+			A2($elm$core$Elm$JsArray$unsafeGet, $elm$core$Array$bitMask & index, tail)) : $elm$core$Maybe$Just(
+			A3($elm$core$Array$getHelp, startShift, index, tree)));
+	});
+var $ktonon$elm_crypto$Crypto$SHA$MessageSchedule$at = function (i) {
+	return A2(
+		$elm$core$Basics$composeR,
+		$elm$core$Array$get(i),
+		$elm$core$Maybe$withDefault($ktonon$elm_word$Word$Mismatch));
+};
+var $ktonon$elm_word$Word$shiftRightZfBy = F2(
+	function (n, word) {
+		switch (word.$) {
+			case 'W':
+				var x = word.a;
+				return $ktonon$elm_word$Word$W(
+					A2($ktonon$elm_word$Word$Helpers$safeShiftRightZfBy, n, x));
+			case 'D':
+				var xh = word.a;
+				var xl = word.b;
+				var _v1 = A2(
+					$ktonon$elm_word$Word$dShiftRightZfBy,
+					n,
+					_Utils_Tuple2(xh, xl));
+				var zh = _v1.a;
+				var zl = _v1.b;
+				return A2($ktonon$elm_word$Word$D, zh, zl);
+			default:
+				return $ktonon$elm_word$Word$Mismatch;
+		}
+	});
+var $ktonon$elm_crypto$Crypto$SHA$MessageSchedule$sigma0 = F2(
+	function (alg, word) {
+		sigma0:
+		while (true) {
+			switch (alg.$) {
+				case 'SHA224':
+					var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA256,
+						$temp$word = word;
+					alg = $temp$alg;
+					word = $temp$word;
+					continue sigma0;
+				case 'SHA384':
+					var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512,
+						$temp$word = word;
+					alg = $temp$alg;
+					word = $temp$word;
+					continue sigma0;
+				case 'SHA256':
+					return A2(
+						$ktonon$elm_word$Word$xor,
+						A2($ktonon$elm_word$Word$shiftRightZfBy, 3, word),
+						A2(
+							$ktonon$elm_word$Word$xor,
+							A2($ktonon$elm_word$Word$rotateRightBy, 18, word),
+							A2($ktonon$elm_word$Word$rotateRightBy, 7, word)));
+				case 'SHA512':
+					return A2(
+						$ktonon$elm_word$Word$xor,
+						A2($ktonon$elm_word$Word$shiftRightZfBy, 7, word),
+						A2(
+							$ktonon$elm_word$Word$xor,
+							A2($ktonon$elm_word$Word$rotateRightBy, 8, word),
+							A2($ktonon$elm_word$Word$rotateRightBy, 1, word)));
+				case 'SHA512_224':
+					var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512,
+						$temp$word = word;
+					alg = $temp$alg;
+					word = $temp$word;
+					continue sigma0;
+				default:
+					var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512,
+						$temp$word = word;
+					alg = $temp$alg;
+					word = $temp$word;
+					continue sigma0;
+			}
+		}
+	});
+var $ktonon$elm_crypto$Crypto$SHA$MessageSchedule$sigma1 = F2(
+	function (alg, word) {
+		sigma1:
+		while (true) {
+			switch (alg.$) {
+				case 'SHA224':
+					var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA256,
+						$temp$word = word;
+					alg = $temp$alg;
+					word = $temp$word;
+					continue sigma1;
+				case 'SHA384':
+					var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512,
+						$temp$word = word;
+					alg = $temp$alg;
+					word = $temp$word;
+					continue sigma1;
+				case 'SHA256':
+					return A2(
+						$ktonon$elm_word$Word$xor,
+						A2($ktonon$elm_word$Word$shiftRightZfBy, 10, word),
+						A2(
+							$ktonon$elm_word$Word$xor,
+							A2($ktonon$elm_word$Word$rotateRightBy, 19, word),
+							A2($ktonon$elm_word$Word$rotateRightBy, 17, word)));
+				case 'SHA512':
+					return A2(
+						$ktonon$elm_word$Word$xor,
+						A2($ktonon$elm_word$Word$shiftRightZfBy, 6, word),
+						A2(
+							$ktonon$elm_word$Word$xor,
+							A2($ktonon$elm_word$Word$rotateRightBy, 61, word),
+							A2($ktonon$elm_word$Word$rotateRightBy, 19, word)));
+				case 'SHA512_224':
+					var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512,
+						$temp$word = word;
+					alg = $temp$alg;
+					word = $temp$word;
+					continue sigma1;
+				default:
+					var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512,
+						$temp$word = word;
+					alg = $temp$alg;
+					word = $temp$word;
+					continue sigma1;
+			}
+		}
+	});
+var $ktonon$elm_crypto$Crypto$SHA$MessageSchedule$nextPart = F3(
+	function (alg, i, w) {
+		var i2 = A2($ktonon$elm_crypto$Crypto$SHA$MessageSchedule$at, i - 2, w);
+		var s1 = A2($ktonon$elm_crypto$Crypto$SHA$MessageSchedule$sigma1, alg, i2);
+		var i15 = A2($ktonon$elm_crypto$Crypto$SHA$MessageSchedule$at, i - 15, w);
+		var s0 = A2($ktonon$elm_crypto$Crypto$SHA$MessageSchedule$sigma0, alg, i15);
+		return A2(
+			$elm$core$Array$append,
+			w,
+			$elm$core$Array$fromList(
+				_List_fromArray(
+					[
+						A2(
+						$ktonon$elm_word$Word$add,
+						s1,
+						A2(
+							$ktonon$elm_word$Word$add,
+							A2($ktonon$elm_crypto$Crypto$SHA$MessageSchedule$at, i - 7, w),
+							A2(
+								$ktonon$elm_word$Word$add,
+								s0,
+								A2($ktonon$elm_crypto$Crypto$SHA$MessageSchedule$at, i - 16, w))))
+					])));
+	});
+var $ktonon$elm_crypto$Crypto$SHA$MessageSchedule$fromChunk = F2(
+	function (alg, chunk) {
+		var n = $elm$core$List$length(
+			$ktonon$elm_crypto$Crypto$SHA$Constants$roundConstants(alg));
+		return A3(
+			$elm$core$List$foldl,
+			$ktonon$elm_crypto$Crypto$SHA$MessageSchedule$nextPart(alg),
+			$elm$core$Array$fromList(chunk),
+			A2($elm$core$List$range, 16, n - 1));
+	});
+var $elm$core$List$isEmpty = function (xs) {
+	if (!xs.b) {
+		return true;
+	} else {
+		return false;
+	}
+};
+var $ktonon$elm_crypto$Crypto$SHA$Chunk$sizeInBytes = function (alg) {
+	sizeInBytes:
+	while (true) {
+		switch (alg.$) {
+			case 'SHA224':
+				var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA256;
+				alg = $temp$alg;
+				continue sizeInBytes;
+			case 'SHA256':
+				return 64;
+			case 'SHA384':
+				var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512;
+				alg = $temp$alg;
+				continue sizeInBytes;
+			case 'SHA512':
+				return 128;
+			case 'SHA512_224':
+				var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512;
+				alg = $temp$alg;
+				continue sizeInBytes;
+			default:
+				var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512;
+				alg = $temp$alg;
+				continue sizeInBytes;
+		}
+	}
+};
+var $ktonon$elm_word$Word$sizeInBytes = function (s) {
+	if (s.$ === 'Bit32') {
+		return 4;
+	} else {
+		return 8;
+	}
+};
+var $ktonon$elm_word$Word$Bit32 = {$: 'Bit32'};
+var $ktonon$elm_word$Word$Bit64 = {$: 'Bit64'};
+var $ktonon$elm_crypto$Crypto$SHA$Alg$wordSize = function (alg) {
+	wordSize:
+	while (true) {
+		switch (alg.$) {
+			case 'SHA224':
+				var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA256;
+				alg = $temp$alg;
+				continue wordSize;
+			case 'SHA256':
+				return $ktonon$elm_word$Word$Bit32;
+			case 'SHA384':
+				var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512;
+				alg = $temp$alg;
+				continue wordSize;
+			case 'SHA512':
+				return $ktonon$elm_word$Word$Bit64;
+			case 'SHA512_224':
+				var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512;
+				alg = $temp$alg;
+				continue wordSize;
+			default:
+				var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512;
+				alg = $temp$alg;
+				continue wordSize;
+		}
+	}
+};
+var $ktonon$elm_crypto$Crypto$SHA$Chunk$sizeInWords = function (alg) {
+	return ($ktonon$elm_crypto$Crypto$SHA$Chunk$sizeInBytes(alg) / $ktonon$elm_word$Word$sizeInBytes(
+		$ktonon$elm_crypto$Crypto$SHA$Alg$wordSize(alg))) | 0;
+};
+var $ktonon$elm_crypto$Crypto$SHA$Chunk$next = F2(
+	function (alg, words) {
+		var n = $ktonon$elm_crypto$Crypto$SHA$Chunk$sizeInWords(alg);
+		var chunk = A2($elm$core$List$take, n, words);
+		return _Utils_Tuple2(
+			$elm$core$List$isEmpty(chunk) ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(chunk),
+			A2($elm$core$List$drop, n, words));
+	});
+var $ktonon$elm_crypto$Crypto$SHA$Process$chunks_ = F3(
+	function (alg, words, currentHash) {
+		chunks_:
+		while (true) {
+			var _v0 = A2($ktonon$elm_crypto$Crypto$SHA$Chunk$next, alg, words);
+			if (_v0.a.$ === 'Nothing') {
+				var _v1 = _v0.a;
+				return currentHash;
+			} else {
+				var chunk = _v0.a.a;
+				var rest = _v0.b;
+				var vars = A2(
+					$ktonon$elm_crypto$Crypto$SHA$Types$addWorkingVars,
+					currentHash,
+					A3(
+						$ktonon$elm_crypto$Crypto$SHA$Process$compressLoop,
+						alg,
+						currentHash,
+						A2($ktonon$elm_crypto$Crypto$SHA$MessageSchedule$fromChunk, alg, chunk)));
+				var $temp$alg = alg,
+					$temp$words = rest,
+					$temp$currentHash = vars;
+				alg = $temp$alg;
+				words = $temp$words;
+				currentHash = $temp$currentHash;
+				continue chunks_;
+			}
+		}
+	});
+var $ktonon$elm_crypto$Crypto$SHA$Constants$initialHashValues = function (alg) {
+	switch (alg.$) {
+		case 'SHA224':
+			return A8(
+				$ktonon$elm_crypto$Crypto$SHA$Types$WorkingVars,
+				$ktonon$elm_word$Word$W(3238371032),
+				$ktonon$elm_word$Word$W(914150663),
+				$ktonon$elm_word$Word$W(812702999),
+				$ktonon$elm_word$Word$W(4144912697),
+				$ktonon$elm_word$Word$W(4290775857),
+				$ktonon$elm_word$Word$W(1750603025),
+				$ktonon$elm_word$Word$W(1694076839),
+				$ktonon$elm_word$Word$W(3204075428));
+		case 'SHA256':
+			return A8(
+				$ktonon$elm_crypto$Crypto$SHA$Types$WorkingVars,
+				$ktonon$elm_word$Word$W(1779033703),
+				$ktonon$elm_word$Word$W(3144134277),
+				$ktonon$elm_word$Word$W(1013904242),
+				$ktonon$elm_word$Word$W(2773480762),
+				$ktonon$elm_word$Word$W(1359893119),
+				$ktonon$elm_word$Word$W(2600822924),
+				$ktonon$elm_word$Word$W(528734635),
+				$ktonon$elm_word$Word$W(1541459225));
+		case 'SHA384':
+			return A8(
+				$ktonon$elm_crypto$Crypto$SHA$Types$WorkingVars,
+				A2($ktonon$elm_word$Word$D, 3418070365, 3238371032),
+				A2($ktonon$elm_word$Word$D, 1654270250, 914150663),
+				A2($ktonon$elm_word$Word$D, 2438529370, 812702999),
+				A2($ktonon$elm_word$Word$D, 355462360, 4144912697),
+				A2($ktonon$elm_word$Word$D, 1731405415, 4290775857),
+				A2($ktonon$elm_word$Word$D, 2394180231, 1750603025),
+				A2($ktonon$elm_word$Word$D, 3675008525, 1694076839),
+				A2($ktonon$elm_word$Word$D, 1203062813, 3204075428));
+		case 'SHA512':
+			return A8(
+				$ktonon$elm_crypto$Crypto$SHA$Types$WorkingVars,
+				A2($ktonon$elm_word$Word$D, 1779033703, 4089235720),
+				A2($ktonon$elm_word$Word$D, 3144134277, 2227873595),
+				A2($ktonon$elm_word$Word$D, 1013904242, 4271175723),
+				A2($ktonon$elm_word$Word$D, 2773480762, 1595750129),
+				A2($ktonon$elm_word$Word$D, 1359893119, 2917565137),
+				A2($ktonon$elm_word$Word$D, 2600822924, 725511199),
+				A2($ktonon$elm_word$Word$D, 528734635, 4215389547),
+				A2($ktonon$elm_word$Word$D, 1541459225, 327033209));
+		case 'SHA512_224':
+			return A8(
+				$ktonon$elm_crypto$Crypto$SHA$Types$WorkingVars,
+				A2($ktonon$elm_word$Word$D, 2352822216, 424955298),
+				A2($ktonon$elm_word$Word$D, 1944164710, 2312950998),
+				A2($ktonon$elm_word$Word$D, 502970286, 855612546),
+				A2($ktonon$elm_word$Word$D, 1738396948, 1479516111),
+				A2($ktonon$elm_word$Word$D, 258812777, 2077511080),
+				A2($ktonon$elm_word$Word$D, 2011393907, 79989058),
+				A2($ktonon$elm_word$Word$D, 1067287976, 1780299464),
+				A2($ktonon$elm_word$Word$D, 286451373, 2446758561));
+		default:
+			return A8(
+				$ktonon$elm_crypto$Crypto$SHA$Types$WorkingVars,
+				A2($ktonon$elm_word$Word$D, 573645204, 4230739756),
+				A2($ktonon$elm_word$Word$D, 2673172387, 3360449730),
+				A2($ktonon$elm_word$Word$D, 596883563, 1867755857),
+				A2($ktonon$elm_word$Word$D, 2520282905, 1497426621),
+				A2($ktonon$elm_word$Word$D, 2519219938, 2827943907),
+				A2($ktonon$elm_word$Word$D, 3193839141, 1401305490),
+				A2($ktonon$elm_word$Word$D, 721525244, 746961066),
+				A2($ktonon$elm_word$Word$D, 246885852, 2177182882));
+	}
+};
+var $ktonon$elm_crypto$Crypto$SHA$Types$toSingleWord = function (word) {
+	if (word.$ === 'D') {
+		var xh = word.a;
+		var xl = word.b;
+		return _List_fromArray(
+			[
+				$ktonon$elm_word$Word$W(xh),
+				$ktonon$elm_word$Word$W(xl)
+			]);
+	} else {
+		return _List_fromArray(
+			[word]);
+	}
+};
+var $ktonon$elm_crypto$Crypto$SHA$Types$workingVarsToWords = F2(
+	function (alg, _v0) {
+		var a = _v0.a;
+		var b = _v0.b;
+		var c = _v0.c;
+		var d = _v0.d;
+		var e = _v0.e;
+		var f = _v0.f;
+		var g = _v0.g;
+		var h = _v0.h;
+		switch (alg.$) {
+			case 'SHA224':
+				return $elm$core$Array$fromList(
+					_List_fromArray(
+						[a, b, c, d, e, f, g]));
+			case 'SHA256':
+				return $elm$core$Array$fromList(
+					_List_fromArray(
+						[a, b, c, d, e, f, g, h]));
+			case 'SHA384':
+				return $elm$core$Array$fromList(
+					_List_fromArray(
+						[a, b, c, d, e, f]));
+			case 'SHA512':
+				return $elm$core$Array$fromList(
+					_List_fromArray(
+						[a, b, c, d, e, f, g, h]));
+			case 'SHA512_224':
+				return $elm$core$Array$fromList(
+					A2(
+						$elm$core$List$take,
+						7,
+						A2(
+							$elm$core$List$concatMap,
+							$ktonon$elm_crypto$Crypto$SHA$Types$toSingleWord,
+							_List_fromArray(
+								[a, b, c, d]))));
+			default:
+				return $elm$core$Array$fromList(
+					_List_fromArray(
+						[a, b, c, d]));
+		}
+	});
+var $ktonon$elm_crypto$Crypto$SHA$Process$chunks = F2(
+	function (alg, words) {
+		return A2(
+			$ktonon$elm_crypto$Crypto$SHA$Types$workingVarsToWords,
+			alg,
+			A3(
+				$ktonon$elm_crypto$Crypto$SHA$Process$chunks_,
+				alg,
+				$elm$core$Array$toList(words),
+				$ktonon$elm_crypto$Crypto$SHA$Constants$initialHashValues(alg)));
+	});
+var $ktonon$elm_word$Word$FourBytes = F4(
+	function (a, b, c, d) {
+		return {$: 'FourBytes', a: a, b: b, c: c, d: d};
+	});
+var $ktonon$elm_word$Word$int32FromBytes = function (_v0) {
+	var x3 = _v0.a;
+	var x2 = _v0.b;
+	var x1 = _v0.c;
+	var x0 = _v0.d;
+	return ((x0 + (x1 * A2($elm$core$Basics$pow, 2, 8))) + (x2 * A2($elm$core$Basics$pow, 2, 16))) + (x3 * A2($elm$core$Basics$pow, 2, 24));
+};
+var $ktonon$elm_word$Word$pad4 = function (bytes) {
+	_v0$4:
+	while (true) {
+		if (bytes.b) {
+			if (bytes.b.b) {
+				if (bytes.b.b.b) {
+					if (bytes.b.b.b.b) {
+						if (!bytes.b.b.b.b.b) {
+							var x3 = bytes.a;
+							var _v1 = bytes.b;
+							var x2 = _v1.a;
+							var _v2 = _v1.b;
+							var x1 = _v2.a;
+							var _v3 = _v2.b;
+							var x0 = _v3.a;
+							return A4($ktonon$elm_word$Word$FourBytes, x3, x2, x1, x0);
+						} else {
+							break _v0$4;
+						}
+					} else {
+						var x3 = bytes.a;
+						var _v4 = bytes.b;
+						var x2 = _v4.a;
+						var _v5 = _v4.b;
+						var x1 = _v5.a;
+						return A4($ktonon$elm_word$Word$FourBytes, x3, x2, x1, 0);
+					}
+				} else {
+					var x3 = bytes.a;
+					var _v6 = bytes.b;
+					var x2 = _v6.a;
+					return A4($ktonon$elm_word$Word$FourBytes, x3, x2, 0, 0);
+				}
+			} else {
+				var x3 = bytes.a;
+				return A4($ktonon$elm_word$Word$FourBytes, x3, 0, 0, 0);
+			}
+		} else {
+			break _v0$4;
+		}
+	}
+	return A4($ktonon$elm_word$Word$FourBytes, 0, 0, 0, 0);
+};
+var $elm$core$Array$push = F2(
+	function (a, array) {
+		var tail = array.d;
+		return A2(
+			$elm$core$Array$unsafeReplaceTail,
+			A2($elm$core$Elm$JsArray$push, a, tail),
+			array);
+	});
+var $ktonon$elm_word$Word$accWords = F3(
+	function (wordSize, bytes, acc) {
+		accWords:
+		while (true) {
+			var _v0 = _Utils_Tuple2(wordSize, bytes);
+			_v0$2:
+			while (true) {
+				if (_v0.a.$ === 'Bit32') {
+					if (_v0.b.b) {
+						if ((_v0.b.b.b && _v0.b.b.b.b) && _v0.b.b.b.b.b) {
+							var _v1 = _v0.a;
+							var _v2 = _v0.b;
+							var x3 = _v2.a;
+							var _v3 = _v2.b;
+							var x2 = _v3.a;
+							var _v4 = _v3.b;
+							var x1 = _v4.a;
+							var _v5 = _v4.b;
+							var x0 = _v5.a;
+							var rest = _v5.b;
+							var acc2 = A2(
+								$elm$core$Array$push,
+								$ktonon$elm_word$Word$W(
+									$ktonon$elm_word$Word$int32FromBytes(
+										A4($ktonon$elm_word$Word$FourBytes, x3, x2, x1, x0))),
+								acc);
+							var $temp$wordSize = wordSize,
+								$temp$bytes = rest,
+								$temp$acc = acc2;
+							wordSize = $temp$wordSize;
+							bytes = $temp$bytes;
+							acc = $temp$acc;
+							continue accWords;
+						} else {
+							var _v15 = _v0.a;
+							var rest = _v0.b;
+							return A2(
+								$elm$core$Array$push,
+								$ktonon$elm_word$Word$W(
+									$ktonon$elm_word$Word$int32FromBytes(
+										$ktonon$elm_word$Word$pad4(rest))),
+								acc);
+						}
+					} else {
+						break _v0$2;
+					}
+				} else {
+					if (_v0.b.b) {
+						if ((((((_v0.b.b.b && _v0.b.b.b.b) && _v0.b.b.b.b.b) && _v0.b.b.b.b.b.b) && _v0.b.b.b.b.b.b.b) && _v0.b.b.b.b.b.b.b.b) && _v0.b.b.b.b.b.b.b.b.b) {
+							var _v6 = _v0.a;
+							var _v7 = _v0.b;
+							var x7 = _v7.a;
+							var _v8 = _v7.b;
+							var x6 = _v8.a;
+							var _v9 = _v8.b;
+							var x5 = _v9.a;
+							var _v10 = _v9.b;
+							var x4 = _v10.a;
+							var _v11 = _v10.b;
+							var x3 = _v11.a;
+							var _v12 = _v11.b;
+							var x2 = _v12.a;
+							var _v13 = _v12.b;
+							var x1 = _v13.a;
+							var _v14 = _v13.b;
+							var x0 = _v14.a;
+							var rest = _v14.b;
+							var acc2 = A2(
+								$elm$core$Array$push,
+								A2(
+									$ktonon$elm_word$Word$D,
+									$ktonon$elm_word$Word$int32FromBytes(
+										A4($ktonon$elm_word$Word$FourBytes, x7, x6, x5, x4)),
+									$ktonon$elm_word$Word$int32FromBytes(
+										A4($ktonon$elm_word$Word$FourBytes, x3, x2, x1, x0))),
+								acc);
+							var $temp$wordSize = wordSize,
+								$temp$bytes = rest,
+								$temp$acc = acc2;
+							wordSize = $temp$wordSize;
+							bytes = $temp$bytes;
+							acc = $temp$acc;
+							continue accWords;
+						} else {
+							var _v16 = _v0.a;
+							var rest = _v0.b;
+							return A2(
+								$elm$core$Array$push,
+								A2(
+									$ktonon$elm_word$Word$D,
+									$ktonon$elm_word$Word$int32FromBytes(
+										$ktonon$elm_word$Word$pad4(
+											A2($elm$core$List$take, 4, rest))),
+									$ktonon$elm_word$Word$int32FromBytes(
+										$ktonon$elm_word$Word$pad4(
+											A2($elm$core$List$drop, 4, rest)))),
+								acc);
+						}
+					} else {
+						break _v0$2;
+					}
+				}
+			}
+			return acc;
+		}
+	});
+var $ktonon$elm_word$Word$fromBytes = F2(
+	function (wordSize, bytes) {
+		return A3($ktonon$elm_word$Word$accWords, wordSize, bytes, $elm$core$Array$empty);
+	});
+var $ktonon$elm_crypto$Crypto$SHA$Preprocess$messageSizeBytes = function (alg) {
+	messageSizeBytes:
+	while (true) {
+		switch (alg.$) {
+			case 'SHA224':
+				var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA256;
+				alg = $temp$alg;
+				continue messageSizeBytes;
+			case 'SHA256':
+				return 8;
+			case 'SHA384':
+				var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512;
+				alg = $temp$alg;
+				continue messageSizeBytes;
+			case 'SHA512':
+				return 16;
+			case 'SHA512_224':
+				var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512;
+				alg = $temp$alg;
+				continue messageSizeBytes;
+			default:
+				var $temp$alg = $ktonon$elm_crypto$Crypto$SHA$Alg$SHA512;
+				alg = $temp$alg;
+				continue messageSizeBytes;
+		}
+	}
+};
+var $ktonon$elm_crypto$Crypto$SHA$Chunk$sizeInBits = A2(
+	$elm$core$Basics$composeR,
+	$ktonon$elm_crypto$Crypto$SHA$Chunk$sizeInBytes,
+	$elm$core$Basics$mul(8));
+var $ktonon$elm_crypto$Crypto$SHA$Preprocess$calculateK = F2(
+	function (alg, l) {
+		var c = $ktonon$elm_crypto$Crypto$SHA$Chunk$sizeInBits(alg);
+		return A2(
+			$elm$core$Basics$modBy,
+			c,
+			((c - 1) - (8 * $ktonon$elm_crypto$Crypto$SHA$Preprocess$messageSizeBytes(alg))) - A2($elm$core$Basics$modBy, c, l));
+	});
+var $ktonon$elm_word$Word$Bytes$fromInt = F2(
+	function (byteCount, value) {
+		return (byteCount > 4) ? A2(
+			$elm$core$List$append,
+			A2(
+				$ktonon$elm_word$Word$Bytes$fromInt,
+				byteCount - 4,
+				(value / A2($elm$core$Basics$pow, 2, 32)) | 0),
+			A2($ktonon$elm_word$Word$Bytes$fromInt, 4, 4294967295 & value)) : A2(
+			$elm$core$List$map,
+			function (i) {
+				return 255 & (value >>> ((byteCount - i) * A2($elm$core$Basics$pow, 2, 3)));
+			},
+			A2($elm$core$List$range, 1, byteCount));
+	});
+var $elm$core$List$repeatHelp = F3(
+	function (result, n, value) {
+		repeatHelp:
+		while (true) {
+			if (n <= 0) {
+				return result;
+			} else {
+				var $temp$result = A2($elm$core$List$cons, value, result),
+					$temp$n = n - 1,
+					$temp$value = value;
+				result = $temp$result;
+				n = $temp$n;
+				value = $temp$value;
+				continue repeatHelp;
+			}
+		}
+	});
+var $elm$core$List$repeat = F2(
+	function (n, value) {
+		return A3($elm$core$List$repeatHelp, _List_Nil, n, value);
+	});
+var $ktonon$elm_crypto$Crypto$SHA$Preprocess$postfix = F2(
+	function (alg, messageSize) {
+		return $elm$core$List$concat(
+			_List_fromArray(
+				[
+					_List_fromArray(
+					[128]),
+					A2(
+					$elm$core$List$repeat,
+					((A2($ktonon$elm_crypto$Crypto$SHA$Preprocess$calculateK, alg, messageSize) - 7) / 8) | 0,
+					0),
+					A2(
+					$ktonon$elm_word$Word$Bytes$fromInt,
+					$ktonon$elm_crypto$Crypto$SHA$Preprocess$messageSizeBytes(alg),
+					messageSize)
+				]));
+	});
+var $ktonon$elm_crypto$Crypto$SHA$Preprocess$preprocess = F2(
+	function (alg, message) {
+		return A2(
+			$elm$core$List$append,
+			message,
+			A2(
+				$ktonon$elm_crypto$Crypto$SHA$Preprocess$postfix,
+				alg,
+				8 * $elm$core$List$length(message)));
+	});
+var $ktonon$elm_crypto$Crypto$SHA$digest = function (alg) {
+	return A2(
+		$elm$core$Basics$composeR,
+		$ktonon$elm_crypto$Crypto$SHA$Preprocess$preprocess(alg),
+		A2(
+			$elm$core$Basics$composeR,
+			$ktonon$elm_word$Word$fromBytes(
+				$ktonon$elm_crypto$Crypto$SHA$Alg$wordSize(alg)),
+			$ktonon$elm_crypto$Crypto$SHA$Process$chunks(alg)));
+};
+var $ktonon$elm_word$Word$Bytes$splitUtf8 = function (x) {
+	return (x < 128) ? _List_fromArray(
+		[x]) : ((x < 2048) ? _List_fromArray(
+		[192 | ((1984 & x) >>> 6), 128 | (63 & x)]) : _List_fromArray(
+		[224 | ((61440 & x) >>> 12), 128 | ((4032 & x) >>> 6), 128 | (63 & x)]));
+};
+var $elm$core$String$foldr = _String_foldr;
+var $elm$core$String$toList = function (string) {
+	return A3($elm$core$String$foldr, $elm$core$List$cons, _List_Nil, string);
+};
+var $ktonon$elm_word$Word$Bytes$fromUTF8 = A2(
+	$elm$core$Basics$composeR,
+	$elm$core$String$toList,
+	A2(
+		$elm$core$List$foldl,
+		F2(
+			function (_char, acc) {
+				return A2(
+					$elm$core$List$append,
+					acc,
+					$ktonon$elm_word$Word$Bytes$splitUtf8(
+						$elm$core$Char$toCode(_char)));
+			}),
+		_List_Nil));
+var $elm$core$Array$foldl = F3(
+	function (func, baseCase, _v0) {
+		var tree = _v0.c;
+		var tail = _v0.d;
+		var helper = F2(
+			function (node, acc) {
+				if (node.$ === 'SubTree') {
+					var subTree = node.a;
+					return A3($elm$core$Elm$JsArray$foldl, helper, acc, subTree);
+				} else {
+					var values = node.a;
+					return A3($elm$core$Elm$JsArray$foldl, func, acc, values);
+				}
+			});
+		return A3(
+			$elm$core$Elm$JsArray$foldl,
+			func,
+			A3($elm$core$Elm$JsArray$foldl, helper, baseCase, tree),
+			tail);
+	});
+var $ktonon$elm_word$Word$Hex$fromArray = function (toHex) {
+	return A2(
+		$elm$core$Array$foldl,
+		F2(
+			function (val, acc) {
+				return _Utils_ap(
+					acc,
+					toHex(val));
+			}),
+		'');
+};
+var $elm$core$String$cons = _String_cons;
+var $ktonon$elm_word$Word$Hex$fromIntAccumulator = function (x) {
+	return $elm$core$String$cons(
+		$elm$core$Char$fromCode(
+			(x < 10) ? (x + 48) : ((x + 97) - 10)));
+};
+var $ktonon$elm_word$Word$Hex$fromInt = F2(
+	function (charCount, value) {
+		return A3(
+			$elm$core$List$foldl,
+			function (i) {
+				return $ktonon$elm_word$Word$Hex$fromIntAccumulator(
+					15 & (value >>> (i * A2($elm$core$Basics$pow, 2, 2))));
+			},
+			'',
+			A2($elm$core$List$range, 0, charCount - 1));
+	});
+var $ktonon$elm_word$Word$Hex$fromWord = function (word) {
+	switch (word.$) {
+		case 'W':
+			var x = word.a;
+			return A2($ktonon$elm_word$Word$Hex$fromInt, 8, x);
+		case 'D':
+			var h = word.a;
+			var l = word.b;
+			return _Utils_ap(
+				A2($ktonon$elm_word$Word$Hex$fromInt, 8, h),
+				A2($ktonon$elm_word$Word$Hex$fromInt, 8, l));
+		default:
+			return 'M';
+	}
+};
+var $ktonon$elm_word$Word$Hex$fromWordArray = $ktonon$elm_word$Word$Hex$fromArray($ktonon$elm_word$Word$Hex$fromWord);
+var $ktonon$elm_crypto$Crypto$Hash$sha256 = function (message) {
+	return $ktonon$elm_word$Word$Hex$fromWordArray(
+		A2(
+			$ktonon$elm_crypto$Crypto$SHA$digest,
+			$ktonon$elm_crypto$Crypto$SHA$Alg$SHA256,
+			$ktonon$elm_word$Word$Bytes$fromUTF8(message)));
+};
+var $the_sett$elm_aws_core$AWS$Internal$Body$toString = function (body) {
+	switch (body.$) {
+		case 'Json':
+			var value = body.a;
+			return A2($elm$json$Json$Encode$encode, 0, value);
+		case 'Empty':
+			return '';
+		default:
+			var val = body.b;
+			return val;
+	}
+};
+var $the_sett$elm_aws_core$AWS$Internal$Canonical$canonicalPayload = A2($elm$core$Basics$composeR, $the_sett$elm_aws_core$AWS$Internal$Body$toString, $ktonon$elm_crypto$Crypto$Hash$sha256);
+var $ktonon$elm_word$Word$Hex$fromByte = $ktonon$elm_word$Word$Hex$fromInt(2);
+var $elm$url$Url$percentEncode = _Url_percentEncode;
+var $elm$core$String$toUpper = _String_toUpper;
+var $the_sett$elm_aws_core$AWS$Uri$percentEncode = function (x) {
+	return A3(
+		$elm$regex$Regex$replace,
+		A2(
+			$elm$core$Maybe$withDefault,
+			$elm$regex$Regex$never,
+			$elm$regex$Regex$fromString('[!*\'()]')),
+		function (match) {
+			return A2(
+				$elm$core$Maybe$withDefault,
+				'',
+				A2(
+					$elm$core$Maybe$map,
+					function (_char) {
+						return '%' + $elm$core$String$toUpper(
+							$ktonon$elm_word$Word$Hex$fromByte(
+								$elm$core$Char$toCode(_char)));
+					},
+					$elm$core$List$head(
+						$elm$core$String$toList(match.match))));
+		},
+		$elm$url$Url$percentEncode(x));
+};
+var $elm$regex$Regex$contains = _Regex_contains;
+var $the_sett$elm_aws_core$AWS$Internal$Canonical$resolveRelativePath = function (path) {
+	var rel = A2(
+		$elm$core$Maybe$withDefault,
+		$elm$regex$Regex$never,
+		$elm$regex$Regex$fromString('(([^/]+)/[.]{2}|/[.])/?'));
+	return A2($elm$regex$Regex$contains, rel, path) ? $the_sett$elm_aws_core$AWS$Internal$Canonical$resolveRelativePath(
+		A3(
+			$elm$regex$Regex$replace,
+			rel,
+			function (_v0) {
+				var match = _v0.match;
+				return ((match === '/./') || (match === '/.')) ? '/' : '';
+			},
+			path)) : path;
+};
+var $the_sett$elm_aws_core$AWS$Internal$Canonical$canonicalUri = F2(
+	function (signer, path) {
+		if (signer.$ === 'SignS3') {
+			return path;
+		} else {
+			return $elm$core$String$isEmpty(path) ? '/' : A2(
+				$elm$core$String$join,
+				'/',
+				A2(
+					$elm$core$List$map,
+					$the_sett$elm_aws_core$AWS$Uri$percentEncode,
+					A2(
+						$elm$core$String$split,
+						'/',
+						$the_sett$elm_aws_core$AWS$Internal$Canonical$resolveRelativePath(
+							A3(
+								$elm$regex$Regex$replace,
+								A2(
+									$elm$core$Maybe$withDefault,
+									$elm$regex$Regex$never,
+									$elm$regex$Regex$fromString('/{2,}')),
+								function (_v1) {
+									return '/';
+								},
+								path)))));
+		}
+	});
+var $the_sett$elm_aws_core$AWS$Internal$Canonical$encode2Tuple = F2(
+	function (separator, _v0) {
+		var a = _v0.a;
+		var b = _v0.b;
+		return A2(
+			$elm$core$String$join,
+			separator,
+			_List_fromArray(
+				[
+					$the_sett$elm_aws_core$AWS$Uri$percentEncode(a),
+					$the_sett$elm_aws_core$AWS$Uri$percentEncode(b)
+				]));
+	});
+var $the_sett$elm_aws_core$AWS$Internal$Canonical$canonicalUrlBuilder = function (params) {
+	return A2(
+		$elm$core$String$join,
+		'&',
+		A2(
+			$elm$core$List$map,
+			$the_sett$elm_aws_core$AWS$Internal$Canonical$encode2Tuple('='),
+			$elm$core$List$sort(params)));
+};
+var $the_sett$elm_aws_core$AWS$Internal$Canonical$signedHeaders = function (headers) {
+	return A2(
+		$elm$core$String$join,
+		';',
+		$elm$core$List$sort(
+			A2(
+				$elm$core$List$map,
+				function (_v0) {
+					var a = _v0.a;
+					return $elm$core$String$toLower(a);
+				},
+				A3($elm$core$List$foldl, $the_sett$elm_aws_core$AWS$Internal$Canonical$mergeSameHeaders, _List_Nil, headers))));
+};
+var $the_sett$elm_aws_core$AWS$Internal$Canonical$canonicalRaw = F6(
+	function (signer, method, path, headers, params, body) {
+		return A2(
+			$elm$core$String$join,
+			'\n',
+			_List_fromArray(
+				[
+					$elm$core$String$toUpper(method),
+					A2($the_sett$elm_aws_core$AWS$Internal$Canonical$canonicalUri, signer, path),
+					$the_sett$elm_aws_core$AWS$Internal$Canonical$canonicalUrlBuilder(params),
+					$the_sett$elm_aws_core$AWS$Internal$Canonical$canonicalHeaders(headers),
+					'',
+					$the_sett$elm_aws_core$AWS$Internal$Canonical$signedHeaders(headers),
+					$the_sett$elm_aws_core$AWS$Internal$Canonical$canonicalPayload(body)
+				]));
+	});
+var $the_sett$elm_aws_core$AWS$Internal$Canonical$canonical = F6(
+	function (signer, method, path, headers, params, body) {
+		return $ktonon$elm_crypto$Crypto$Hash$sha256(
+			A6($the_sett$elm_aws_core$AWS$Internal$Canonical$canonicalRaw, signer, method, path, headers, params, body));
+	});
+var $rtfeldman$elm_iso8601_date_strings$Iso8601$fromMonth = function (month) {
+	switch (month.$) {
+		case 'Jan':
+			return 1;
+		case 'Feb':
+			return 2;
+		case 'Mar':
+			return 3;
+		case 'Apr':
+			return 4;
+		case 'May':
+			return 5;
+		case 'Jun':
+			return 6;
+		case 'Jul':
+			return 7;
+		case 'Aug':
+			return 8;
+		case 'Sep':
+			return 9;
+		case 'Oct':
+			return 10;
+		case 'Nov':
+			return 11;
+		default:
+			return 12;
+	}
+};
+var $elm$time$Time$flooredDiv = F2(
+	function (numerator, denominator) {
+		return $elm$core$Basics$floor(numerator / denominator);
+	});
+var $elm$time$Time$toAdjustedMinutesHelp = F3(
+	function (defaultOffset, posixMinutes, eras) {
+		toAdjustedMinutesHelp:
+		while (true) {
+			if (!eras.b) {
+				return posixMinutes + defaultOffset;
+			} else {
+				var era = eras.a;
+				var olderEras = eras.b;
+				if (_Utils_cmp(era.start, posixMinutes) < 0) {
+					return posixMinutes + era.offset;
+				} else {
+					var $temp$defaultOffset = defaultOffset,
+						$temp$posixMinutes = posixMinutes,
+						$temp$eras = olderEras;
+					defaultOffset = $temp$defaultOffset;
+					posixMinutes = $temp$posixMinutes;
+					eras = $temp$eras;
+					continue toAdjustedMinutesHelp;
+				}
+			}
+		}
+	});
+var $elm$time$Time$toAdjustedMinutes = F2(
+	function (_v0, time) {
+		var defaultOffset = _v0.a;
+		var eras = _v0.b;
+		return A3(
+			$elm$time$Time$toAdjustedMinutesHelp,
+			defaultOffset,
+			A2(
+				$elm$time$Time$flooredDiv,
+				$elm$time$Time$posixToMillis(time),
+				60000),
+			eras);
+	});
+var $elm$time$Time$toCivil = function (minutes) {
+	var rawDay = A2($elm$time$Time$flooredDiv, minutes, 60 * 24) + 719468;
+	var era = (((rawDay >= 0) ? rawDay : (rawDay - 146096)) / 146097) | 0;
+	var dayOfEra = rawDay - (era * 146097);
+	var yearOfEra = ((((dayOfEra - ((dayOfEra / 1460) | 0)) + ((dayOfEra / 36524) | 0)) - ((dayOfEra / 146096) | 0)) / 365) | 0;
+	var dayOfYear = dayOfEra - (((365 * yearOfEra) + ((yearOfEra / 4) | 0)) - ((yearOfEra / 100) | 0));
+	var mp = (((5 * dayOfYear) + 2) / 153) | 0;
+	var month = mp + ((mp < 10) ? 3 : (-9));
+	var year = yearOfEra + (era * 400);
+	return {
+		day: (dayOfYear - ((((153 * mp) + 2) / 5) | 0)) + 1,
+		month: month,
+		year: year + ((month <= 2) ? 1 : 0)
+	};
+};
+var $elm$time$Time$toDay = F2(
+	function (zone, time) {
+		return $elm$time$Time$toCivil(
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).day;
+	});
+var $elm$time$Time$toHour = F2(
+	function (zone, time) {
+		return A2(
+			$elm$core$Basics$modBy,
+			24,
+			A2(
+				$elm$time$Time$flooredDiv,
+				A2($elm$time$Time$toAdjustedMinutes, zone, time),
+				60));
+	});
+var $elm$time$Time$toMillis = F2(
+	function (_v0, time) {
+		return A2(
+			$elm$core$Basics$modBy,
+			1000,
+			$elm$time$Time$posixToMillis(time));
+	});
+var $elm$time$Time$toMinute = F2(
+	function (zone, time) {
+		return A2(
+			$elm$core$Basics$modBy,
+			60,
+			A2($elm$time$Time$toAdjustedMinutes, zone, time));
+	});
+var $elm$time$Time$Apr = {$: 'Apr'};
+var $elm$time$Time$Aug = {$: 'Aug'};
+var $elm$time$Time$Dec = {$: 'Dec'};
+var $elm$time$Time$Feb = {$: 'Feb'};
+var $elm$time$Time$Jan = {$: 'Jan'};
+var $elm$time$Time$Jul = {$: 'Jul'};
+var $elm$time$Time$Jun = {$: 'Jun'};
+var $elm$time$Time$Mar = {$: 'Mar'};
+var $elm$time$Time$May = {$: 'May'};
+var $elm$time$Time$Nov = {$: 'Nov'};
+var $elm$time$Time$Oct = {$: 'Oct'};
+var $elm$time$Time$Sep = {$: 'Sep'};
+var $elm$time$Time$toMonth = F2(
+	function (zone, time) {
+		var _v0 = $elm$time$Time$toCivil(
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).month;
+		switch (_v0) {
+			case 1:
+				return $elm$time$Time$Jan;
+			case 2:
+				return $elm$time$Time$Feb;
+			case 3:
+				return $elm$time$Time$Mar;
+			case 4:
+				return $elm$time$Time$Apr;
+			case 5:
+				return $elm$time$Time$May;
+			case 6:
+				return $elm$time$Time$Jun;
+			case 7:
+				return $elm$time$Time$Jul;
+			case 8:
+				return $elm$time$Time$Aug;
+			case 9:
+				return $elm$time$Time$Sep;
+			case 10:
+				return $elm$time$Time$Oct;
+			case 11:
+				return $elm$time$Time$Nov;
+			default:
+				return $elm$time$Time$Dec;
+		}
+	});
+var $elm$core$String$fromChar = function (_char) {
+	return A2($elm$core$String$cons, _char, '');
+};
+var $elm$core$Bitwise$shiftRightBy = _Bitwise_shiftRightBy;
+var $elm$core$String$repeatHelp = F3(
+	function (n, chunk, result) {
+		return (n <= 0) ? result : A3(
+			$elm$core$String$repeatHelp,
+			n >> 1,
+			_Utils_ap(chunk, chunk),
+			(!(n & 1)) ? result : _Utils_ap(result, chunk));
+	});
+var $elm$core$String$repeat = F2(
+	function (n, chunk) {
+		return A3($elm$core$String$repeatHelp, n, chunk, '');
+	});
+var $elm$core$String$padLeft = F3(
+	function (n, _char, string) {
+		return _Utils_ap(
+			A2(
+				$elm$core$String$repeat,
+				n - $elm$core$String$length(string),
+				$elm$core$String$fromChar(_char)),
+			string);
+	});
+var $rtfeldman$elm_iso8601_date_strings$Iso8601$toPaddedString = F2(
+	function (digits, time) {
+		return A3(
+			$elm$core$String$padLeft,
+			digits,
+			_Utils_chr('0'),
+			$elm$core$String$fromInt(time));
+	});
+var $elm$time$Time$toSecond = F2(
+	function (_v0, time) {
+		return A2(
+			$elm$core$Basics$modBy,
+			60,
+			A2(
+				$elm$time$Time$flooredDiv,
+				$elm$time$Time$posixToMillis(time),
+				1000));
+	});
+var $elm$time$Time$toYear = F2(
+	function (zone, time) {
+		return $elm$time$Time$toCivil(
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).year;
+	});
+var $elm$time$Time$utc = A2($elm$time$Time$Zone, 0, _List_Nil);
+var $rtfeldman$elm_iso8601_date_strings$Iso8601$fromTime = function (time) {
+	return A2(
+		$rtfeldman$elm_iso8601_date_strings$Iso8601$toPaddedString,
+		4,
+		A2($elm$time$Time$toYear, $elm$time$Time$utc, time)) + ('-' + (A2(
+		$rtfeldman$elm_iso8601_date_strings$Iso8601$toPaddedString,
+		2,
+		$rtfeldman$elm_iso8601_date_strings$Iso8601$fromMonth(
+			A2($elm$time$Time$toMonth, $elm$time$Time$utc, time))) + ('-' + (A2(
+		$rtfeldman$elm_iso8601_date_strings$Iso8601$toPaddedString,
+		2,
+		A2($elm$time$Time$toDay, $elm$time$Time$utc, time)) + ('T' + (A2(
+		$rtfeldman$elm_iso8601_date_strings$Iso8601$toPaddedString,
+		2,
+		A2($elm$time$Time$toHour, $elm$time$Time$utc, time)) + (':' + (A2(
+		$rtfeldman$elm_iso8601_date_strings$Iso8601$toPaddedString,
+		2,
+		A2($elm$time$Time$toMinute, $elm$time$Time$utc, time)) + (':' + (A2(
+		$rtfeldman$elm_iso8601_date_strings$Iso8601$toPaddedString,
+		2,
+		A2($elm$time$Time$toSecond, $elm$time$Time$utc, time)) + ('.' + (A2(
+		$rtfeldman$elm_iso8601_date_strings$Iso8601$toPaddedString,
+		3,
+		A2($elm$time$Time$toMillis, $elm$time$Time$utc, time)) + 'Z'))))))))))));
+};
+var $the_sett$elm_aws_core$AWS$Internal$V4$formatPosix = function (date) {
+	return A3(
+		$elm$regex$Regex$replace,
+		A2(
+			$elm$core$Maybe$withDefault,
+			$elm$regex$Regex$never,
+			$elm$regex$Regex$fromString('([-:]|\\.\\d{3})')),
+		function (_v0) {
+			return '';
+		},
+		$rtfeldman$elm_iso8601_date_strings$Iso8601$fromTime(date));
+};
+var $the_sett$elm_aws_core$AWS$Internal$Service$region = function (_v0) {
+	var endpoint = _v0.endpoint;
+	var regionResolver = _v0.regionResolver;
+	return regionResolver(endpoint);
+};
+var $the_sett$elm_aws_core$AWS$Internal$V4$credentialScope = F3(
+	function (date, creds, service) {
+		return A2(
+			$elm$core$String$join,
+			'/',
+			_List_fromArray(
+				[
+					A3(
+					$elm$core$String$slice,
+					0,
+					8,
+					$the_sett$elm_aws_core$AWS$Internal$V4$formatPosix(date)),
+					$the_sett$elm_aws_core$AWS$Internal$Service$region(service),
+					service.endpointPrefix,
+					'aws4_request'
+				]));
+	});
+var $elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
+var $elm$core$List$any = F2(
+	function (isOkay, list) {
+		any:
+		while (true) {
+			if (!list.b) {
+				return false;
+			} else {
+				var x = list.a;
+				var xs = list.b;
+				if (isOkay(x)) {
+					return true;
+				} else {
+					var $temp$isOkay = isOkay,
+						$temp$list = xs;
+					isOkay = $temp$isOkay;
+					list = $temp$list;
+					continue any;
+				}
+			}
+		}
+	});
+var $elm$core$List$member = F2(
+	function (x, xs) {
+		return A2(
+			$elm$core$List$any,
+			function (a) {
+				return _Utils_eq(a, x);
+			},
+			xs);
+	});
+var $elm$core$Basics$not = _Basics_not;
+var $the_sett$elm_aws_core$AWS$Internal$V4$filterHeaders = F2(
+	function (headersToRemove, headersList) {
+		var matches = function (_v0) {
+			var head = _v0.a;
+			return !A2(
+				$elm$core$List$member,
+				$elm$core$String$toLower(head),
+				headersToRemove);
+		};
+		return A2($elm$core$List$filter, matches, headersList);
+	});
+var $ktonon$elm_crypto$Crypto$HMAC$SHA = function (a) {
+	return {$: 'SHA', a: a};
+};
+var $ktonon$elm_crypto$Crypto$HMAC$blockSize = function (_v0) {
+	blockSize:
+	while (true) {
+		var alg = _v0.a;
+		switch (alg.$) {
+			case 'SHA224':
+				var $temp$_v0 = $ktonon$elm_crypto$Crypto$HMAC$SHA($ktonon$elm_crypto$Crypto$SHA$Alg$SHA256);
+				_v0 = $temp$_v0;
+				continue blockSize;
+			case 'SHA256':
+				return 64;
+			case 'SHA384':
+				var $temp$_v0 = $ktonon$elm_crypto$Crypto$HMAC$SHA($ktonon$elm_crypto$Crypto$SHA$Alg$SHA512);
+				_v0 = $temp$_v0;
+				continue blockSize;
+			case 'SHA512':
+				return 128;
+			case 'SHA512_224':
+				var $temp$_v0 = $ktonon$elm_crypto$Crypto$HMAC$SHA($ktonon$elm_crypto$Crypto$SHA$Alg$SHA512);
+				_v0 = $temp$_v0;
+				continue blockSize;
+			default:
+				var $temp$_v0 = $ktonon$elm_crypto$Crypto$HMAC$SHA($ktonon$elm_crypto$Crypto$SHA$Alg$SHA512);
+				_v0 = $temp$_v0;
+				continue blockSize;
+		}
+	}
+};
+var $ktonon$elm_word$Word$toBytes = A2(
+	$elm$core$Basics$composeR,
+	$elm$core$Array$toList,
+	$elm$core$List$concatMap(
+		function (word) {
+			switch (word.$) {
+				case 'W':
+					var x = word.a;
+					return A2($ktonon$elm_word$Word$Bytes$fromInt, 4, x);
+				case 'D':
+					var xh = word.a;
+					var xl = word.b;
+					return A2(
+						$elm$core$List$append,
+						A2($ktonon$elm_word$Word$Bytes$fromInt, 4, xh),
+						A2($ktonon$elm_word$Word$Bytes$fromInt, 4, xl));
+				default:
+					return _List_Nil;
+			}
+		}));
+var $ktonon$elm_crypto$Crypto$HMAC$Digest$hmac_ = F3(
+	function (hash, message, key) {
+		var oKeyPad = A2(
+			$elm$core$List$map,
+			$elm$core$Bitwise$xor(92),
+			key);
+		var iKeyPad = A2(
+			$elm$core$List$map,
+			$elm$core$Bitwise$xor(54),
+			key);
+		return hash(
+			A2(
+				$elm$core$List$append,
+				oKeyPad,
+				$ktonon$elm_word$Word$toBytes(
+					hash(
+						A2($elm$core$List$append, iKeyPad, message)))));
+	});
+var $ktonon$elm_crypto$Crypto$HMAC$Digest$padEnd = F2(
+	function (blockSize, bytes) {
+		return A2(
+			$elm$core$List$append,
+			bytes,
+			A2(
+				$elm$core$List$repeat,
+				blockSize - $elm$core$List$length(bytes),
+				0));
+	});
+var $ktonon$elm_crypto$Crypto$HMAC$Digest$normalizeKey = F3(
+	function (hash, blockSize, key) {
+		var _v0 = A2(
+			$elm$core$Basics$compare,
+			blockSize,
+			$elm$core$List$length(key));
+		switch (_v0.$) {
+			case 'EQ':
+				return key;
+			case 'GT':
+				return A2($ktonon$elm_crypto$Crypto$HMAC$Digest$padEnd, blockSize, key);
+			default:
+				return A2(
+					$ktonon$elm_crypto$Crypto$HMAC$Digest$padEnd,
+					blockSize,
+					$ktonon$elm_word$Word$toBytes(
+						hash(key)));
+		}
+	});
+var $ktonon$elm_crypto$Crypto$HMAC$Digest$digestBytes = F4(
+	function (hash, blockSize, key, message) {
+		return A3(
+			$ktonon$elm_crypto$Crypto$HMAC$Digest$hmac_,
+			hash,
+			message,
+			A3($ktonon$elm_crypto$Crypto$HMAC$Digest$normalizeKey, hash, blockSize, key));
+	});
+var $ktonon$elm_crypto$Crypto$HMAC$hash = function (_v0) {
+	var alg = _v0.a;
+	return $ktonon$elm_crypto$Crypto$SHA$digest(alg);
+};
+var $ktonon$elm_crypto$Crypto$HMAC$digestBytes = F3(
+	function (type_, key, message) {
+		return $ktonon$elm_word$Word$toBytes(
+			A4(
+				$ktonon$elm_crypto$Crypto$HMAC$Digest$digestBytes,
+				$ktonon$elm_crypto$Crypto$HMAC$hash(type_),
+				$ktonon$elm_crypto$Crypto$HMAC$blockSize(type_),
+				key,
+				message));
+	});
+var $ktonon$elm_word$Word$Hex$fromList = function (toHex) {
+	return A2(
+		$elm$core$List$foldl,
+		F2(
+			function (val, acc) {
+				return _Utils_ap(
+					acc,
+					toHex(val));
+			}),
+		'');
+};
+var $ktonon$elm_word$Word$Hex$fromByteList = $ktonon$elm_word$Word$Hex$fromList($ktonon$elm_word$Word$Hex$fromByte);
+var $ktonon$elm_crypto$Crypto$HMAC$sha256 = $ktonon$elm_crypto$Crypto$HMAC$SHA($ktonon$elm_crypto$Crypto$SHA$Alg$SHA256);
+var $the_sett$elm_aws_core$AWS$Internal$V4$signature = F4(
+	function (creds, service, date, toSign) {
+		var digest = F2(
+			function (message, key) {
+				return A3(
+					$ktonon$elm_crypto$Crypto$HMAC$digestBytes,
+					$ktonon$elm_crypto$Crypto$HMAC$sha256,
+					key,
+					$ktonon$elm_word$Word$Bytes$fromUTF8(message));
+			});
+		return $ktonon$elm_word$Word$Hex$fromByteList(
+			A2(
+				digest,
+				toSign,
+				A2(
+					digest,
+					'aws4_request',
+					A2(
+						digest,
+						service.endpointPrefix,
+						A2(
+							digest,
+							$the_sett$elm_aws_core$AWS$Internal$Service$region(service),
+							A2(
+								digest,
+								A3(
+									$elm$core$String$slice,
+									0,
+									8,
+									$the_sett$elm_aws_core$AWS$Internal$V4$formatPosix(date)),
+								$ktonon$elm_word$Word$Bytes$fromUTF8('AWS4' + creds.secretAccessKey)))))));
+	});
+var $the_sett$elm_aws_core$AWS$Internal$V4$stringToSign = F4(
+	function (alg, date, scope, canon) {
+		return A2(
+			$elm$core$String$join,
+			'\n',
+			_List_fromArray(
+				[
+					alg,
+					$the_sett$elm_aws_core$AWS$Internal$V4$formatPosix(date),
+					scope,
+					canon
+				]));
+	});
+var $the_sett$elm_aws_core$AWS$Internal$V4$authorization = F5(
+	function (creds, date, service, req, rawHeaders) {
+		var scope = A3($the_sett$elm_aws_core$AWS$Internal$V4$credentialScope, date, creds, service);
+		var filteredHeaders = A2(
+			$the_sett$elm_aws_core$AWS$Internal$V4$filterHeaders,
+			_List_fromArray(
+				['content-type', 'accept']),
+			rawHeaders);
+		var canon = A6($the_sett$elm_aws_core$AWS$Internal$Canonical$canonical, service.signer, req.method, req.path, filteredHeaders, req.query, req.body);
+		return A2(
+			$elm$core$String$join,
+			', ',
+			_List_fromArray(
+				[
+					'AWS4-HMAC-SHA256 Credential=' + (creds.accessKeyId + ('/' + scope)),
+					'SignedHeaders=' + $the_sett$elm_aws_core$AWS$Internal$Canonical$signedHeaders(filteredHeaders),
+					'Signature=' + A4(
+					$the_sett$elm_aws_core$AWS$Internal$V4$signature,
+					creds,
+					service,
+					date,
+					A4($the_sett$elm_aws_core$AWS$Internal$V4$stringToSign, $the_sett$elm_aws_core$AWS$Internal$V4$algorithm, date, scope, canon))
+				]));
+	});
+var $the_sett$elm_aws_core$AWS$Internal$Service$host = function (spec) {
+	return A2(spec.hostResolver, spec.endpoint, spec.endpointPrefix);
+};
+var $the_sett$elm_aws_core$AWS$Internal$V4$addAuthorization = F5(
+	function (service, creds, date, req, headersList) {
+		return A2(
+			$elm$core$List$append,
+			headersList,
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'Authorization',
+					A5(
+						$the_sett$elm_aws_core$AWS$Internal$V4$authorization,
+						creds,
+						date,
+						service,
+						req,
+						A2(
+							$elm$core$List$cons,
+							_Utils_Tuple2(
+								'Host',
+								$the_sett$elm_aws_core$AWS$Internal$Service$host(service)),
+							headersList)))
+				]));
+	});
+var $the_sett$elm_aws_core$AWS$Internal$V4$addSessionToken = F2(
+	function (creds, headersList) {
+		return A2(
+			$elm$core$Maybe$withDefault,
+			headersList,
+			A2(
+				$elm$core$Maybe$map,
+				function (token) {
+					return A2(
+						$elm$core$List$cons,
+						_Utils_Tuple2('x-amz-security-token', token),
+						headersList);
+				},
+				creds.sessionToken));
+	});
+var $elm$http$Http$Header = F2(
+	function (a, b) {
+		return {$: 'Header', a: a, b: b};
+	});
+var $elm$http$Http$header = $elm$http$Http$Header;
+var $the_sett$elm_aws_core$AWS$Internal$Service$acceptType = function (spec) {
+	var _v0 = spec.protocol;
+	if (_v0.$ === 'REST_XML') {
+		return 'application/xml';
+	} else {
+		return 'application/json';
+	}
+};
+var $the_sett$elm_aws_core$AWS$Internal$Service$contentType = function (spec) {
+	return function () {
+		var _v0 = spec.protocol;
+		if (_v0.$ === 'REST_XML') {
+			return 'application/xml';
+		} else {
+			var _v1 = spec.jsonVersion;
+			if (_v1.$ === 'Just') {
+				var apiVersion = _v1.a;
+				return 'application/x-amz-json-' + apiVersion;
+			} else {
+				return 'application/json';
+			}
+		}
+	}() + '; charset=utf-8';
+};
+var $the_sett$elm_aws_core$AWS$Internal$Body$explicitMimetype = function (body) {
+	if (body.$ === 'String') {
+		var typ = body.a;
+		return $elm$core$Maybe$Just(typ);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $elm$core$Basics$neq = _Utils_notEqual;
+var $the_sett$elm_aws_core$AWS$Internal$V4$headers = F4(
+	function (service, date, body, extraHeaders) {
+		var extraNames = A2(
+			$elm$core$List$map,
+			$elm$core$String$toLower,
+			A2($elm$core$List$map, $elm$core$Tuple$first, extraHeaders));
+		return $elm$core$List$concat(
+			_List_fromArray(
+				[
+					extraHeaders,
+					_List_fromArray(
+					[
+						_Utils_Tuple2(
+						'x-amz-date',
+						$the_sett$elm_aws_core$AWS$Internal$V4$formatPosix(date)),
+						_Utils_Tuple2(
+						'x-amz-content-sha256',
+						$the_sett$elm_aws_core$AWS$Internal$Canonical$canonicalPayload(body))
+					]),
+					A2($elm$core$List$member, 'accept', extraNames) ? _List_Nil : _List_fromArray(
+					[
+						_Utils_Tuple2(
+						'Accept',
+						$the_sett$elm_aws_core$AWS$Internal$Service$acceptType(service))
+					]),
+					(A2($elm$core$List$member, 'content-type', extraNames) || (!_Utils_eq(
+					$the_sett$elm_aws_core$AWS$Internal$Body$explicitMimetype(body),
+					$elm$core$Maybe$Nothing))) ? _List_Nil : _List_fromArray(
+					[
+						_Utils_Tuple2(
+						'Content-Type',
+						$the_sett$elm_aws_core$AWS$Internal$Service$contentType(service))
+					])
+				]));
+	});
+var $elm$http$Http$BadStatus_ = F2(
+	function (a, b) {
+		return {$: 'BadStatus_', a: a, b: b};
+	});
+var $elm$http$Http$BadUrl_ = function (a) {
+	return {$: 'BadUrl_', a: a};
+};
+var $elm$http$Http$GoodStatus_ = F2(
+	function (a, b) {
+		return {$: 'GoodStatus_', a: a, b: b};
+	});
+var $elm$http$Http$NetworkError_ = {$: 'NetworkError_'};
+var $elm$http$Http$Receiving = function (a) {
+	return {$: 'Receiving', a: a};
+};
+var $elm$http$Http$Sending = function (a) {
+	return {$: 'Sending', a: a};
+};
+var $elm$http$Http$Timeout_ = {$: 'Timeout_'};
+var $elm$core$Maybe$isJust = function (maybe) {
+	if (maybe.$ === 'Just') {
+		return true;
+	} else {
+		return false;
+	}
+};
+var $elm$core$Platform$sendToSelf = _Platform_sendToSelf;
+var $elm$http$Http$stringResolver = A2(_Http_expect, '', $elm$core$Basics$identity);
+var $elm$http$Http$resultToTask = function (result) {
+	if (result.$ === 'Ok') {
+		var a = result.a;
+		return $elm$core$Task$succeed(a);
+	} else {
+		var x = result.a;
+		return $elm$core$Task$fail(x);
+	}
+};
+var $elm$http$Http$task = function (r) {
+	return A3(
+		_Http_toTask,
+		_Utils_Tuple0,
+		$elm$http$Http$resultToTask,
+		{allowCookiesFromOtherDomains: false, body: r.body, expect: r.resolver, headers: r.headers, method: r.method, timeout: r.timeout, tracker: $elm$core$Maybe$Nothing, url: r.url});
+};
+var $elm$http$Http$emptyBody = _Http_emptyBody;
+var $elm$http$Http$jsonBody = function (value) {
+	return A2(
+		_Http_pair,
+		'application/json',
+		A2($elm$json$Json$Encode$encode, 0, value));
+};
+var $elm$http$Http$stringBody = _Http_pair;
+var $the_sett$elm_aws_core$AWS$Internal$Body$toHttp = function (body) {
+	switch (body.$) {
+		case 'Empty':
+			return $elm$http$Http$emptyBody;
+		case 'Json':
+			var value = body.a;
+			return $elm$http$Http$jsonBody(value);
+		default:
+			var mimetype = body.a;
+			var val = body.b;
+			return A2($elm$http$Http$stringBody, mimetype, val);
+	}
+};
+var $the_sett$elm_aws_core$AWS$Internal$UrlBuilder$add = F3(
+	function (k, v, qs) {
+		var prepend = function (maybeXs) {
+			if (maybeXs.$ === 'Nothing') {
+				return $elm$core$Maybe$Just(
+					_List_fromArray(
+						[v]));
+			} else {
+				var xs = maybeXs.a;
+				return $elm$core$Maybe$Just(
+					A2($elm$core$List$cons, v, xs));
+			}
+		};
+		return A3($elm$core$Dict$update, k, prepend, qs);
+	});
+var $the_sett$elm_aws_core$AWS$Internal$UrlBuilder$render = function (qs) {
+	var flatten = function (_v0) {
+		var k = _v0.a;
+		var xs = _v0.b;
+		return A2(
+			$elm$core$List$map,
+			function (x) {
+				return k + ('=' + $elm$url$Url$percentEncode(x));
+			},
+			xs);
+	};
+	return '?' + A2(
+		$elm$core$String$join,
+		'&',
+		A2(
+			$elm$core$List$concatMap,
+			flatten,
+			$elm$core$Dict$toList(qs)));
+};
+var $the_sett$elm_aws_core$AWS$Internal$UrlBuilder$queryString = function (params) {
+	if (!params.b) {
+		return '';
+	} else {
+		return $the_sett$elm_aws_core$AWS$Internal$UrlBuilder$render(
+			A3(
+				$elm$core$List$foldl,
+				F2(
+					function (_v1, qs) {
+						var key = _v1.a;
+						var val = _v1.b;
+						return A3(
+							$the_sett$elm_aws_core$AWS$Internal$UrlBuilder$add,
+							$the_sett$elm_aws_core$AWS$Uri$percentEncode(key),
+							val,
+							qs);
+					}),
+				$elm$core$Dict$empty,
+				params));
+	}
+};
+var $the_sett$elm_aws_core$AWS$Internal$UrlBuilder$url = F2(
+	function (service, _v0) {
+		var path = _v0.path;
+		var query = _v0.query;
+		return 'https://' + ($the_sett$elm_aws_core$AWS$Internal$Service$host(service) + (path + $the_sett$elm_aws_core$AWS$Internal$UrlBuilder$queryString(query)));
+	});
+var $the_sett$elm_aws_core$AWS$Internal$V4$sign = F4(
+	function (service, creds, date, req) {
+		var responseDecoder = function (response) {
+			switch (response.$) {
+				case 'BadUrl_':
+					var url = response.a;
+					return $elm$core$Result$Err(
+						$the_sett$elm_aws_core$AWS$Internal$Error$HttpError(
+							$elm$http$Http$BadUrl(url)));
+				case 'Timeout_':
+					return $elm$core$Result$Err(
+						$the_sett$elm_aws_core$AWS$Internal$Error$HttpError($elm$http$Http$Timeout));
+				case 'NetworkError_':
+					return $elm$core$Result$Err(
+						$the_sett$elm_aws_core$AWS$Internal$Error$HttpError($elm$http$Http$NetworkError));
+				case 'BadStatus_':
+					var metadata = response.a;
+					var body = response.b;
+					var _v2 = A2(req.errorDecoder, metadata, body);
+					if (_v2.$ === 'Ok') {
+						var appErr = _v2.a;
+						return $elm$core$Result$Err(
+							$the_sett$elm_aws_core$AWS$Internal$Error$AWSError(appErr));
+					} else {
+						var err = _v2.a;
+						return $elm$core$Result$Err(
+							$the_sett$elm_aws_core$AWS$Internal$Error$HttpError(
+								$elm$http$Http$BadBody(err)));
+					}
+				default:
+					var metadata = response.a;
+					var body = response.b;
+					var _v3 = A2(req.decoder, metadata, body);
+					if (_v3.$ === 'Ok') {
+						var resp = _v3.a;
+						return $elm$core$Result$Ok(resp);
+					} else {
+						var err = _v3.a;
+						return $elm$core$Result$Err(
+							$the_sett$elm_aws_core$AWS$Internal$Error$HttpError(
+								$elm$http$Http$BadBody(err)));
+					}
+			}
+		};
+		var resolver = $elm$http$Http$stringResolver(responseDecoder);
+		return $elm$http$Http$task(
+			{
+				body: $the_sett$elm_aws_core$AWS$Internal$Body$toHttp(req.body),
+				headers: A2(
+					$elm$core$List$map,
+					function (_v0) {
+						var key = _v0.a;
+						var val = _v0.b;
+						return A2($elm$http$Http$header, key, val);
+					},
+					A2(
+						$the_sett$elm_aws_core$AWS$Internal$V4$addSessionToken,
+						creds,
+						A5(
+							$the_sett$elm_aws_core$AWS$Internal$V4$addAuthorization,
+							service,
+							creds,
+							date,
+							req,
+							A4($the_sett$elm_aws_core$AWS$Internal$V4$headers, service, date, req.body, req.headers)))),
+				method: req.method,
+				resolver: resolver,
+				timeout: $elm$core$Maybe$Nothing,
+				url: A2($the_sett$elm_aws_core$AWS$Internal$UrlBuilder$url, service, req)
+			});
+	});
+var $the_sett$elm_aws_core$AWS$Http$send = F3(
+	function (service, credentials, req) {
+		var signWithTimestamp = F2(
+			function (innerReq, posix) {
+				var _v1 = service.signer;
+				if (_v1.$ === 'SignV4') {
+					return A4($the_sett$elm_aws_core$AWS$Internal$V4$sign, service, credentials, posix, innerReq);
+				} else {
+					return $elm$core$Task$fail(
+						$the_sett$elm_aws_core$AWS$Internal$Error$HttpError(
+							$elm$http$Http$BadBody('TODO: S3 Signing Scheme not implemented.')));
+				}
+			});
+		var prepareRequest = function (innerReq) {
+			var _v0 = service.protocol;
+			if (_v0.$ === 'JSON') {
+				return A2(
+					$the_sett$elm_aws_core$AWS$Http$addHeaders,
+					_List_fromArray(
+						[
+							_Utils_Tuple2('x-amz-target', service.targetPrefix + ('.' + innerReq.name))
+						]),
+					innerReq);
+			} else {
+				return innerReq;
+			}
+		};
+		return A2(
+			$elm$core$Task$mapError,
+			$the_sett$elm_aws_core$AWS$Http$internalErrToErr,
+			A2(
+				$elm$core$Task$andThen,
+				signWithTimestamp(
+					prepareRequest(req)),
+				$elm$time$Time$now));
+	});
+var $the_sett$elm_aws_core$AWS$Http$POST = {$: 'POST'};
+var $the_sett$elm_aws_core$AWS$Http$awsAppErrDecoder = F2(
+	function (metadata, body) {
+		var bodyDecoder = A3(
+			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+			'message',
+			$elm$json$Json$Decode$maybe($elm$json$Json$Decode$string),
+			A3(
+				$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+				'__type',
+				$elm$json$Json$Decode$string,
+				$elm$json$Json$Decode$succeed(
+					F2(
+						function (type_, message) {
+							return {message: message, statusCode: metadata.statusCode, type_: type_};
+						}))));
+		return A2(
+			$elm$core$Result$mapError,
+			function (_v0) {
+				return body;
+			},
+			A2($elm$json$Json$Decode$decodeString, bodyDecoder, body));
+	});
+var $the_sett$json_optional$Json$Encode$Optional$WithValue = F2(
+	function (a, b) {
+		return {$: 'WithValue', a: a, b: b};
+	});
+var $the_sett$json_optional$Json$Encode$Optional$field = F2(
+	function (encoder, _v0) {
+		var name = _v0.a;
+		var val = _v0.b;
+		return A2(
+			$the_sett$json_optional$Json$Encode$Optional$WithValue,
+			name,
+			encoder(val));
+	});
+var $the_sett$elm_aws_core$AWS$Internal$Body$Json = function (a) {
+	return {$: 'Json', a: a};
+};
+var $the_sett$elm_aws_core$AWS$Internal$Body$json = $the_sett$elm_aws_core$AWS$Internal$Body$Json;
+var $the_sett$elm_aws_core$AWS$Http$jsonBody = $the_sett$elm_aws_core$AWS$Internal$Body$json;
+var $the_sett$elm_aws_core$AWS$Http$jsonBodyDecoder = function (decodeFn) {
+	return F2(
+		function (metadata, body) {
+			var _v0 = A2($elm$json$Json$Decode$decodeString, decodeFn, body);
+			if (_v0.$ === 'Ok') {
+				var val = _v0.a;
+				return $elm$core$Result$Ok(val);
+			} else {
+				var err = _v0.a;
+				return $elm$core$Result$Err(
+					$elm$json$Json$Decode$errorToString(err));
+			}
+		});
+};
+var $miniBill$elm_codec$Codec$composite = F3(
+	function (enc, dec, _v0) {
+		var codec = _v0.a;
+		return $miniBill$elm_codec$Codec$Codec(
+			{
+				decoder: dec(codec.decoder),
+				encoder: enc(codec.encoder)
+			});
+	});
+var $elm$json$Json$Decode$dict = function (decoder) {
+	return A2(
+		$elm$json$Json$Decode$map,
+		$elm$core$Dict$fromList,
+		$elm$json$Json$Decode$keyValuePairs(decoder));
+};
+var $elm$core$Dict$map = F2(
+	function (func, dict) {
+		if (dict.$ === 'RBEmpty_elm_builtin') {
+			return $elm$core$Dict$RBEmpty_elm_builtin;
+		} else {
+			var color = dict.a;
+			var key = dict.b;
+			var value = dict.c;
+			var left = dict.d;
+			var right = dict.e;
+			return A5(
+				$elm$core$Dict$RBNode_elm_builtin,
+				color,
+				key,
+				A2(func, key, value),
+				A2($elm$core$Dict$map, func, left),
+				A2($elm$core$Dict$map, func, right));
+		}
+	});
+var $miniBill$elm_codec$Codec$dict = A2(
+	$miniBill$elm_codec$Codec$composite,
+	function (e) {
+		return A2(
+			$elm$core$Basics$composeL,
+			A2($elm$core$Basics$composeL, $elm$json$Json$Encode$object, $elm$core$Dict$toList),
+			$elm$core$Dict$map(
+				function (_v0) {
+					return e;
+				}));
+	},
+	$elm$json$Json$Decode$dict);
+var $the_sett$elm_aws_messaging$AWS$Sqs$MessageAttributeValue = F5(
+	function (binaryListValues, binaryValue, dataType, stringListValues, stringValue) {
+		return {binaryListValues: binaryListValues, binaryValue: binaryValue, dataType: dataType, stringListValues: stringListValues, stringValue: stringValue};
+	});
+var $miniBill$elm_codec$Codec$list = A2($miniBill$elm_codec$Codec$composite, $elm$json$Json$Encode$list, $elm$json$Json$Decode$list);
+var $the_sett$elm_aws_messaging$AWS$Sqs$binaryListCodec = $miniBill$elm_codec$Codec$list($miniBill$elm_codec$Codec$string);
+var $miniBill$elm_codec$Codec$maybe = function (codec) {
+	return $miniBill$elm_codec$Codec$Codec(
+		{
+			decoder: $elm$json$Json$Decode$maybe(
+				$miniBill$elm_codec$Codec$decoder(codec)),
+			encoder: function (v) {
+				if (v.$ === 'Nothing') {
+					return $elm$json$Json$Encode$null;
+				} else {
+					var x = v.a;
+					return A2($miniBill$elm_codec$Codec$encoder, codec, x);
+				}
+			}
+		});
+};
+var $miniBill$elm_codec$Codec$optionalField = F4(
+	function (name, getter, codec, _v0) {
+		var ocodec = _v0.a;
+		return $miniBill$elm_codec$Codec$ObjectCodec(
+			{
+				decoder: A3(
+					$elm$json$Json$Decode$map2,
+					F2(
+						function (f, x) {
+							return f(x);
+						}),
+					ocodec.decoder,
+					$elm$json$Json$Decode$maybe(
+						A2(
+							$elm$json$Json$Decode$field,
+							name,
+							$miniBill$elm_codec$Codec$decoder(codec)))),
+				encoder: function (v) {
+					return A2(
+						$elm$core$List$cons,
+						_Utils_Tuple2(
+							name,
+							A2(
+								$miniBill$elm_codec$Codec$encoder,
+								$miniBill$elm_codec$Codec$maybe(codec),
+								getter(v))),
+						ocodec.encoder(v));
+				}
+			});
+	});
+var $the_sett$elm_aws_messaging$AWS$Sqs$stringListCodec = $miniBill$elm_codec$Codec$list($miniBill$elm_codec$Codec$string);
+var $the_sett$elm_aws_messaging$AWS$Sqs$messageAttributeValueCodec = $miniBill$elm_codec$Codec$buildObject(
+	A4(
+		$miniBill$elm_codec$Codec$optionalField,
+		'StringValue',
+		function ($) {
+			return $.stringValue;
+		},
+		$miniBill$elm_codec$Codec$string,
+		A4(
+			$miniBill$elm_codec$Codec$optionalField,
+			'StringListValues',
+			function ($) {
+				return $.stringListValues;
+			},
+			$the_sett$elm_aws_messaging$AWS$Sqs$stringListCodec,
+			A4(
+				$miniBill$elm_codec$Codec$field,
+				'DataType',
+				function ($) {
+					return $.dataType;
+				},
+				$miniBill$elm_codec$Codec$string,
+				A4(
+					$miniBill$elm_codec$Codec$optionalField,
+					'BinaryValue',
+					function ($) {
+						return $.binaryValue;
+					},
+					$miniBill$elm_codec$Codec$string,
+					A4(
+						$miniBill$elm_codec$Codec$optionalField,
+						'BinaryListValues',
+						function ($) {
+							return $.binaryListValues;
+						},
+						$the_sett$elm_aws_messaging$AWS$Sqs$binaryListCodec,
+						$miniBill$elm_codec$Codec$object($the_sett$elm_aws_messaging$AWS$Sqs$MessageAttributeValue)))))));
+var $the_sett$elm_aws_messaging$AWS$Sqs$messageBodyAttributeMapCodec = $miniBill$elm_codec$Codec$dict($the_sett$elm_aws_messaging$AWS$Sqs$messageAttributeValueCodec);
+var $the_sett$elm_refine$Dict$Refined$foldl = F3(
+	function (f, acc, _v0) {
+		var dict = _v0.a.dict;
+		return A3(
+			$elm$core$Dict$foldl,
+			F2(
+				function (_v1, _v2) {
+					var k = _v2.a;
+					var v = _v2.b;
+					return A2(f, k, v);
+				}),
+			acc,
+			dict);
+	});
+var $the_sett$elm_refine$Dict$Enum$foldl = F3(
+	function (f, acc, dict) {
+		return A3($the_sett$elm_refine$Dict$Refined$foldl, f, acc, dict);
+	});
+var $the_sett$elm_refine$Enum$toString = F2(
+	function (_v0, val) {
+		var toStringFn = _v0.b;
+		return toStringFn(val);
+	});
+var $the_sett$elm_refine$Enum$dictEncoder = F3(
+	function (_enum, valEncoder, dict) {
+		return $elm$json$Json$Encode$object(
+			A3(
+				$the_sett$elm_refine$Dict$Enum$foldl,
+				F3(
+					function (k, v, accum) {
+						return A2(
+							$elm$core$List$cons,
+							_Utils_Tuple2(
+								A2($the_sett$elm_refine$Enum$toString, _enum, k),
+								valEncoder(v)),
+							accum);
+					}),
+				_List_Nil,
+				dict));
+	});
+var $the_sett$elm_aws_messaging$AWS$Sqs$MessageSystemAttributeNameForSendsAwstraceHeader = {$: 'MessageSystemAttributeNameForSendsAwstraceHeader'};
+var $the_sett$elm_refine$Enum$Enum = F2(
+	function (a, b) {
+		return {$: 'Enum', a: a, b: b};
+	});
+var $the_sett$elm_refine$Enum$define = F2(
+	function (vals, toStringFn) {
+		return A2($the_sett$elm_refine$Enum$Enum, vals, toStringFn);
+	});
+var $the_sett$elm_aws_messaging$AWS$Sqs$messageSystemAttributeNameForSends = A2(
+	$the_sett$elm_refine$Enum$define,
+	_List_fromArray(
+		[$the_sett$elm_aws_messaging$AWS$Sqs$MessageSystemAttributeNameForSendsAwstraceHeader]),
+	function (val) {
+		return 'AWSTraceHeader';
+	});
+var $the_sett$json_optional$Json$Encode$Optional$objectMaySkip = function (fields) {
+	return $elm$json$Json$Encode$object(
+		A3(
+			$elm$core$List$foldr,
+			F2(
+				function (fld, accum) {
+					switch (fld.$) {
+						case 'WithValue':
+							var name = fld.a;
+							var val = fld.b;
+							return A2(
+								$elm$core$List$cons,
+								_Utils_Tuple2(name, val),
+								accum);
+						case 'Optional':
+							var name = fld.a;
+							return accum;
+						case 'Nullable':
+							var name = fld.a;
+							return A2(
+								$elm$core$List$cons,
+								_Utils_Tuple2(name, $elm$json$Json$Encode$null),
+								accum);
+						default:
+							return accum;
+					}
+				}),
+			_List_Nil,
+			fields));
+};
+var $the_sett$json_optional$Json$Encode$Optional$Optional = function (a) {
+	return {$: 'Optional', a: a};
+};
+var $the_sett$json_optional$Json$Encode$Optional$optionalField = F2(
+	function (encoder, _v0) {
+		var name = _v0.a;
+		var maybeVal = _v0.b;
+		if (maybeVal.$ === 'Just') {
+			var val = maybeVal.a;
+			return A2(
+				$the_sett$json_optional$Json$Encode$Optional$WithValue,
+				name,
+				encoder(val));
+		} else {
+			return $the_sett$json_optional$Json$Encode$Optional$Optional(name);
+		}
+	});
+var $the_sett$elm_aws_messaging$AWS$Sqs$messageSystemAttributeValueEncoder = function (val) {
+	return $the_sett$json_optional$Json$Encode$Optional$objectMaySkip(
+		_List_fromArray(
+			[
+				A2(
+				$the_sett$json_optional$Json$Encode$Optional$optionalField,
+				$miniBill$elm_codec$Codec$encoder($the_sett$elm_aws_messaging$AWS$Sqs$binaryListCodec),
+				_Utils_Tuple2('BinaryListValues', val.binaryListValues)),
+				A2(
+				$the_sett$json_optional$Json$Encode$Optional$optionalField,
+				$elm$json$Json$Encode$string,
+				_Utils_Tuple2('BinaryValue', val.binaryValue)),
+				A2(
+				$the_sett$json_optional$Json$Encode$Optional$field,
+				$elm$json$Json$Encode$string,
+				_Utils_Tuple2('DataType', val.dataType)),
+				A2(
+				$the_sett$json_optional$Json$Encode$Optional$optionalField,
+				$miniBill$elm_codec$Codec$encoder($the_sett$elm_aws_messaging$AWS$Sqs$stringListCodec),
+				_Utils_Tuple2('StringListValues', val.stringListValues)),
+				A2(
+				$the_sett$json_optional$Json$Encode$Optional$optionalField,
+				$elm$json$Json$Encode$string,
+				_Utils_Tuple2('StringValue', val.stringValue))
+			]));
+};
+var $the_sett$elm_aws_messaging$AWS$Sqs$messageBodySystemAttributeMapEncoder = function (val) {
+	return A3($the_sett$elm_refine$Enum$dictEncoder, $the_sett$elm_aws_messaging$AWS$Sqs$messageSystemAttributeNameForSends, $the_sett$elm_aws_messaging$AWS$Sqs$messageSystemAttributeValueEncoder, val);
+};
+var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optionalDecoder = F3(
+	function (path, valDecoder, fallback) {
+		var nullOr = function (decoder) {
+			return $elm$json$Json$Decode$oneOf(
+				_List_fromArray(
+					[
+						decoder,
+						$elm$json$Json$Decode$null(fallback)
+					]));
+		};
+		var handleResult = function (input) {
+			var _v0 = A2(
+				$elm$json$Json$Decode$decodeValue,
+				A2($elm$json$Json$Decode$at, path, $elm$json$Json$Decode$value),
+				input);
+			if (_v0.$ === 'Ok') {
+				var rawValue = _v0.a;
+				var _v1 = A2(
+					$elm$json$Json$Decode$decodeValue,
+					nullOr(valDecoder),
+					rawValue);
+				if (_v1.$ === 'Ok') {
+					var finalResult = _v1.a;
+					return $elm$json$Json$Decode$succeed(finalResult);
+				} else {
+					return A2(
+						$elm$json$Json$Decode$at,
+						path,
+						nullOr(valDecoder));
+				}
+			} else {
+				return $elm$json$Json$Decode$succeed(fallback);
+			}
+		};
+		return A2($elm$json$Json$Decode$andThen, handleResult, $elm$json$Json$Decode$value);
+	});
+var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional = F4(
+	function (key, valDecoder, fallback, decoder) {
+		return A2(
+			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom,
+			A3(
+				$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optionalDecoder,
+				_List_fromArray(
+					[key]),
+				valDecoder,
+				fallback),
+			decoder);
+	});
+var $the_sett$elm_aws_core$AWS$Http$methodToString = function (meth) {
+	switch (meth.$) {
+		case 'DELETE':
+			return 'DELETE';
+		case 'GET':
+			return 'GET';
+		case 'HEAD':
+			return 'HEAD';
+		case 'OPTIONS':
+			return 'OPTIONS';
+		case 'POST':
+			return 'POST';
+		default:
+			return 'PUT';
+	}
+};
+var $the_sett$elm_aws_core$AWS$Internal$Request$unsigned = F6(
+	function (name, method, uri, body, decoder, errorDecoder) {
+		return {body: body, decoder: decoder, errorDecoder: errorDecoder, headers: _List_Nil, method: method, name: name, path: uri, query: _List_Nil};
+	});
+var $the_sett$elm_aws_core$AWS$Http$request = F6(
+	function (name, method, path, body, decoder, errorDecoder) {
+		return A6(
+			$the_sett$elm_aws_core$AWS$Internal$Request$unsigned,
+			name,
+			$the_sett$elm_aws_core$AWS$Http$methodToString(method),
+			path,
+			body,
+			decoder,
+			errorDecoder);
+	});
+var $the_sett$elm_aws_messaging$AWS$Sqs$sendMessage = function (req) {
+	var url = '/';
+	var encoder = function (val) {
+		return $the_sett$json_optional$Json$Encode$Optional$objectMaySkip(
+			_List_fromArray(
+				[
+					A2(
+					$the_sett$json_optional$Json$Encode$Optional$field,
+					$elm$json$Json$Encode$string,
+					_Utils_Tuple2('QueueUrl', val.queueUrl)),
+					A2(
+					$the_sett$json_optional$Json$Encode$Optional$optionalField,
+					$the_sett$elm_aws_messaging$AWS$Sqs$messageBodySystemAttributeMapEncoder,
+					_Utils_Tuple2('MessageSystemAttributes', val.messageSystemAttributes)),
+					A2(
+					$the_sett$json_optional$Json$Encode$Optional$optionalField,
+					$elm$json$Json$Encode$string,
+					_Utils_Tuple2('MessageGroupId', val.messageGroupId)),
+					A2(
+					$the_sett$json_optional$Json$Encode$Optional$optionalField,
+					$elm$json$Json$Encode$string,
+					_Utils_Tuple2('MessageDeduplicationId', val.messageDeduplicationId)),
+					A2(
+					$the_sett$json_optional$Json$Encode$Optional$field,
+					$elm$json$Json$Encode$string,
+					_Utils_Tuple2('MessageBody', val.messageBody)),
+					A2(
+					$the_sett$json_optional$Json$Encode$Optional$optionalField,
+					$miniBill$elm_codec$Codec$encoder($the_sett$elm_aws_messaging$AWS$Sqs$messageBodyAttributeMapCodec),
+					_Utils_Tuple2('MessageAttributes', val.messageAttributes)),
+					A2(
+					$the_sett$json_optional$Json$Encode$Optional$optionalField,
+					$elm$json$Json$Encode$int,
+					_Utils_Tuple2('DelaySeconds', val.delaySeconds))
+				]));
+	};
+	var jsonBody = $the_sett$elm_aws_core$AWS$Http$jsonBody(
+		encoder(req));
+	var decoder = $the_sett$elm_aws_core$AWS$Http$jsonBodyDecoder(
+		A4(
+			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional,
+			'MD5OfMessageAttributes',
+			$elm$json$Json$Decode$maybe($elm$json$Json$Decode$string),
+			$elm$core$Maybe$Nothing,
+			A4(
+				$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional,
+				'MD5OfMessageBody',
+				$elm$json$Json$Decode$maybe($elm$json$Json$Decode$string),
+				$elm$core$Maybe$Nothing,
+				A4(
+					$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional,
+					'MD5OfMessageSystemAttributes',
+					$elm$json$Json$Decode$maybe($elm$json$Json$Decode$string),
+					$elm$core$Maybe$Nothing,
+					A4(
+						$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional,
+						'MessageId',
+						$elm$json$Json$Decode$maybe($elm$json$Json$Decode$string),
+						$elm$core$Maybe$Nothing,
+						A4(
+							$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional,
+							'SequenceNumber',
+							$elm$json$Json$Decode$maybe($elm$json$Json$Decode$string),
+							$elm$core$Maybe$Nothing,
+							$elm$json$Json$Decode$succeed(
+								F5(
+									function (sequenceNumberFld, messageIdFld, md5OfMessageSystemAttributesFld, md5OfMessageBodyFld, md5OfMessageAttributesFld) {
+										return {md5OfMessageAttributes: md5OfMessageAttributesFld, md5OfMessageBody: md5OfMessageBodyFld, md5OfMessageSystemAttributes: md5OfMessageSystemAttributesFld, messageId: messageIdFld, sequenceNumber: sequenceNumberFld};
+									}))))))));
+	return A6($the_sett$elm_aws_core$AWS$Http$request, 'SendMessage', $the_sett$elm_aws_core$AWS$Http$POST, url, jsonBody, decoder, $the_sett$elm_aws_core$AWS$Http$awsAppErrDecoder);
+};
+var $the_sett$elm_aws_core$AWS$Config$JSON = {$: 'JSON'};
+var $the_sett$elm_aws_core$AWS$Config$SignV4 = {$: 'SignV4'};
+var $the_sett$elm_aws_core$AWS$Config$RegionalEndpoint = function (a) {
+	return {$: 'RegionalEndpoint', a: a};
+};
+var $the_sett$elm_aws_core$AWS$Config$GlobalEndpoint = {$: 'GlobalEndpoint'};
+var $the_sett$elm_aws_core$AWS$Config$defineGlobal = F4(
+	function (prefix, apiVersion, proto, signerType) {
+		return {apiVersion: apiVersion, endpoint: $the_sett$elm_aws_core$AWS$Config$GlobalEndpoint, endpointPrefix: prefix, jsonVersion: $elm$core$Maybe$Nothing, protocol: proto, signer: signerType, signingName: $elm$core$Maybe$Nothing, targetPrefix: $elm$core$Maybe$Nothing, timestampFormat: $elm$core$Maybe$Nothing, xmlNamespace: $elm$core$Maybe$Nothing};
+	});
+var $the_sett$elm_aws_core$AWS$Config$defineRegional = F5(
+	function (prefix, apiVersion, proto, signerType, rgn) {
+		var svc = A4($the_sett$elm_aws_core$AWS$Config$defineGlobal, prefix, apiVersion, proto, signerType);
+		return _Utils_update(
+			svc,
+			{
+				endpoint: $the_sett$elm_aws_core$AWS$Config$RegionalEndpoint(rgn)
+			});
+	});
+var $the_sett$elm_aws_core$AWS$Service$defaultHostResolver = F2(
+	function (endpoint, prefix) {
+		if (endpoint.$ === 'GlobalEndpoint') {
+			return prefix + '.amazonaws.com';
+		} else {
+			var rgn = endpoint.a;
+			return prefix + ('.' + (rgn + '.amazonaws.com'));
+		}
+	});
+var $the_sett$elm_aws_core$AWS$Service$defaultRegionResolver = function (endpoint) {
+	if (endpoint.$ === 'RegionalEndpoint') {
+		var rgn = endpoint.a;
+		return rgn;
+	} else {
+		return 'us-east-1';
+	}
+};
+var $the_sett$elm_aws_core$AWS$Service$defaultTargetPrefix = F2(
+	function (prefix, apiVersion) {
+		return 'AWS' + ($elm$core$String$toUpper(prefix) + ('_' + A2(
+			$elm$core$String$join,
+			'',
+			A2($elm$core$String$split, '-', apiVersion))));
+	});
+var $the_sett$elm_aws_core$AWS$Config$ISO8601 = {$: 'ISO8601'};
+var $the_sett$elm_aws_core$AWS$Config$UnixTimestamp = {$: 'UnixTimestamp'};
+var $the_sett$elm_aws_core$AWS$Service$defaultTimestampFormat = function (proto) {
+	switch (proto.$) {
+		case 'JSON':
+			return $the_sett$elm_aws_core$AWS$Config$UnixTimestamp;
+		case 'REST_JSON':
+			return $the_sett$elm_aws_core$AWS$Config$UnixTimestamp;
+		default:
+			return $the_sett$elm_aws_core$AWS$Config$ISO8601;
+	}
+};
+var $the_sett$elm_aws_core$AWS$Service$service = function (config) {
+	return {
+		apiVersion: config.apiVersion,
+		endpoint: config.endpoint,
+		endpointPrefix: config.endpointPrefix,
+		hostResolver: $the_sett$elm_aws_core$AWS$Service$defaultHostResolver,
+		jsonVersion: config.jsonVersion,
+		protocol: config.protocol,
+		regionResolver: $the_sett$elm_aws_core$AWS$Service$defaultRegionResolver,
+		signer: config.signer,
+		signingName: config.signingName,
+		targetPrefix: A2(
+			$elm$core$Maybe$withDefault,
+			A2($the_sett$elm_aws_core$AWS$Service$defaultTargetPrefix, config.endpointPrefix, config.apiVersion),
+			config.targetPrefix),
+		timestampFormat: A2(
+			$elm$core$Maybe$withDefault,
+			$the_sett$elm_aws_core$AWS$Service$defaultTimestampFormat(config.protocol),
+			config.timestampFormat),
+		xmlNamespace: config.xmlNamespace
+	};
+};
+var $the_sett$elm_aws_core$AWS$Config$withJsonVersion = F2(
+	function (jsonVersion, service) {
+		return _Utils_update(
+			service,
+			{
+				jsonVersion: $elm$core$Maybe$Just(jsonVersion)
+			});
+	});
+var $the_sett$elm_aws_core$AWS$Config$withTargetPrefix = F2(
+	function (prefix, service) {
+		return _Utils_update(
+			service,
+			{
+				targetPrefix: $elm$core$Maybe$Just(prefix)
+			});
+	});
+var $the_sett$elm_aws_messaging$AWS$Sqs$service = function (region) {
+	return $the_sett$elm_aws_core$AWS$Service$service(
+		A2(
+			$the_sett$elm_aws_core$AWS$Config$withTargetPrefix,
+			'AmazonSQS',
+			A2(
+				$the_sett$elm_aws_core$AWS$Config$withJsonVersion,
+				'1.0',
+				A5($the_sett$elm_aws_core$AWS$Config$defineRegional, 'sqs', '2012-11-05', $the_sett$elm_aws_core$AWS$Config$JSON, $the_sett$elm_aws_core$AWS$Config$SignV4, region))));
+};
+var $the_sett$elm_aws_core$AWS$Credentials$withSessionToken = F2(
+	function (token, creds) {
+		return _Utils_update(
+			creds,
+			{
+				sessionToken: $elm$core$Maybe$Just(token)
+			});
+	});
 var $author$project$EventLog$SaveChannel$notifyCompactor = F3(
 	function (component, channelName, _v0) {
-		return _Debug_todo(
-			'EventLog.SaveChannel',
-			{
-				start: {line: 390, column: 5},
-				end: {line: 390, column: 15}
-			})('');
+		var notice = $the_sett$elm_aws_messaging$AWS$Sqs$sendMessage(
+			{delaySeconds: $elm$core$Maybe$Nothing, messageAttributes: $elm$core$Maybe$Nothing, messageBody: 'test', messageDeduplicationId: $elm$core$Maybe$Nothing, messageGroupId: $elm$core$Maybe$Nothing, messageSystemAttributes: $elm$core$Maybe$Nothing, queueUrl: component.snapshotQueueUrl});
+		var credentials = A2(
+			$the_sett$elm_aws_core$AWS$Credentials$withSessionToken,
+			component.awsSessionToken,
+			A2($the_sett$elm_aws_core$AWS$Credentials$fromAccessKeys, component.awsAccessKeyId, component.awsSecretAccessKey));
+		var notifyCmd = A3(
+			$the_sett$elm_aws_core$AWS$Http$send,
+			$the_sett$elm_aws_messaging$AWS$Sqs$service(component.awsRegion),
+			credentials,
+			notice);
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$map,
+			$elm$core$Basics$always(_Utils_Tuple0),
+			A2(
+				$brian_watkins$elm_procedure$Procedure$mapError,
+				$author$project$EventLog$SaveChannel$awsErrorToDetails,
+				$brian_watkins$elm_procedure$Procedure$fromTask(notifyCmd)));
 	});
 var $author$project$EventLog$SaveChannel$setModel = F2(
 	function (m, x) {
@@ -8477,42 +12175,67 @@ var $author$project$API$main = $elm$core$Platform$worker(
 _Platform_export({'API':{'init':$author$project$API$main(
 	A2(
 		$elm$json$Json$Decode$andThen,
-		function (momentoSecret) {
+		function (snapshotQueueUrl) {
 			return A2(
 				$elm$json$Json$Decode$andThen,
-				function (eventLogTable) {
+				function (momentoSecret) {
 					return A2(
 						$elm$json$Json$Decode$andThen,
-						function (channelTable) {
+						function (eventLogTable) {
 							return A2(
 								$elm$json$Json$Decode$andThen,
-								function (channelApiUrl) {
-									return $elm$json$Json$Decode$succeed(
-										{channelApiUrl: channelApiUrl, channelTable: channelTable, eventLogTable: eventLogTable, momentoSecret: momentoSecret});
+								function (channelTable) {
+									return A2(
+										$elm$json$Json$Decode$andThen,
+										function (channelApiUrl) {
+											return A2(
+												$elm$json$Json$Decode$andThen,
+												function (awsSessionToken) {
+													return A2(
+														$elm$json$Json$Decode$andThen,
+														function (awsSecretAccessKey) {
+															return A2(
+																$elm$json$Json$Decode$andThen,
+																function (awsRegion) {
+																	return A2(
+																		$elm$json$Json$Decode$andThen,
+																		function (awsAccessKeyId) {
+																			return $elm$json$Json$Decode$succeed(
+																				{awsAccessKeyId: awsAccessKeyId, awsRegion: awsRegion, awsSecretAccessKey: awsSecretAccessKey, awsSessionToken: awsSessionToken, channelApiUrl: channelApiUrl, channelTable: channelTable, eventLogTable: eventLogTable, momentoSecret: momentoSecret, snapshotQueueUrl: snapshotQueueUrl});
+																		},
+																		A2($elm$json$Json$Decode$field, 'awsAccessKeyId', $elm$json$Json$Decode$string));
+																},
+																A2($elm$json$Json$Decode$field, 'awsRegion', $elm$json$Json$Decode$string));
+														},
+														A2($elm$json$Json$Decode$field, 'awsSecretAccessKey', $elm$json$Json$Decode$string));
+												},
+												A2($elm$json$Json$Decode$field, 'awsSessionToken', $elm$json$Json$Decode$string));
+										},
+										A2($elm$json$Json$Decode$field, 'channelApiUrl', $elm$json$Json$Decode$string));
 								},
-								A2($elm$json$Json$Decode$field, 'channelApiUrl', $elm$json$Json$Decode$string));
+								A2($elm$json$Json$Decode$field, 'channelTable', $elm$json$Json$Decode$string));
 						},
-						A2($elm$json$Json$Decode$field, 'channelTable', $elm$json$Json$Decode$string));
+						A2($elm$json$Json$Decode$field, 'eventLogTable', $elm$json$Json$Decode$string));
 				},
-				A2($elm$json$Json$Decode$field, 'eventLogTable', $elm$json$Json$Decode$string));
+				A2(
+					$elm$json$Json$Decode$field,
+					'momentoSecret',
+					A2(
+						$elm$json$Json$Decode$andThen,
+						function (restEndpoint) {
+							return A2(
+								$elm$json$Json$Decode$andThen,
+								function (refreshToken) {
+									return A2(
+										$elm$json$Json$Decode$andThen,
+										function (apiKey) {
+											return $elm$json$Json$Decode$succeed(
+												{apiKey: apiKey, refreshToken: refreshToken, restEndpoint: restEndpoint});
+										},
+										A2($elm$json$Json$Decode$field, 'apiKey', $elm$json$Json$Decode$string));
+								},
+								A2($elm$json$Json$Decode$field, 'refreshToken', $elm$json$Json$Decode$string));
+						},
+						A2($elm$json$Json$Decode$field, 'restEndpoint', $elm$json$Json$Decode$string))));
 		},
-		A2(
-			$elm$json$Json$Decode$field,
-			'momentoSecret',
-			A2(
-				$elm$json$Json$Decode$andThen,
-				function (restEndpoint) {
-					return A2(
-						$elm$json$Json$Decode$andThen,
-						function (refreshToken) {
-							return A2(
-								$elm$json$Json$Decode$andThen,
-								function (apiKey) {
-									return $elm$json$Json$Decode$succeed(
-										{apiKey: apiKey, refreshToken: refreshToken, restEndpoint: restEndpoint});
-								},
-								A2($elm$json$Json$Decode$field, 'apiKey', $elm$json$Json$Decode$string));
-						},
-						A2($elm$json$Json$Decode$field, 'refreshToken', $elm$json$Json$Decode$string));
-				},
-				A2($elm$json$Json$Decode$field, 'restEndpoint', $elm$json$Json$Decode$string)))))(0)}});}(this));
+		A2($elm$json$Json$Decode$field, 'snapshotQueueUrl', $elm$json$Json$Decode$string)))(0)}});}(this));

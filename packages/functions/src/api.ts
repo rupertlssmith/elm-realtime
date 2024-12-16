@@ -10,10 +10,15 @@ const channelApiUrl = Resource.ChannelApi.url;
 
 const app = Elm.API.init({
     flags: {
+        awsRegion: process.env.AWS_REGION,
+        awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        awsSessionToken: process.env.AWS_SESSION_TOKEN,
         momentoSecret: momentoSecret,
         channelTable: Resource.ChannelTable.name,
         eventLogTable: Resource.EventLogTable.name,
-        channelApiUrl: channelApiUrl
+        channelApiUrl: channelApiUrl,
+        snapshotQueueUrl : Resource.SnapshotQueue.url
     },
 });
 
@@ -28,6 +33,7 @@ export async function main(event, context) {
         requestPort: 'requestPort',
         responsePort: 'responsePort',
     });
+
 
     // console.log(context);
     // console.log(event);

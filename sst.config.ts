@@ -63,7 +63,8 @@ export default $config({
                     api,
                     channelTable,
                     eventLogTable,
-                    snapshotTable
+                    snapshotTable,
+                    snapshotQueue
                 ]
             }
         );
@@ -76,7 +77,14 @@ export default $config({
                     api,
                     channelTable,
                     eventLogTable,
-                    snapshotTable
+                    snapshotTable,
+                    snapshotQueue
+                ],
+                permissions: [
+                    {
+                        actions: ["sqs:*"],
+                        resources: ["*"]
+                    }
                 ]
             }
         );

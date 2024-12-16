@@ -12,10 +12,15 @@ x =
 -}
 type alias Model =
     { -- Flags
-      momentoApiKey : String
+      awsRegion : String
+    , awsAccessKeyId : String
+    , awsSecretAccessKey : String
+    , awsSessionToken : String
+    , momentoApiKey : String
     , channelApiUrl : String
     , channelTable : String
     , eventLogTable : String
+    , snapshotQueueUrl : String
 
     -- Elm modules
     , eventLog : EventLog.Model
@@ -36,10 +41,15 @@ type alias MomentoSecret =
 
 
 type alias Flags =
-    { momentoSecret : MomentoSecret
+    { awsRegion : String
+    , awsAccessKeyId : String
+    , awsSecretAccessKey : String
+    , awsSessionToken : String
+    , momentoSecret : MomentoSecret
     , channelApiUrl : String
     , channelTable : String
     , eventLogTable : String
+    , snapshotQueueUrl : String
     }
 
 
@@ -58,10 +68,15 @@ init flags =
         ( eventLogMdl, eventLogCmds ) =
             EventLog.init EventLogMsg
     in
-    ( { momentoApiKey = flags.momentoSecret.apiKey
+    ( { awsRegion = flags.awsRegion
+      , awsAccessKeyId = flags.awsAccessKeyId
+      , awsSecretAccessKey = flags.awsSecretAccessKey
+      , awsSessionToken = flags.awsSessionToken
+      , momentoApiKey = flags.momentoSecret.apiKey
       , channelApiUrl = flags.channelApiUrl
       , channelTable = flags.channelTable
       , eventLogTable = flags.eventLogTable
+      , snapshotQueueUrl = flags.snapshotQueueUrl
       , eventLog = eventLogMdl
       }
     , Cmd.batch
