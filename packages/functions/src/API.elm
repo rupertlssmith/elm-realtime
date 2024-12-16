@@ -4,6 +4,10 @@ import EventLog.Component as EventLog
 import Snapshot.Snapshot
 
 
+x =
+    Snapshot.Snapshot.main
+
+
 {-| API for managing realtime channels.
 -}
 type alias Model =

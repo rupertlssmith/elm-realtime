@@ -29,8 +29,9 @@ export async function main(event, context) {
         responsePort: 'responsePort',
     });
 
+    console.log(event);
     const res = await handler(event, context);
-    //console.log(res);
+    console.log(res);
     return res;
 }
 

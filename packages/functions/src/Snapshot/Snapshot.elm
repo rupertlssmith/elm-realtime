@@ -92,7 +92,7 @@ subscriptions model =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
+    case msg |> Debug.log "Snapshot.update" of
         HttpRequest session result ->
             case result of
                 Ok apiRequest ->
@@ -113,13 +113,14 @@ update msg model =
 
 processRoute : HttpSessionKey -> ApiRequest Route -> Model -> ( Model, Cmd Msg )
 processRoute session apiRequest model =
-    case ( Request.method apiRequest.request, apiRequest.route ) of
-        ( POST, Snapshot ) ->
-            U2.pure model
-                |> U2.andMap (takeSnapshot session model)
-
-        _ ->
-            U2.pure model
+    --case ( Request.method apiRequest.request, apiRequest.route ) of
+    --    ( POST, Snapshot ) ->
+    --        U2.pure model
+    --            |> U2.andMap (takeSnapshot session model)
+    --
+    --    _ ->
+    --        U2.pure model
+    ( model, Response.ok200 "ok" |> httpServerApi.response session )
 
 
 takeSnapshot _ _ model =
