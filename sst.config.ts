@@ -83,7 +83,7 @@ export default $config({
                 permissions: [
                     {
                         actions: ["sqs:*"],
-                        resources: ["*"]
+                        resources: [snapshotQueue.arn]
                     }
                 ]
             }
