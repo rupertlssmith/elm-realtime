@@ -1,5 +1,6 @@
 module API exposing (Flags, Model, MomentoSecret, Msg, main)
 
+import AWS.Credentials exposing (Credentials)
 import EventLog.Component as EventLog
 import Snapshot.Snapshot
 
@@ -21,6 +22,7 @@ type alias Model =
     , channelTable : String
     , eventLogTable : String
     , snapshotQueueUrl : String
+    , defaultCredentials : Credentials
 
     -- Elm modules
     , eventLog : EventLog.Model
@@ -67,6 +69,12 @@ init flags =
     let
         ( eventLogMdl, eventLogCmds ) =
             EventLog.init EventLogMsg
+
+        credentials =
+            AWS.Credentials.fromAccessKeys
+                flags.awsAccessKeyId
+                flags.awsSecretAccessKey
+                |> AWS.Credentials.withSessionToken flags.awsSessionToken
     in
     ( { awsRegion = flags.awsRegion
       , awsAccessKeyId = flags.awsAccessKeyId
@@ -77,6 +85,7 @@ init flags =
       , channelTable = flags.channelTable
       , eventLogTable = flags.eventLogTable
       , snapshotQueueUrl = flags.snapshotQueueUrl
+      , defaultCredentials = credentials
       , eventLog = eventLogMdl
       }
     , Cmd.batch

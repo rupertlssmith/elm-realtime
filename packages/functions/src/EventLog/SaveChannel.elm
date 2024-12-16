@@ -28,9 +28,7 @@ import Update2 as U2
 type alias SaveChannel a =
     { a
         | awsRegion : String
-        , awsAccessKeyId : String
-        , awsSecretAccessKey : String
-        , awsSessionToken : String
+        , defaultCredentials : Credentials
         , momentoApiKey : String
         , eventLogTable : String
         , snapshotQueueUrl : String
@@ -407,15 +405,9 @@ notifyCompactor component channelName _ =
                 , queueUrl = component.snapshotQueueUrl
                 }
 
-        credentials =
-            AWS.Credentials.fromAccessKeys
-                component.awsAccessKeyId
-                component.awsSecretAccessKey
-                |> AWS.Credentials.withSessionToken component.awsSessionToken
-
         notifyCmd =
             notice
-                |> AWS.Http.send (Sqs.service component.awsRegion) credentials
+                |> AWS.Http.send (Sqs.service component.awsRegion) component.defaultCredentials
     in
     Procedure.fromTask notifyCmd
         |> Procedure.mapError awsErrorToDetails

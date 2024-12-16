@@ -11,6 +11,7 @@ module EventLog.Component exposing
 {-| API for managing realtime channels.
 -}
 
+import AWS.Credentials exposing (Credentials)
 import EventLog.Apis as Apis
 import EventLog.CreateChannel as CreateChannel
 import EventLog.GetAvailableChannel as GetAvailableChannel
@@ -46,9 +47,7 @@ type alias Protocol submodel msg model =
 type alias Component a =
     { a
         | awsRegion : String
-        , awsAccessKeyId : String
-        , awsSecretAccessKey : String
-        , awsSessionToken : String
+        , defaultCredentials : Credentials
         , momentoApiKey : String
         , channelApiUrl : String
         , channelTable : String

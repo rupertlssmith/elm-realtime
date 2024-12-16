@@ -3216,6 +3216,10 @@ var $author$project$API$EventLogMsg = function (a) {
 	return {$: 'EventLogMsg', a: a};
 };
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $the_sett$elm_aws_core$AWS$Credentials$fromAccessKeys = F2(
+	function (keyId, secretKey) {
+		return {accessKeyId: keyId, secretAccessKey: secretKey, sessionToken: $elm$core$Maybe$Nothing};
+	});
 var $author$project$EventLog$Model$ModelStart = function (a) {
 	return {$: 'ModelStart', a: a};
 };
@@ -3459,12 +3463,24 @@ var $author$project$EventLog$Component$init = function (toMsg) {
 				$the_sett$elm_update_helper$Update2$pure(
 					{}))));
 };
+var $the_sett$elm_aws_core$AWS$Credentials$withSessionToken = F2(
+	function (token, creds) {
+		return _Utils_update(
+			creds,
+			{
+				sessionToken: $elm$core$Maybe$Just(token)
+			});
+	});
 var $author$project$API$init = function (flags) {
+	var credentials = A2(
+		$the_sett$elm_aws_core$AWS$Credentials$withSessionToken,
+		flags.awsSessionToken,
+		A2($the_sett$elm_aws_core$AWS$Credentials$fromAccessKeys, flags.awsAccessKeyId, flags.awsSecretAccessKey));
 	var _v0 = $author$project$EventLog$Component$init($author$project$API$EventLogMsg);
 	var eventLogMdl = _v0.a;
 	var eventLogCmds = _v0.b;
 	return _Utils_Tuple2(
-		{awsAccessKeyId: flags.awsAccessKeyId, awsRegion: flags.awsRegion, awsSecretAccessKey: flags.awsSecretAccessKey, awsSessionToken: flags.awsSessionToken, channelApiUrl: flags.channelApiUrl, channelTable: flags.channelTable, eventLog: eventLogMdl, eventLogTable: flags.eventLogTable, momentoApiKey: flags.momentoSecret.apiKey, snapshotQueueUrl: flags.snapshotQueueUrl},
+		{awsAccessKeyId: flags.awsAccessKeyId, awsRegion: flags.awsRegion, awsSecretAccessKey: flags.awsSecretAccessKey, awsSessionToken: flags.awsSessionToken, channelApiUrl: flags.channelApiUrl, channelTable: flags.channelTable, defaultCredentials: credentials, eventLog: eventLogMdl, eventLogTable: flags.eventLogTable, momentoApiKey: flags.momentoSecret.apiKey, snapshotQueueUrl: flags.snapshotQueueUrl},
 		$elm$core$Platform$Cmd$batch(
 			_List_fromArray(
 				[eventLogCmds])));
@@ -8448,10 +8464,6 @@ var $author$project$EventLog$SaveChannel$awsErrorToDetails = function (err) {
 		};
 	}
 };
-var $the_sett$elm_aws_core$AWS$Credentials$fromAccessKeys = F2(
-	function (keyId, secretKey) {
-		return {accessKeyId: keyId, secretAccessKey: secretKey, sessionToken: $elm$core$Maybe$Nothing};
-	});
 var $elm$http$Http$BadBody = function (a) {
 	return {$: 'BadBody', a: a};
 };
@@ -11839,14 +11851,6 @@ var $the_sett$elm_aws_messaging$AWS$Sqs$service = function (region) {
 				'1.0',
 				A5($the_sett$elm_aws_core$AWS$Config$defineRegional, 'sqs', '2012-11-05', $the_sett$elm_aws_core$AWS$Config$JSON, $the_sett$elm_aws_core$AWS$Config$SignV4, region))));
 };
-var $the_sett$elm_aws_core$AWS$Credentials$withSessionToken = F2(
-	function (token, creds) {
-		return _Utils_update(
-			creds,
-			{
-				sessionToken: $elm$core$Maybe$Just(token)
-			});
-	});
 var $author$project$EventLog$SaveChannel$notifyCompactor = F3(
 	function (component, channelName, _v0) {
 		var notice = $the_sett$elm_aws_messaging$AWS$Sqs$sendMessage(
@@ -11859,14 +11863,10 @@ var $author$project$EventLog$SaveChannel$notifyCompactor = F3(
 				messageSystemAttributes: $elm$core$Maybe$Nothing,
 				queueUrl: component.snapshotQueueUrl
 			});
-		var credentials = A2(
-			$the_sett$elm_aws_core$AWS$Credentials$withSessionToken,
-			component.awsSessionToken,
-			A2($the_sett$elm_aws_core$AWS$Credentials$fromAccessKeys, component.awsAccessKeyId, component.awsSecretAccessKey));
 		var notifyCmd = A3(
 			$the_sett$elm_aws_core$AWS$Http$send,
 			$the_sett$elm_aws_messaging$AWS$Sqs$service(component.awsRegion),
-			credentials,
+			component.defaultCredentials,
 			notice);
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$map,
