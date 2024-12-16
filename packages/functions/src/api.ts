@@ -1,5 +1,5 @@
 import {Elm} from './elm.js';
-import * as elmServerless from "./bridge/index.js";
+import * as elmServerless from "../../shared/src/js/httpserver/index.js";
 import {Resource} from "sst";
 import {NodeMomentoFactory} from "../../shared/src/js/node_momento";
 import {MomentoPorts} from "../../shared/src/js/momento";

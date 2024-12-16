@@ -25,10 +25,10 @@ module HttpServer exposing
 
 -}
 
-import Json.Decode as Decode
-import Json.Encode as Encode exposing (Value)
 import Http.Request as Request
 import Http.Response as Response exposing (Response)
+import Json.Decode as Decode
+import Json.Encode as Encode exposing (Value)
 import Url exposing (Url)
 
 
@@ -50,7 +50,7 @@ type HttpSessionKey
     = HttpSessionKey Value -- This actually holds the `callback` in an util.promisify()
 
 
-{-| The ports that need to be wired up to elm-serverless bridge/index.js.
+{-| The ports that need to be wired up to @the-sett/elm-httpserver.
 -}
 type alias Ports msg =
     { request : ({ session : Value, req : Value } -> msg) -> Sub msg
