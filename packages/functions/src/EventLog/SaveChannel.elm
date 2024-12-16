@@ -1,6 +1,7 @@
 module EventLog.SaveChannel exposing (saveChannel)
 
 import AWS.Dynamo as Dynamo exposing (Error(..))
+import AWS.Sqs as Sqs
 import DB.EventLogTable as EventLogTable
 import Dict
 import EventLog.Apis as Apis
@@ -10,14 +11,14 @@ import EventLog.Msg exposing (Msg(..))
 import EventLog.Names as Names
 import EventLog.OpenMomentoCache as OpenMomentoCache
 import EventLog.Route exposing (Route)
+import Http.Response as Response exposing (Response)
 import HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Extra as DE
 import Json.Encode as Encode
 import Momento exposing (CacheItem, Error, MomentoSessionKey)
 import Procedure
-import Http.Response as Response exposing (Response)
-import Time
+import Time exposing (Posix)
 import Update2 as U2
 
 
@@ -64,6 +65,7 @@ saveChannel session state apiRequest channelName component =
             Procedure.provide channelName
                 |> Procedure.andThen (OpenMomentoCache.openMomentoCache component)
                 |> Procedure.andThen (drainSaveList component channelName)
+                |> Procedure.andThen (notifyCompactor component channelName)
                 |> Procedure.mapError (Debug.log "error" >> ErrorFormat.encodeErrorFormat >> Response.err500json)
                 |> Procedure.map (Response.ok200json Encode.null |> always)
     in
@@ -377,3 +379,24 @@ publishEvent component channelName state =
         |> Procedure.fetchResult
         |> Procedure.map (always ())
         |> Procedure.mapError Momento.errorToDetails
+
+
+notifyCompactor :
+    SaveChannel a
+    -> String
+    -> ()
+    -> Procedure.Procedure ErrorFormat () Msg
+notifyCompactor component channelName _ =
+    Debug.todo ""
+
+
+{-| Decide whether to trigger a compaction notification based on the timestamp of the last compaction
+and the latest sequence number written.
+
+It is expected that compaction will happen every X sequence numbers, or if a compaction has not been
+done for Y seconds.
+
+-}
+compactionTrigger : Posix -> Posix -> Int -> Bool
+compactionTrigger prev latest seq =
+    True

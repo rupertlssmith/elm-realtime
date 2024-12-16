@@ -26,6 +26,10 @@ declare module "sst" {
       "type": "sst.sst.Secret"
       "value": string
     }
+    "SnapshotQueue": {
+      "type": "sst.aws.Queue"
+      "url": string
+    }
     "SnapshotTable": {
       "name": string
       "type": "sst.aws.Dynamo"

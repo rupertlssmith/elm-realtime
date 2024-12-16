@@ -43,6 +43,26 @@ export default $config({
             primaryIndex: {hashKey: "id", rangeKey: "seq"}
         });
 
+        // Notification Queue for triggering snapshots.
+        const snapshotQueue = new sst.aws.Queue("SnapshotQueue", {
+            fifo: true
+        });
+
+        snapshotQueue.subscribe(
+            {
+                handler: "packages/functions/src/snapshot.main",
+                // batch {
+                //     size: 100,
+                //     window: "1 second"
+                // },
+                link: [
+                    channelTable,
+                    eventLogTable,
+                    snapshotTable
+                ]
+            }
+        );
+
         // API for managing the realtime channels.
         const api = new sst.aws.ApiGatewayV2("ChannelApi", {link: [momentoApiKey]});
 

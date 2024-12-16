@@ -1,6 +1,7 @@
 module API exposing (Flags, Model, MomentoSecret, Msg, main)
 
 import EventLog.Component as EventLog
+import Snapshot.Snapshot
 
 
 {-| API for managing realtime channels.

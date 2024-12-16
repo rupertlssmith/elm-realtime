@@ -7346,8 +7346,7 @@ var $miniBill$elm_codec$Codec$buildObject = function (_v0) {
 			decoder: om.decoder,
 			encoder: function (v) {
 				return $elm$json$Json$Encode$object(
-					$elm$core$List$reverse(
-						om.encoder(v)));
+					om.encoder(v));
 			}
 		});
 };
@@ -7380,8 +7379,7 @@ var $miniBill$elm_codec$Codec$field = F4(
 								codec,
 								getter(v))),
 						ocodec.encoder(v));
-				},
-				fields: A2($elm$core$List$cons, name, ocodec.fields)
+				}
 			});
 	});
 var $miniBill$elm_codec$Codec$object = function (ctor) {
@@ -7390,8 +7388,7 @@ var $miniBill$elm_codec$Codec$object = function (ctor) {
 			decoder: $elm$json$Json$Decode$succeed(ctor),
 			encoder: function (_v0) {
 				return _List_Nil;
-			},
-			fields: _List_Nil
+			}
 		});
 };
 var $miniBill$elm_codec$Codec$build = F2(
@@ -8159,6 +8156,16 @@ var $author$project$EventLog$SaveChannel$drainSaveList = F3(
 				A2($author$project$EventLog$SaveChannel$tryReadEvent, component, channelName),
 				$brian_watkins$elm_procedure$Procedure$provide(sessionKey)));
 	});
+var $elm$core$Debug$todo = _Debug_todo;
+var $author$project$EventLog$SaveChannel$notifyCompactor = F3(
+	function (component, channelName, _v0) {
+		return _Debug_todo(
+			'EventLog.SaveChannel',
+			{
+				start: {line: 390, column: 5},
+				end: {line: 390, column: 15}
+			})('');
+	});
 var $author$project$EventLog$SaveChannel$setModel = F2(
 	function (m, x) {
 		return _Utils_update(
@@ -8185,11 +8192,14 @@ var $author$project$EventLog$SaveChannel$saveChannel = F5(
 					A2($elm$core$Basics$composeR, $author$project$EventLog$ErrorFormat$encodeErrorFormat, $author$project$Http$Response$err500json)),
 				A2(
 					$brian_watkins$elm_procedure$Procedure$andThen,
-					A2($author$project$EventLog$SaveChannel$drainSaveList, component, channelName),
+					A2($author$project$EventLog$SaveChannel$notifyCompactor, component, channelName),
 					A2(
 						$brian_watkins$elm_procedure$Procedure$andThen,
-						$author$project$EventLog$OpenMomentoCache$openMomentoCache(component),
-						$brian_watkins$elm_procedure$Procedure$provide(channelName)))));
+						A2($author$project$EventLog$SaveChannel$drainSaveList, component, channelName),
+						A2(
+							$brian_watkins$elm_procedure$Procedure$andThen,
+							$author$project$EventLog$OpenMomentoCache$openMomentoCache(component),
+							$brian_watkins$elm_procedure$Procedure$provide(channelName))))));
 		return A2(
 			$elm$core$Tuple$mapFirst,
 			$author$project$EventLog$SaveChannel$setModel(component),
