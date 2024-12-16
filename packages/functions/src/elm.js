@@ -8441,7 +8441,11 @@ var $author$project$EventLog$SaveChannel$awsErrorToDetails = function (err) {
 			message: 'Http.Error: ' + $elm$core$Debug$toString(hterr)
 		};
 	} else {
-		return {details: $elm$json$Json$Encode$null, message: 'AWSError'};
+		var awserr = err.a;
+		return {
+			details: $elm$json$Json$Encode$null,
+			message: 'AWSError: ' + (awserr.type_ + (' ' + A2($elm$core$Maybe$withDefault, '', awserr.message)))
+		};
 	}
 };
 var $the_sett$elm_aws_core$AWS$Credentials$fromAccessKeys = F2(
@@ -11846,7 +11850,15 @@ var $the_sett$elm_aws_core$AWS$Credentials$withSessionToken = F2(
 var $author$project$EventLog$SaveChannel$notifyCompactor = F3(
 	function (component, channelName, _v0) {
 		var notice = $the_sett$elm_aws_messaging$AWS$Sqs$sendMessage(
-			{delaySeconds: $elm$core$Maybe$Nothing, messageAttributes: $elm$core$Maybe$Nothing, messageBody: 'test', messageDeduplicationId: $elm$core$Maybe$Nothing, messageGroupId: $elm$core$Maybe$Nothing, messageSystemAttributes: $elm$core$Maybe$Nothing, queueUrl: component.snapshotQueueUrl});
+			{
+				delaySeconds: $elm$core$Maybe$Nothing,
+				messageAttributes: $elm$core$Maybe$Nothing,
+				messageBody: 'test',
+				messageDeduplicationId: $elm$core$Maybe$Just('test'),
+				messageGroupId: $elm$core$Maybe$Just('snapshot'),
+				messageSystemAttributes: $elm$core$Maybe$Nothing,
+				queueUrl: component.snapshotQueueUrl
+			});
 		var credentials = A2(
 			$the_sett$elm_aws_core$AWS$Credentials$withSessionToken,
 			component.awsSessionToken,

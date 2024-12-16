@@ -401,8 +401,8 @@ notifyCompactor component channelName _ =
                 { delaySeconds = Nothing
                 , messageAttributes = Nothing
                 , messageBody = "test"
-                , messageDeduplicationId = Nothing
-                , messageGroupId = Nothing
+                , messageDeduplicationId = Just "test"
+                , messageGroupId = Just "snapshot"
                 , messageSystemAttributes = Nothing
                 , queueUrl = component.snapshotQueueUrl
                 }
@@ -428,8 +428,10 @@ awsErrorToDetails err =
         HttpError hterr ->
             { message = "Http.Error: " ++ Debug.toString hterr, details = Encode.null }
 
-        AWSError _ ->
-            { message = "AWSError", details = Encode.null }
+        AWSError awserr ->
+            { message = "AWSError: " ++ awserr.type_ ++ " " ++ (awserr.message |> Maybe.withDefault "")
+            , details = Encode.null
+            }
 
 
 {-| Decide whether to trigger a compaction notification based on the timestamp of the last compaction
