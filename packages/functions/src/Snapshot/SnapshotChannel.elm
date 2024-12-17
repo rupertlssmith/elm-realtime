@@ -49,10 +49,13 @@ switchState cons state =
 
 {-| Snapshot Channel:
 
-    * Fetch the latest snapshot stored, if the request is for a higher snapshot then continue.
+    * Check any cached snapshot, if the request is for a higher snapshot then continue.
+    * Fetch the latest snapshot stored if newer than the cached one, if the request is
+      still for a higher snapshot then continue.
     * Read events from the event log from the latest snapshot onwards.
     * Play the event log forward on top of the snapshot.
     * Write the new snapshot into the snapshot table with the correct sequence number.
+    * Retain the new snapshot in the cache.
 
 -}
 snapshotChannel :
