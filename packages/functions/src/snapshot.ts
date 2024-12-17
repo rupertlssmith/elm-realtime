@@ -18,7 +18,7 @@ const app = Elm.API.init({
         channelTable: Resource.ChannelTable.name,
         eventLogTable: Resource.EventLogTable.name,
         channelApiUrl: channelApiUrl,
-        snapshotQueueUrl : Resource.SnapshotQueue.url
+        snapshotQueueUrl: Resource.SnapshotQueue.url
     },
 });
 
@@ -27,22 +27,38 @@ const momentoPorts = new MomentoPorts(app, momentoFactory);
 const dynamoPorts = new DynamoPorts(app);
 
 export async function main(event, context) {
-    const handler = elmServerless.httpApi({
-        app: app,
-        logger: silent,
-        requestPort: 'requestPort',
-        responsePort: 'responsePort',
-    });
+    // const handler = elmServerless.httpApi({
+    //     app: app,
+    //     logger: silent,
+    //     requestPort: 'requestPort',
+    //     responsePort: 'responsePort',
+    // });
 
 
-    // console.log(context);
-    // console.log(event);
-    const res = await handler(event, context);
+    console.log(context);
+    console.log(event);
+    //const res = await handler(event, context);
     // console.log(res);
-    return res;
+    //return res;
+
+    for (const message of event.Records) {
+        await processMessageAsync(message);
+    }
+
 }
 
 const silent = {
     info: (_) => {
+    }
+}
+
+async function processMessageAsync(message) {
+    try {
+        console.log(`Processed message ${message.body}`);
+        // TODO: Do interesting work based on the new message
+        await Promise.resolve(1); //Placeholder for actual async work
+    } catch (err) {
+        console.error("An error occurred");
+        throw err;
     }
 }

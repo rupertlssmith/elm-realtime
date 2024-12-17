@@ -48,6 +48,14 @@ switchState cons state =
     )
 
 
+type DrainState
+    = DrainedNothing MomentoSessionKey
+    | DrainedToSeq
+        { sessionKey : MomentoSessionKey
+        , lastSeqNo : Int
+        }
+
+
 {-| Channel save:
 
     * Obtain a connection to the cache.
@@ -89,22 +97,46 @@ drainSaveList :
     SaveChannel a
     -> String
     -> MomentoSessionKey
-    -> Procedure.Procedure ErrorFormat () Msg
+    -> Procedure.Procedure ErrorFormat DrainState Msg
 drainSaveList component channelName sessionKey =
-    Procedure.provide sessionKey
+    drainSaveListInner component channelName (DrainedNothing sessionKey)
+
+
+drainSaveListInner :
+    SaveChannel a
+    -> String
+    -> DrainState
+    -> Procedure.Procedure ErrorFormat DrainState Msg
+drainSaveListInner component channelName state =
+    let
+        msk =
+            case state of
+                DrainedNothing sessionKey ->
+                    sessionKey
+
+                DrainedToSeq { sessionKey } ->
+                    sessionKey
+    in
+    Procedure.provide msk
         |> Procedure.andThen (tryReadEvent component channelName)
         |> Procedure.andThen
-            (\state ->
-                case state.unsavedEvent of
+            (\innerState ->
+                case innerState.unsavedEvent of
                     Nothing ->
-                        Procedure.provide ()
+                        Procedure.provide state
 
                     Just event ->
-                        Procedure.provide { sessionKey = sessionKey, unsavedEvent = event }
+                        Procedure.provide { sessionKey = msk, unsavedEvent = event }
                             |> Procedure.andThen (recordEventWithUniqueSeqNo component channelName)
                             |> Procedure.andThen (publishEvent component channelName)
-                            |> Procedure.map (always sessionKey)
-                            |> Procedure.andThen (drainSaveList component channelName)
+                            |> Procedure.map
+                                (\{ sessionKey, lastSeqNo } ->
+                                    DrainedToSeq
+                                        { sessionKey = sessionKey
+                                        , lastSeqNo = lastSeqNo
+                                        }
+                                )
+                            |> Procedure.andThen (drainSaveListInner component channelName)
             )
 
 
@@ -366,7 +398,14 @@ publishEvent :
             , lastSeqNo : Int
             , unsavedEvent : UnsavedEvent
         }
-    -> Procedure.Procedure ErrorFormat () Msg
+    ->
+        Procedure.Procedure ErrorFormat
+            { x
+                | sessionKey : MomentoSessionKey
+                , lastSeqNo : Int
+                , unsavedEvent : UnsavedEvent
+            }
+            Msg
 publishEvent component channelName state =
     let
         payload =
@@ -383,35 +422,40 @@ publishEvent component channelName state =
         , payload = payload
         }
         |> Procedure.fetchResult
-        |> Procedure.map (always ())
+        |> Procedure.map (always state)
         |> Procedure.mapError Momento.errorToDetails
 
 
 notifyCompactor :
     SaveChannel a
     -> String
-    -> ()
+    -> DrainState
     -> Procedure.Procedure ErrorFormat () Msg
-notifyCompactor component channelName _ =
-    let
-        notice =
-            Sqs.sendMessage
-                { delaySeconds = Nothing
-                , messageAttributes = Nothing
-                , messageBody = "test"
-                , messageDeduplicationId = Just "test"
-                , messageGroupId = Just "snapshot"
-                , messageSystemAttributes = Nothing
-                , queueUrl = component.snapshotQueueUrl
-                }
+notifyCompactor component channelName drainState =
+    case drainState of
+        DrainedNothing _ ->
+            Procedure.provide ()
 
-        notifyCmd =
-            notice
-                |> AWS.Http.send (Sqs.service component.awsRegion) component.defaultCredentials
-    in
-    Procedure.fromTask notifyCmd
-        |> Procedure.mapError awsErrorToDetails
-        |> Procedure.map (always ())
+        DrainedToSeq { lastSeqNo } ->
+            let
+                notice =
+                    Sqs.sendMessage
+                        { delaySeconds = Nothing
+                        , messageAttributes = Nothing
+                        , messageBody = "test"
+                        , messageDeduplicationId = channelName ++ ":" ++ String.fromInt lastSeqNo |> Just
+                        , messageGroupId = Just channelName
+                        , messageSystemAttributes = Nothing
+                        , queueUrl = component.snapshotQueueUrl
+                        }
+
+                notifyCmd =
+                    notice
+                        |> AWS.Http.send (Sqs.service component.awsRegion) component.defaultCredentials
+            in
+            Procedure.fromTask notifyCmd
+                |> Procedure.mapError awsErrorToDetails
+                |> Procedure.map (always ())
 
 
 awsErrorToDetails : AWS.Http.Error AWS.Http.AWSAppError -> ErrorFormat

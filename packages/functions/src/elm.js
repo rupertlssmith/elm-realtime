@@ -8194,6 +8194,12 @@ var $author$project$Http$Request$method = function (_v0) {
 	var request = _v0.a;
 	return request.method;
 };
+var $author$project$EventLog$SaveChannel$DrainedNothing = function (a) {
+	return {$: 'DrainedNothing', a: a};
+};
+var $author$project$EventLog$SaveChannel$DrainedToSeq = function (a) {
+	return {$: 'DrainedToSeq', a: a};
+};
 var $author$project$EventLog$SaveChannel$publishEvent = F3(
 	function (component, channelName, state) {
 		var payload = $elm$json$Json$Encode$object(
@@ -8215,7 +8221,7 @@ var $author$project$EventLog$SaveChannel$publishEvent = F3(
 			$author$project$Momento$errorToDetails,
 			A2(
 				$brian_watkins$elm_procedure$Procedure$map,
-				$elm$core$Basics$always(_Utils_Tuple0),
+				$elm$core$Basics$always(state),
 				$brian_watkins$elm_procedure$Procedure$fetchResult(
 					A2(
 						$author$project$EventLog$Apis$momentoApi.publish,
@@ -8417,22 +8423,36 @@ var $author$project$EventLog$SaveChannel$tryReadEvent = F3(
 							list: $author$project$EventLog$Names$saveListName(channelName)
 						}))));
 	});
-var $author$project$EventLog$SaveChannel$drainSaveList = F3(
-	function (component, channelName, sessionKey) {
+var $author$project$EventLog$SaveChannel$drainSaveListInner = F3(
+	function (component, channelName, state) {
+		var msk = function () {
+			if (state.$ === 'DrainedNothing') {
+				var sessionKey = state.a;
+				return sessionKey;
+			} else {
+				var sessionKey = state.a.sessionKey;
+				return sessionKey;
+			}
+		}();
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$andThen,
-			function (state) {
-				var _v0 = state.unsavedEvent;
+			function (innerState) {
+				var _v0 = innerState.unsavedEvent;
 				if (_v0.$ === 'Nothing') {
-					return $brian_watkins$elm_procedure$Procedure$provide(_Utils_Tuple0);
+					return $brian_watkins$elm_procedure$Procedure$provide(state);
 				} else {
 					var event = _v0.a;
 					return A2(
 						$brian_watkins$elm_procedure$Procedure$andThen,
-						A2($author$project$EventLog$SaveChannel$drainSaveList, component, channelName),
+						A2($author$project$EventLog$SaveChannel$drainSaveListInner, component, channelName),
 						A2(
 							$brian_watkins$elm_procedure$Procedure$map,
-							$elm$core$Basics$always(sessionKey),
+							function (_v1) {
+								var sessionKey = _v1.sessionKey;
+								var lastSeqNo = _v1.lastSeqNo;
+								return $author$project$EventLog$SaveChannel$DrainedToSeq(
+									{lastSeqNo: lastSeqNo, sessionKey: sessionKey});
+							},
 							A2(
 								$brian_watkins$elm_procedure$Procedure$andThen,
 								A2($author$project$EventLog$SaveChannel$publishEvent, component, channelName),
@@ -8440,13 +8460,21 @@ var $author$project$EventLog$SaveChannel$drainSaveList = F3(
 									$brian_watkins$elm_procedure$Procedure$andThen,
 									A2($author$project$EventLog$SaveChannel$recordEventWithUniqueSeqNo, component, channelName),
 									$brian_watkins$elm_procedure$Procedure$provide(
-										{sessionKey: sessionKey, unsavedEvent: event})))));
+										{sessionKey: msk, unsavedEvent: event})))));
 				}
 			},
 			A2(
 				$brian_watkins$elm_procedure$Procedure$andThen,
 				A2($author$project$EventLog$SaveChannel$tryReadEvent, component, channelName),
-				$brian_watkins$elm_procedure$Procedure$provide(sessionKey)));
+				$brian_watkins$elm_procedure$Procedure$provide(msk)));
+	});
+var $author$project$EventLog$SaveChannel$drainSaveList = F3(
+	function (component, channelName, sessionKey) {
+		return A3(
+			$author$project$EventLog$SaveChannel$drainSaveListInner,
+			component,
+			channelName,
+			$author$project$EventLog$SaveChannel$DrainedNothing(sessionKey));
 	});
 var $elm$core$Debug$toString = _Debug_toString;
 var $author$project$EventLog$SaveChannel$awsErrorToDetails = function (err) {
@@ -11852,29 +11880,35 @@ var $the_sett$elm_aws_messaging$AWS$Sqs$service = function (region) {
 				A5($the_sett$elm_aws_core$AWS$Config$defineRegional, 'sqs', '2012-11-05', $the_sett$elm_aws_core$AWS$Config$JSON, $the_sett$elm_aws_core$AWS$Config$SignV4, region))));
 };
 var $author$project$EventLog$SaveChannel$notifyCompactor = F3(
-	function (component, channelName, _v0) {
-		var notice = $the_sett$elm_aws_messaging$AWS$Sqs$sendMessage(
-			{
-				delaySeconds: $elm$core$Maybe$Nothing,
-				messageAttributes: $elm$core$Maybe$Nothing,
-				messageBody: 'test',
-				messageDeduplicationId: $elm$core$Maybe$Just('test'),
-				messageGroupId: $elm$core$Maybe$Just('snapshot'),
-				messageSystemAttributes: $elm$core$Maybe$Nothing,
-				queueUrl: component.snapshotQueueUrl
-			});
-		var notifyCmd = A3(
-			$the_sett$elm_aws_core$AWS$Http$send,
-			$the_sett$elm_aws_messaging$AWS$Sqs$service(component.awsRegion),
-			component.defaultCredentials,
-			notice);
-		return A2(
-			$brian_watkins$elm_procedure$Procedure$map,
-			$elm$core$Basics$always(_Utils_Tuple0),
-			A2(
-				$brian_watkins$elm_procedure$Procedure$mapError,
-				$author$project$EventLog$SaveChannel$awsErrorToDetails,
-				$brian_watkins$elm_procedure$Procedure$fromTask(notifyCmd)));
+	function (component, channelName, drainState) {
+		if (drainState.$ === 'DrainedNothing') {
+			return $brian_watkins$elm_procedure$Procedure$provide(_Utils_Tuple0);
+		} else {
+			var lastSeqNo = drainState.a.lastSeqNo;
+			var notice = $the_sett$elm_aws_messaging$AWS$Sqs$sendMessage(
+				{
+					delaySeconds: $elm$core$Maybe$Nothing,
+					messageAttributes: $elm$core$Maybe$Nothing,
+					messageBody: 'test',
+					messageDeduplicationId: $elm$core$Maybe$Just(
+						channelName + (':' + $elm$core$String$fromInt(lastSeqNo))),
+					messageGroupId: $elm$core$Maybe$Just(channelName),
+					messageSystemAttributes: $elm$core$Maybe$Nothing,
+					queueUrl: component.snapshotQueueUrl
+				});
+			var notifyCmd = A3(
+				$the_sett$elm_aws_core$AWS$Http$send,
+				$the_sett$elm_aws_messaging$AWS$Sqs$service(component.awsRegion),
+				component.defaultCredentials,
+				notice);
+			return A2(
+				$brian_watkins$elm_procedure$Procedure$map,
+				$elm$core$Basics$always(_Utils_Tuple0),
+				A2(
+					$brian_watkins$elm_procedure$Procedure$mapError,
+					$author$project$EventLog$SaveChannel$awsErrorToDetails,
+					$brian_watkins$elm_procedure$Procedure$fromTask(notifyCmd)));
+		}
 	});
 var $author$project$EventLog$SaveChannel$setModel = F2(
 	function (m, x) {
