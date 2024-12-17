@@ -4,6 +4,7 @@ module EventLog.Apis exposing
     , eventLogTableMetadataApi
     , httpServerApi
     , momentoApi
+    , sqsLambdaApi
     )
 
 import AWS.Dynamo as Dynamo exposing (Error(..))
@@ -14,6 +15,7 @@ import EventLog.Route as Route exposing (Route(..))
 import HttpServer as HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Momento exposing (CacheItem, Error, MomentoSessionKey)
 import Ports
+import SqsLambda
 
 
 dynamoPorts : Dynamo.Ports Msg
@@ -71,3 +73,9 @@ httpServerApi =
     , parseRoute = Route.routeParser
     }
         |> HttpServer.httpServerApi
+
+
+sqsLambdaApi : SqsLambda.SqsEventApi Msg
+sqsLambdaApi =
+    { sqsLambdaSubscribe = Ports.sqsLambdaSubscribe }
+        |> SqsLambda.sqsEventApi

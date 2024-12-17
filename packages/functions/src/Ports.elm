@@ -1,5 +1,6 @@
 port module Ports exposing
     ( requestPort, responsePort
+    , sqsLambdaSubscribe
     , mmOpen, mmClose
     , mmSubscribe, mmPublish, mmOnMessage
     , mmResponse, mmAsyncError
@@ -15,6 +16,7 @@ port module Ports exposing
 # AWS Lambda ports
 
 @docs requestPort, responsePort
+@docs sqsLambdaSubscribe
 
 
 # Momento Cache
@@ -44,6 +46,9 @@ port requestPort : ({ session : Value, req : Value } -> msg) -> Sub msg
 
 
 port responsePort : { session : Value, res : Value } -> Cmd msg
+
+
+port sqsLambdaSubscribe : ({ session : Value, req : Value } -> msg) -> Sub msg
 
 
 

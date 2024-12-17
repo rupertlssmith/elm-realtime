@@ -3495,6 +3495,10 @@ var $author$project$EventLog$Msg$HttpRequest = F2(
 var $author$project$EventLog$Msg$MomentoError = function (a) {
 	return {$: 'MomentoError', a: a};
 };
+var $author$project$EventLog$Msg$SqsEvent = F2(
+	function (a, b) {
+		return {$: 'SqsEvent', a: a, b: b};
+	});
 var $author$project$HttpServer$HttpSessionKey = function (a) {
 	return {$: 'HttpSessionKey', a: a};
 };
@@ -5719,6 +5723,66 @@ var $author$project$EventLog$Apis$momentoApi = A2(
 	$author$project$EventLog$Msg$ProcedureMsg,
 	{asyncError: $author$project$Ports$mmAsyncError, close: $author$project$Ports$mmClose, createWebhook: $author$project$Ports$mmCreateWebhook, onMessage: $author$project$Ports$mmOnMessage, open: $author$project$Ports$mmOpen, popList: $author$project$Ports$mmPopList, publish: $author$project$Ports$mmPublish, pushList: $author$project$Ports$mmPushList, response: $author$project$Ports$mmResponse, subscribe: $author$project$Ports$mmSubscribe});
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
+var $author$project$SqsLambda$InvalidRequestFormat = function (a) {
+	return {$: 'InvalidRequestFormat', a: a};
+};
+var $author$project$SqsLambda$SqsMessage = F2(
+	function (messageId, body) {
+		return {body: body, messageId: messageId};
+	});
+var $elm_community$json_extra$Json$Decode$Extra$andMap = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
+var $elm$json$Json$Decode$list = _Json_decodeList;
+var $author$project$SqsLambda$decodeRequestAndRoute = function (rawRequest) {
+	var decoder = $elm$json$Json$Decode$list(
+		A2(
+			$elm_community$json_extra$Json$Decode$Extra$andMap,
+			A2($elm$json$Json$Decode$field, 'body', $elm$json$Json$Decode$string),
+			A2(
+				$elm_community$json_extra$Json$Decode$Extra$andMap,
+				A2($elm$json$Json$Decode$field, 'messageId', $elm$json$Json$Decode$string),
+				$elm$json$Json$Decode$succeed($author$project$SqsLambda$SqsMessage))));
+	return A2(
+		$elm$core$Result$mapError,
+		$author$project$SqsLambda$InvalidRequestFormat,
+		A2($elm$json$Json$Decode$decodeValue, decoder, rawRequest));
+};
+var $author$project$HttpServer$sessionKeyFromCallback = $author$project$HttpServer$HttpSessionKey;
+var $author$project$SqsLambda$requestSub = F2(
+	function (ports, requestFn) {
+		var fn = function (_v0) {
+			var session = _v0.session;
+			var req = _v0.req;
+			return A2(
+				requestFn,
+				$author$project$HttpServer$sessionKeyFromCallback(session),
+				$author$project$SqsLambda$decodeRequestAndRoute(req));
+		};
+		return A2(
+			$elm$core$Platform$Sub$map,
+			$elm$core$Basics$identity,
+			ports.sqsLambdaSubscribe(fn));
+	});
+var $author$project$SqsLambda$sqsEventApi = function (ports) {
+	return {
+		event: $author$project$SqsLambda$requestSub(ports)
+	};
+};
+var $author$project$Ports$sqsLambdaSubscribe = _Platform_incomingPort(
+	'sqsLambdaSubscribe',
+	A2(
+		$elm$json$Json$Decode$andThen,
+		function (session) {
+			return A2(
+				$elm$json$Json$Decode$andThen,
+				function (req) {
+					return $elm$json$Json$Decode$succeed(
+						{req: req, session: session});
+				},
+				A2($elm$json$Json$Decode$field, 'req', $elm$json$Json$Decode$value));
+		},
+		A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value)));
+var $author$project$EventLog$Apis$sqsLambdaApi = $author$project$SqsLambda$sqsEventApi(
+	{sqsLambdaSubscribe: $author$project$Ports$sqsLambdaSubscribe});
 var $elm$core$Dict$values = function (dict) {
 	return A3(
 		$elm$core$Dict$foldr,
@@ -5747,7 +5811,8 @@ var $author$project$EventLog$Component$subscriptions = F2(
 						[
 							$brian_watkins$elm_procedure$Procedure$Program$subscriptions(state.procedure),
 							$author$project$EventLog$Apis$httpServerApi.request($author$project$EventLog$Msg$HttpRequest),
-							$author$project$EventLog$Apis$momentoApi.asyncError($author$project$EventLog$Msg$MomentoError)
+							$author$project$EventLog$Apis$momentoApi.asyncError($author$project$EventLog$Msg$MomentoError),
+							$author$project$EventLog$Apis$sqsLambdaApi.event($author$project$EventLog$Msg$SqsEvent)
 						])));
 		} else {
 			return $elm$core$Platform$Sub$none;
@@ -5839,6 +5904,12 @@ var $elm_community$result_extra$Result$Extra$merge = function (r) {
 		var rr = r.a;
 		return rr;
 	}
+};
+var $author$project$Http$Response$ok200 = function (msg) {
+	return A2(
+		$author$project$Http$Response$setBody,
+		$author$project$Http$Body$text(msg),
+		$author$project$Http$Response$init);
 };
 var $author$project$EventLog$Msg$HttpResponse = F2(
 	function (a, b) {
@@ -6317,7 +6388,6 @@ var $author$project$AWS$Dynamo$ConditionCheckFailed = function (a) {
 var $author$project$AWS$Dynamo$Error = function (a) {
 	return {$: 'Error', a: a};
 };
-var $elm_community$json_extra$Json$Decode$Extra$andMap = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
 var $author$project$AWS$Dynamo$errorDecoder = A2(
 	$elm$json$Json$Decode$andThen,
 	function (details) {
@@ -6347,7 +6417,6 @@ var $author$project$AWS$Dynamo$errorDecoder = A2(
 					function (message, details) {
 						return {details: details, message: message};
 					})))));
-var $elm$json$Json$Decode$list = _Json_decodeList;
 var $author$project$AWS$Dynamo$batchGetResponseDecoder = F3(
 	function (valDecoder, tableName, val) {
 		var decoder = A2(
@@ -12112,7 +12181,7 @@ var $author$project$EventLog$Component$update = F3(
 	function (protocol, msg, component) {
 		var model = component.eventLog;
 		var _v0 = _Utils_Tuple2(model, msg);
-		_v0$5:
+		_v0$6:
 		while (true) {
 			switch (_v0.b.$) {
 				case 'RandomSeed':
@@ -12131,7 +12200,7 @@ var $author$project$EventLog$Component$update = F3(
 										$the_sett$elm_update_helper$Update2$pure(
 											{procedure: $brian_watkins$elm_procedure$Procedure$Program$init, seed: seed})))));
 					} else {
-						break _v0$5;
+						break _v0$6;
 					}
 				case 'ProcedureMsg':
 					if (_v0.a.$ === 'ModelReady') {
@@ -12156,7 +12225,7 @@ var $author$project$EventLog$Component$update = F3(
 												{procedure: procMdl}),
 											procMsg)))));
 					} else {
-						break _v0$5;
+						break _v0$6;
 					}
 				case 'HttpRequest':
 					if (_v0.a.$ === 'ModelReady') {
@@ -12185,12 +12254,35 @@ var $author$project$EventLog$Component$update = F3(
 													$author$project$HttpServer$errorToString(httpError)))))));
 						}
 					} else {
-						break _v0$5;
+						break _v0$6;
+					}
+				case 'SqsEvent':
+					if (_v0.a.$ === 'ModelReady') {
+						var state = _v0.a.a;
+						var _v4 = _v0.b;
+						var session = _v4.a;
+						var event = _v4.b;
+						var _v5 = A2($elm$core$Debug$log, 'Got SQS event', event);
+						return protocol.onUpdate(
+							A2(
+								$elm$core$Tuple$mapSecond,
+								$elm$core$Platform$Cmd$map(protocol.toMsg),
+								A2(
+									$elm$core$Tuple$mapFirst,
+									$author$project$EventLog$Component$setModel(component),
+									_Utils_Tuple2(
+										$author$project$EventLog$Model$ModelReady(state),
+										A2(
+											$author$project$EventLog$Apis$httpServerApi.response,
+											session,
+											$author$project$Http$Response$ok200('Ok'))))));
+					} else {
+						break _v0$6;
 					}
 				case 'HttpResponse':
-					var _v4 = _v0.b;
-					var session = _v4.a;
-					var result = _v4.b;
+					var _v6 = _v0.b;
+					var session = _v6.a;
+					var result = _v6.b;
 					return protocol.onUpdate(
 						A2(
 							$elm$core$Tuple$mapSecond,

@@ -3,6 +3,7 @@ module HttpServer exposing
     , HttpServerApi, httpServerApi
     , HttpSessionKey, ApiRequest
     , Error(..), errorToDetails, errorToString
+    , sessionKeyFromCallback
     )
 
 {-| An API for running the server side of an HTTP and implementing an HTTP API.
@@ -22,6 +23,11 @@ module HttpServer exposing
 # Error reporting
 
 @docs Error, errorToDetails, errorToString
+
+
+# Special operations
+
+@docs sessionKeyFromCallback
 
 -}
 
@@ -48,6 +54,20 @@ key when responding in order to link the request and response together.
 -}
 type HttpSessionKey
     = HttpSessionKey Value -- This actually holds the `callback` in an util.promisify()
+
+
+{-| The HttpSessionKey wraps a javascript object that is used to wrap a `callback` in an util.promisify().
+It is intended to be fully opaque. But there is a need to allow other services, such as AWS Lambda functions
+that can be triggered by SQS, EventBridge, SNS and so on. These services may respond via the HttpServer API
+and therefore need an `HttpSessionKey`.
+
+This function allows creation of an HttpSessionKey from a value. It is not intended for use in your
+application.
+
+-}
+sessionKeyFromCallback : Value -> HttpSessionKey
+sessionKeyFromCallback =
+    HttpSessionKey
 
 
 {-| The ports that need to be wired up to @the-sett/elm-httpserver.

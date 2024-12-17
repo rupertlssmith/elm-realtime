@@ -5,7 +5,7 @@ export default $config({
     app(input) {
         return {
             home: "aws",
-            name: "elm-realtiome",
+            name: "elm-realtime",
             removal: input.stage === "production" ? "retain" : "remove",
             providers: {
                 aws: {
