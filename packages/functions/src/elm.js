@@ -5804,14 +5804,17 @@ var $author$project$SqsLambda$SqsMessage = F2(
 var $elm_community$json_extra$Json$Decode$Extra$andMap = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
 var $elm$json$Json$Decode$list = _Json_decodeList;
 var $author$project$SqsLambda$decodeRequestAndRoute = function (rawRequest) {
-	var decoder = $elm$json$Json$Decode$list(
+	var eventDecoder = A2(
+		$elm_community$json_extra$Json$Decode$Extra$andMap,
+		A2($elm$json$Json$Decode$field, 'body', $elm$json$Json$Decode$string),
 		A2(
 			$elm_community$json_extra$Json$Decode$Extra$andMap,
-			A2($elm$json$Json$Decode$field, 'body', $elm$json$Json$Decode$string),
-			A2(
-				$elm_community$json_extra$Json$Decode$Extra$andMap,
-				A2($elm$json$Json$Decode$field, 'messageId', $elm$json$Json$Decode$string),
-				$elm$json$Json$Decode$succeed($author$project$SqsLambda$SqsMessage))));
+			A2($elm$json$Json$Decode$field, 'messageId', $elm$json$Json$Decode$string),
+			$elm$json$Json$Decode$succeed($author$project$SqsLambda$SqsMessage)));
+	var decoder = A2(
+		$elm$json$Json$Decode$field,
+		'Records',
+		$elm$json$Json$Decode$list(eventDecoder));
 	return A2(
 		$elm$core$Result$mapError,
 		$author$project$SqsLambda$InvalidRequestFormat,

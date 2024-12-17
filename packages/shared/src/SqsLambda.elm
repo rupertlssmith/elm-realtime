@@ -111,11 +111,13 @@ requestSub ports requestFn =
 decodeRequestAndRoute : Value -> Result Error SqsEvent
 decodeRequestAndRoute rawRequest =
     let
-        decoder =
+        eventDecoder =
             Decode.succeed SqsMessage
                 |> DE.andMap (Decode.field "messageId" Decode.string)
                 |> DE.andMap (Decode.field "body" Decode.string)
-                |> Decode.list
+
+        decoder =
+            Decode.field "Records" (eventDecoder |> Decode.list)
     in
     Decode.decodeValue decoder rawRequest
         |> Result.mapError InvalidRequestFormat
