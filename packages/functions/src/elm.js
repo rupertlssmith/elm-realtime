@@ -3209,11 +3209,11 @@ var $elm$core$Result$isOk = function (result) {
 };
 var $elm$json$Json$Decode$andThen = _Json_andThen;
 var $elm$json$Json$Decode$field = _Json_decodeField;
-var $elm$core$Basics$identity = function (x) {
-	return x;
-};
 var $author$project$API$EventLogMsg = function (a) {
 	return {$: 'EventLogMsg', a: a};
+};
+var $author$project$API$SnapshotMsg = function (a) {
+	return {$: 'SnapshotMsg', a: a};
 };
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $the_sett$elm_aws_core$AWS$Credentials$fromAccessKeys = F2(
@@ -3251,6 +3251,9 @@ var $the_sett$elm_update_helper$Update2$pure = function (model) {
 };
 var $author$project$EventLog$Msg$RandomSeed = function (a) {
 	return {$: 'RandomSeed', a: a};
+};
+var $elm$core$Basics$identity = function (x) {
+	return x;
 };
 var $elm$random$Random$Generate = function (a) {
 	return {$: 'Generate', a: a};
@@ -3463,6 +3466,36 @@ var $author$project$EventLog$Component$init = function (toMsg) {
 				$the_sett$elm_update_helper$Update2$pure(
 					{}))));
 };
+var $author$project$Snapshot$Model$ModelStart = function (a) {
+	return {$: 'ModelStart', a: a};
+};
+var $author$project$Snapshot$Msg$RandomSeed = function (a) {
+	return {$: 'RandomSeed', a: a};
+};
+var $author$project$Snapshot$Component$randomize = function (model) {
+	return _Utils_Tuple2(
+		model,
+		A2($elm$random$Random$generate, $author$project$Snapshot$Msg$RandomSeed, $elm$random$Random$independentSeed));
+};
+var $author$project$Snapshot$Component$switchState = F2(
+	function (cons, state) {
+		return _Utils_Tuple2(
+			cons(state),
+			$elm$core$Platform$Cmd$none);
+	});
+var $author$project$Snapshot$Component$init = function (toMsg) {
+	return A2(
+		$elm$core$Tuple$mapSecond,
+		$elm$core$Platform$Cmd$map(toMsg),
+		A2(
+			$the_sett$elm_update_helper$Update2$andMap,
+			$author$project$Snapshot$Component$switchState($author$project$Snapshot$Model$ModelStart),
+			A2(
+				$the_sett$elm_update_helper$Update2$andMap,
+				$author$project$Snapshot$Component$randomize,
+				$the_sett$elm_update_helper$Update2$pure(
+					{}))));
+};
 var $the_sett$elm_aws_core$AWS$Credentials$withSessionToken = F2(
 	function (token, creds) {
 		return _Utils_update(
@@ -3476,18 +3509,22 @@ var $author$project$API$init = function (flags) {
 		$the_sett$elm_aws_core$AWS$Credentials$withSessionToken,
 		flags.awsSessionToken,
 		A2($the_sett$elm_aws_core$AWS$Credentials$fromAccessKeys, flags.awsAccessKeyId, flags.awsSecretAccessKey));
-	var _v0 = $author$project$EventLog$Component$init($author$project$API$EventLogMsg);
-	var eventLogMdl = _v0.a;
-	var eventLogCmds = _v0.b;
+	var _v0 = $author$project$Snapshot$Component$init($author$project$API$SnapshotMsg);
+	var snapshotMdl = _v0.a;
+	var snapshotCmds = _v0.b;
+	var _v1 = $author$project$EventLog$Component$init($author$project$API$EventLogMsg);
+	var eventLogMdl = _v1.a;
+	var eventLogCmds = _v1.b;
 	return _Utils_Tuple2(
-		{awsAccessKeyId: flags.awsAccessKeyId, awsRegion: flags.awsRegion, awsSecretAccessKey: flags.awsSecretAccessKey, awsSessionToken: flags.awsSessionToken, channelApiUrl: flags.channelApiUrl, channelTable: flags.channelTable, defaultCredentials: credentials, eventLog: eventLogMdl, eventLogTable: flags.eventLogTable, momentoApiKey: flags.momentoSecret.apiKey, snapshotQueueUrl: flags.snapshotQueueUrl},
+		{awsAccessKeyId: flags.awsAccessKeyId, awsRegion: flags.awsRegion, awsSecretAccessKey: flags.awsSecretAccessKey, awsSessionToken: flags.awsSessionToken, channelApiUrl: flags.channelApiUrl, channelTable: flags.channelTable, defaultCredentials: credentials, eventLog: eventLogMdl, eventLogTable: flags.eventLogTable, momentoApiKey: flags.momentoSecret.apiKey, snapshot: snapshotMdl, snapshotQueueUrl: flags.snapshotQueueUrl},
 		$elm$core$Platform$Cmd$batch(
 			_List_fromArray(
-				[eventLogCmds])));
+				[eventLogCmds, snapshotCmds])));
 };
 var $elm$json$Json$Decode$string = _Json_decodeString;
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $author$project$API$eventLogProtocol = {onUpdate: $elm$core$Basics$identity, toMsg: $author$project$API$EventLogMsg};
+var $author$project$API$snapshotProtocol = {onUpdate: $elm$core$Basics$identity, toMsg: $author$project$API$SnapshotMsg};
 var $author$project$EventLog$Msg$HttpRequest = F2(
 	function (a, b) {
 		return {$: 'HttpRequest', a: a, b: b};
@@ -3495,10 +3532,6 @@ var $author$project$EventLog$Msg$HttpRequest = F2(
 var $author$project$EventLog$Msg$MomentoError = function (a) {
 	return {$: 'MomentoError', a: a};
 };
-var $author$project$EventLog$Msg$SqsEvent = F2(
-	function (a, b) {
-		return {$: 'SqsEvent', a: a, b: b};
-	});
 var $author$project$HttpServer$HttpSessionKey = function (a) {
 	return {$: 'HttpSessionKey', a: a};
 };
@@ -5723,6 +5756,44 @@ var $author$project$EventLog$Apis$momentoApi = A2(
 	$author$project$EventLog$Msg$ProcedureMsg,
 	{asyncError: $author$project$Ports$mmAsyncError, close: $author$project$Ports$mmClose, createWebhook: $author$project$Ports$mmCreateWebhook, onMessage: $author$project$Ports$mmOnMessage, open: $author$project$Ports$mmOpen, popList: $author$project$Ports$mmPopList, publish: $author$project$Ports$mmPublish, pushList: $author$project$Ports$mmPushList, response: $author$project$Ports$mmResponse, subscribe: $author$project$Ports$mmSubscribe});
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
+var $elm$core$Dict$values = function (dict) {
+	return A3(
+		$elm$core$Dict$foldr,
+		F3(
+			function (key, value, valueList) {
+				return A2($elm$core$List$cons, value, valueList);
+			}),
+		_List_Nil,
+		dict);
+};
+var $brian_watkins$elm_procedure$Procedure$Program$subscriptions = function (_v0) {
+	var registry = _v0.a;
+	return $elm$core$Platform$Sub$batch(
+		$elm$core$Dict$values(registry.channels));
+};
+var $author$project$EventLog$Component$subscriptions = F2(
+	function (protocol, component) {
+		var model = component.eventLog;
+		if (model.$ === 'ModelReady') {
+			var state = model.a;
+			return A2(
+				$elm$core$Platform$Sub$map,
+				protocol.toMsg,
+				$elm$core$Platform$Sub$batch(
+					_List_fromArray(
+						[
+							$brian_watkins$elm_procedure$Procedure$Program$subscriptions(state.procedure),
+							$author$project$EventLog$Apis$httpServerApi.request($author$project$EventLog$Msg$HttpRequest),
+							$author$project$EventLog$Apis$momentoApi.asyncError($author$project$EventLog$Msg$MomentoError)
+						])));
+		} else {
+			return $elm$core$Platform$Sub$none;
+		}
+	});
+var $author$project$Snapshot$Msg$SqsEvent = F2(
+	function (a, b) {
+		return {$: 'SqsEvent', a: a, b: b};
+	});
 var $author$project$SqsLambda$InvalidRequestFormat = function (a) {
 	return {$: 'InvalidRequestFormat', a: a};
 };
@@ -5781,26 +5852,11 @@ var $author$project$Ports$sqsLambdaSubscribe = _Platform_incomingPort(
 				A2($elm$json$Json$Decode$field, 'req', $elm$json$Json$Decode$value));
 		},
 		A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value)));
-var $author$project$EventLog$Apis$sqsLambdaApi = $author$project$SqsLambda$sqsEventApi(
+var $author$project$Snapshot$Apis$sqsLambdaApi = $author$project$SqsLambda$sqsEventApi(
 	{sqsLambdaSubscribe: $author$project$Ports$sqsLambdaSubscribe});
-var $elm$core$Dict$values = function (dict) {
-	return A3(
-		$elm$core$Dict$foldr,
-		F3(
-			function (key, value, valueList) {
-				return A2($elm$core$List$cons, value, valueList);
-			}),
-		_List_Nil,
-		dict);
-};
-var $brian_watkins$elm_procedure$Procedure$Program$subscriptions = function (_v0) {
-	var registry = _v0.a;
-	return $elm$core$Platform$Sub$batch(
-		$elm$core$Dict$values(registry.channels));
-};
-var $author$project$EventLog$Component$subscriptions = F2(
+var $author$project$Snapshot$Component$subscriptions = F2(
 	function (protocol, component) {
-		var model = component.eventLog;
+		var model = component.snapshot;
 		if (model.$ === 'ModelReady') {
 			var state = model.a;
 			return A2(
@@ -5810,9 +5866,7 @@ var $author$project$EventLog$Component$subscriptions = F2(
 					_List_fromArray(
 						[
 							$brian_watkins$elm_procedure$Procedure$Program$subscriptions(state.procedure),
-							$author$project$EventLog$Apis$httpServerApi.request($author$project$EventLog$Msg$HttpRequest),
-							$author$project$EventLog$Apis$momentoApi.asyncError($author$project$EventLog$Msg$MomentoError),
-							$author$project$EventLog$Apis$sqsLambdaApi.event($author$project$EventLog$Msg$SqsEvent)
+							$author$project$Snapshot$Apis$sqsLambdaApi.event($author$project$Snapshot$Msg$SqsEvent)
 						])));
 		} else {
 			return $elm$core$Platform$Sub$none;
@@ -5822,7 +5876,8 @@ var $author$project$API$subscriptions = function (model) {
 	return $elm$core$Platform$Sub$batch(
 		_List_fromArray(
 			[
-				A2($author$project$EventLog$Component$subscriptions, $author$project$API$eventLogProtocol, model)
+				A2($author$project$EventLog$Component$subscriptions, $author$project$API$eventLogProtocol, model),
+				A2($author$project$Snapshot$Component$subscriptions, $author$project$API$snapshotProtocol, model)
 			]));
 };
 var $author$project$EventLog$Model$ModelReady = function (a) {
@@ -5904,12 +5959,6 @@ var $elm_community$result_extra$Result$Extra$merge = function (r) {
 		var rr = r.a;
 		return rr;
 	}
-};
-var $author$project$Http$Response$ok200 = function (msg) {
-	return A2(
-		$author$project$Http$Response$setBody,
-		$author$project$Http$Body$text(msg),
-		$author$project$Http$Response$init);
 };
 var $author$project$EventLog$Msg$HttpResponse = F2(
 	function (a, b) {
@@ -12181,7 +12230,7 @@ var $author$project$EventLog$Component$update = F3(
 	function (protocol, msg, component) {
 		var model = component.eventLog;
 		var _v0 = _Utils_Tuple2(model, msg);
-		_v0$6:
+		_v0$5:
 		while (true) {
 			switch (_v0.b.$) {
 				case 'RandomSeed':
@@ -12200,7 +12249,7 @@ var $author$project$EventLog$Component$update = F3(
 										$the_sett$elm_update_helper$Update2$pure(
 											{procedure: $brian_watkins$elm_procedure$Procedure$Program$init, seed: seed})))));
 					} else {
-						break _v0$6;
+						break _v0$5;
 					}
 				case 'ProcedureMsg':
 					if (_v0.a.$ === 'ModelReady') {
@@ -12225,7 +12274,7 @@ var $author$project$EventLog$Component$update = F3(
 												{procedure: procMdl}),
 											procMsg)))));
 					} else {
-						break _v0$6;
+						break _v0$5;
 					}
 				case 'HttpRequest':
 					if (_v0.a.$ === 'ModelReady') {
@@ -12254,35 +12303,12 @@ var $author$project$EventLog$Component$update = F3(
 													$author$project$HttpServer$errorToString(httpError)))))));
 						}
 					} else {
-						break _v0$6;
-					}
-				case 'SqsEvent':
-					if (_v0.a.$ === 'ModelReady') {
-						var state = _v0.a.a;
-						var _v4 = _v0.b;
-						var session = _v4.a;
-						var event = _v4.b;
-						var _v5 = A2($elm$core$Debug$log, 'Got SQS event', event);
-						return protocol.onUpdate(
-							A2(
-								$elm$core$Tuple$mapSecond,
-								$elm$core$Platform$Cmd$map(protocol.toMsg),
-								A2(
-									$elm$core$Tuple$mapFirst,
-									$author$project$EventLog$Component$setModel(component),
-									_Utils_Tuple2(
-										$author$project$EventLog$Model$ModelReady(state),
-										A2(
-											$author$project$EventLog$Apis$httpServerApi.response,
-											session,
-											$author$project$Http$Response$ok200('Ok'))))));
-					} else {
-						break _v0$6;
+						break _v0$5;
 					}
 				case 'HttpResponse':
-					var _v6 = _v0.b;
-					var session = _v6.a;
-					var result = _v6.b;
+					var _v4 = _v0.b;
+					var session = _v4.a;
+					var result = _v4.b;
 					return protocol.onUpdate(
 						A2(
 							$elm$core$Tuple$mapSecond,
@@ -12302,10 +12328,110 @@ var $author$project$EventLog$Component$update = F3(
 		return protocol.onUpdate(
 			$the_sett$elm_update_helper$Update2$pure(component));
 	});
+var $author$project$Snapshot$Model$ModelReady = function (a) {
+	return {$: 'ModelReady', a: a};
+};
+var $author$project$Snapshot$Apis$httpServerApi = $author$project$HttpServer$httpServerApi(
+	{
+		parseRoute: $elm$core$Basics$always(
+			$elm$core$Maybe$Just(_Utils_Tuple0)),
+		ports: {request: $author$project$Ports$requestPort, response: $author$project$Ports$responsePort}
+	});
+var $author$project$Http$Response$ok200 = function (msg) {
+	return A2(
+		$author$project$Http$Response$setBody,
+		$author$project$Http$Body$text(msg),
+		$author$project$Http$Response$init);
+};
+var $author$project$Snapshot$Component$setModel = F2(
+	function (m, x) {
+		return _Utils_update(
+			m,
+			{snapshot: x});
+	});
+var $author$project$Snapshot$Component$update = F3(
+	function (protocol, msg, component) {
+		var model = component.snapshot;
+		var _v0 = _Utils_Tuple2(model, msg);
+		_v0$3:
+		while (true) {
+			if (_v0.a.$ === 'ModelStart') {
+				if (_v0.b.$ === 'RandomSeed') {
+					var seed = _v0.b.a;
+					return protocol.onUpdate(
+						A2(
+							$elm$core$Tuple$mapSecond,
+							$elm$core$Platform$Cmd$map(protocol.toMsg),
+							A2(
+								$elm$core$Tuple$mapFirst,
+								$author$project$Snapshot$Component$setModel(component),
+								A2(
+									$the_sett$elm_update_helper$Update2$andMap,
+									$author$project$Snapshot$Component$switchState($author$project$Snapshot$Model$ModelReady),
+									$the_sett$elm_update_helper$Update2$pure(
+										{procedure: $brian_watkins$elm_procedure$Procedure$Program$init, seed: seed})))));
+				} else {
+					break _v0$3;
+				}
+			} else {
+				switch (_v0.b.$) {
+					case 'ProcedureMsg':
+						var state = _v0.a.a;
+						var innerMsg = _v0.b.a;
+						var _v1 = A2($brian_watkins$elm_procedure$Procedure$Program$update, innerMsg, state.procedure);
+						var procMdl = _v1.a;
+						var procMsg = _v1.b;
+						return protocol.onUpdate(
+							A2(
+								$elm$core$Tuple$mapSecond,
+								$elm$core$Platform$Cmd$map(protocol.toMsg),
+								A2(
+									$elm$core$Tuple$mapFirst,
+									$author$project$Snapshot$Component$setModel(component),
+									A2(
+										$the_sett$elm_update_helper$Update2$andMap,
+										$author$project$Snapshot$Component$switchState($author$project$Snapshot$Model$ModelReady),
+										_Utils_Tuple2(
+											_Utils_update(
+												state,
+												{procedure: procMdl}),
+											procMsg)))));
+					case 'SqsEvent':
+						var state = _v0.a.a;
+						var _v2 = _v0.b;
+						var session = _v2.a;
+						var event = _v2.b;
+						var _v3 = A2($elm$core$Debug$log, 'Got SQS event', event);
+						return protocol.onUpdate(
+							A2(
+								$elm$core$Tuple$mapSecond,
+								$elm$core$Platform$Cmd$map(protocol.toMsg),
+								A2(
+									$elm$core$Tuple$mapFirst,
+									$author$project$Snapshot$Component$setModel(component),
+									_Utils_Tuple2(
+										$author$project$Snapshot$Model$ModelReady(state),
+										A2(
+											$author$project$Snapshot$Apis$httpServerApi.response,
+											session,
+											$author$project$Http$Response$ok200('Ok'))))));
+					default:
+						break _v0$3;
+				}
+			}
+		}
+		return protocol.onUpdate(
+			$the_sett$elm_update_helper$Update2$pure(component));
+	});
 var $author$project$API$update = F2(
 	function (msg, model) {
-		var innerMsg = msg.a;
-		return A3($author$project$EventLog$Component$update, $author$project$API$eventLogProtocol, innerMsg, model);
+		if (msg.$ === 'EventLogMsg') {
+			var innerMsg = msg.a;
+			return A3($author$project$EventLog$Component$update, $author$project$API$eventLogProtocol, innerMsg, model);
+		} else {
+			var innerMsg = msg.a;
+			return A3($author$project$Snapshot$Component$update, $author$project$API$snapshotProtocol, innerMsg, model);
+		}
 	});
 var $elm$core$Platform$worker = _Platform_worker;
 var $author$project$API$main = $elm$core$Platform$worker(

@@ -1,19 +1,20 @@
-module EventLog.Apis exposing
+module Snapshot.Apis exposing
     ( channelTableApi
     , eventLogTableApi
     , eventLogTableMetadataApi
     , httpServerApi
     , momentoApi
+    , sqsLambdaApi
     )
 
 import AWS.Dynamo as Dynamo exposing (Error(..))
 import DB.ChannelTable as ChannelTable
 import DB.EventLogTable as EventLogTable
-import EventLog.Msg exposing (Msg(..))
-import EventLog.Route as Route exposing (Route(..))
-import HttpServer as HttpServer exposing (ApiRequest, Error, HttpSessionKey)
+import HttpServer as HttpServer exposing (HttpSessionKey)
 import Momento exposing (CacheItem, Error, MomentoSessionKey)
 import Ports
+import Snapshot.Msg exposing (Msg(..))
+import SqsLambda
 
 
 dynamoPorts : Dynamo.Ports Msg
@@ -62,12 +63,18 @@ momentoApi =
         |> Momento.momentoApi ProcedureMsg
 
 
-httpServerApi : HttpServer.HttpServerApi Msg Route
+httpServerApi : HttpServer.HttpServerApi Msg ()
 httpServerApi =
     { ports =
         { request = Ports.requestPort
         , response = Ports.responsePort
         }
-    , parseRoute = Route.routeParser
+    , parseRoute = Just () |> always
     }
         |> HttpServer.httpServerApi
+
+
+sqsLambdaApi : SqsLambda.SqsEventApi Msg
+sqsLambdaApi =
+    { sqsLambdaSubscribe = Ports.sqsLambdaSubscribe }
+        |> SqsLambda.sqsEventApi

@@ -88,7 +88,6 @@ subscriptions protocol component =
             [ Procedure.Program.subscriptions state.procedure
             , Apis.httpServerApi.request HttpRequest
             , Apis.momentoApi.asyncError MomentoError
-            , Apis.sqsLambdaApi.event SqsEvent
             ]
                 |> Sub.batch
                 |> Sub.map protocol.toMsg
@@ -140,20 +139,6 @@ update protocol msg component =
                         |> Tuple.mapFirst (setModel component)
                         |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                         |> protocol.onUpdate
-
-        ( ModelReady state, SqsEvent session event ) ->
-            let
-                _ =
-                    Debug.log "Got SQS event" event
-            in
-            ( ModelReady state
-            , "Ok"
-                |> Response.ok200
-                |> Apis.httpServerApi.response session
-            )
-                |> Tuple.mapFirst (setModel component)
-                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
-                |> protocol.onUpdate
 
         ( _, HttpResponse session result ) ->
             ( component

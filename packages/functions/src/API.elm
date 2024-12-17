@@ -2,11 +2,7 @@ module API exposing (Flags, Model, MomentoSecret, Msg, main)
 
 import AWS.Credentials exposing (Credentials)
 import EventLog.Component as EventLog
-import Snapshot.Snapshot
-
-
-x =
-    Snapshot.Snapshot.main
+import Snapshot.Component as Snapshot
 
 
 {-| API for managing realtime channels.
@@ -26,6 +22,7 @@ type alias Model =
 
     -- Elm modules
     , eventLog : EventLog.Model
+    , snapshot : Snapshot.Model
 
     -- Shared state
     }
@@ -33,6 +30,7 @@ type alias Model =
 
 type Msg
     = EventLogMsg EventLog.Msg
+    | SnapshotMsg Snapshot.Msg
 
 
 type alias MomentoSecret =
@@ -70,6 +68,9 @@ init flags =
         ( eventLogMdl, eventLogCmds ) =
             EventLog.init EventLogMsg
 
+        ( snapshotMdl, snapshotCmds ) =
+            Snapshot.init SnapshotMsg
+
         credentials =
             AWS.Credentials.fromAccessKeys
                 flags.awsAccessKeyId
@@ -87,9 +88,11 @@ init flags =
       , snapshotQueueUrl = flags.snapshotQueueUrl
       , defaultCredentials = credentials
       , eventLog = eventLogMdl
+      , snapshot = snapshotMdl
       }
     , Cmd.batch
         [ eventLogCmds
+        , snapshotCmds
         ]
     )
 
@@ -98,6 +101,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ EventLog.subscriptions eventLogProtocol model
+        , Snapshot.subscriptions snapshotProtocol model
         ]
 
 
@@ -109,6 +113,11 @@ update msg model =
                 innerMsg
                 model
 
+        SnapshotMsg innerMsg ->
+            Snapshot.update snapshotProtocol
+                innerMsg
+                model
+
 
 
 -- EventLog Protocol
@@ -117,5 +126,12 @@ update msg model =
 eventLogProtocol : EventLog.Protocol Model Msg Model
 eventLogProtocol =
     { toMsg = EventLogMsg
+    , onUpdate = identity
+    }
+
+
+snapshotProtocol : Snapshot.Protocol Model Msg Model
+snapshotProtocol =
+    { toMsg = SnapshotMsg
     , onUpdate = identity
     }
