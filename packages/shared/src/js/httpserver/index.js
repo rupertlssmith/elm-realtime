@@ -5,7 +5,7 @@ const xmlhttprequest = require('./xmlhttprequest');
 const defaultLogger = require('./logger');
 const requestHandler = require('./request-handler');
 const responseHandler = require('./response-handler');
-import * as ports from "../../../shared/src/js/ports.js"
+import * as ports from "../ports.js"
 
 global.XMLHttpRequest = xmlhttprequest.XMLHttpRequest;
 

@@ -53,7 +53,7 @@ export default $config({
 
         snapshotQueue.subscribe(
             {
-                handler: "packages/functions/src/api.main",
+                handler: "packages/functions/src/snapshot.main",
                 // batch {
                 //     size: 100,
                 //     window: "1 second"
@@ -79,12 +79,6 @@ export default $config({
                     eventLogTable,
                     snapshotTable,
                     snapshotQueue
-                ],
-                permissions: [
-                    {
-                        actions: ["sqs:*"],
-                        resources: [snapshotQueue.arn]
-                    }
                 ]
             }
         );
