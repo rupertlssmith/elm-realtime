@@ -1,4 +1,4 @@
-module EventLog.Names exposing
+module Names exposing
     ( cacheName
     , metadataKeyName
     , modelTopicName

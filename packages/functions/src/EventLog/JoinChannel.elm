@@ -2,15 +2,15 @@ module EventLog.JoinChannel exposing (..)
 
 import AWS.Dynamo as Dynamo exposing (Order(..))
 import DB.EventLogTable as EventLogTable
+import ErrorFormat exposing (ErrorFormat)
 import EventLog.Apis as Apis
-import EventLog.ErrorFormat as ErrorFormat exposing (ErrorFormat)
 import EventLog.Model exposing (Model(..), ReadyState)
 import EventLog.Msg exposing (Msg(..))
 import EventLog.Route exposing (Route)
+import Http.Response as Response exposing (Response)
 import HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Json.Encode as Encode exposing (Value)
 import Procedure
-import Http.Response as Response exposing (Response)
 import Update2 as U2
 
 

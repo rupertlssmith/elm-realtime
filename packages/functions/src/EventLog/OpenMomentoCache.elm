@@ -1,10 +1,10 @@
 module EventLog.OpenMomentoCache exposing (openMomentoCache)
 
+import ErrorFormat exposing (ErrorFormat)
 import EventLog.Apis as Apis
-import EventLog.ErrorFormat exposing (ErrorFormat)
 import EventLog.Msg exposing (Msg(..))
-import EventLog.Names as Names
 import Momento exposing (CacheItem, Error, MomentoSessionKey)
+import Names
 import Procedure
 
 

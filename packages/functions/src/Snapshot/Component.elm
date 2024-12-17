@@ -8,7 +8,7 @@ module Snapshot.Component exposing
     , update
     )
 
-{-| API for managing realtime channels.
+{-| API for managing realtime channel snapshots.
 -}
 
 import AWS.Credentials exposing (Credentials)
@@ -16,9 +16,11 @@ import Http.Response as Response exposing (Response)
 import HttpServer exposing (HttpSessionKey)
 import Procedure.Program
 import Random
+import Result.Extra
 import Snapshot.Apis as Apis
 import Snapshot.Model as Model exposing (Model(..), ReadyState, StartState)
 import Snapshot.Msg as Msg exposing (Msg(..))
+import Snapshot.SnapshotChannel as SnapshotChannel
 import Update2 as U2
 
 
@@ -126,6 +128,13 @@ update protocol msg component =
                 |> Apis.httpServerApi.response session
             )
                 |> Tuple.mapFirst (setModel component)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
+        ( _, HttpResponse session result ) ->
+            ( component
+            , result |> Result.Extra.merge |> Apis.httpServerApi.response session
+            )
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 

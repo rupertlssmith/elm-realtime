@@ -1,4 +1,4 @@
-module EventLog.ErrorFormat exposing
+module ErrorFormat exposing
     ( ErrorFormat
     , encodeErrorFormat
     )

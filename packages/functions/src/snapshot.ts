@@ -1,8 +1,5 @@
 import {Elm} from './elm.js';
-import * as elmServerless from "../../shared/src/js/httpserver/index.js";
 import {Resource} from "sst";
-import {NodeMomentoFactory} from "../../shared/src/js/node_momento";
-import {MomentoFactory, MomentoPorts} from "../../shared/src/js/momento";
 import {DynamoPorts} from "../../shared/src/js/dynamo";
 import * as ports from "../../shared/src/js/ports";
 import util from "util";
@@ -111,8 +108,6 @@ const silent = {
     }
 }
 
-const momentoFactory = new NodeMomentoFactory();
-const momentoPorts = new MomentoPorts(app, momentoFactory);
 const dynamoPorts = new DynamoPorts(app);
 const sqsLambdaPorts = new SqsLambdaPorts(app, silent);
 

@@ -6031,7 +6031,7 @@ var $brian_watkins$elm_procedure$Procedure$andThen = F2(
 				}
 			});
 	});
-var $author$project$EventLog$ErrorFormat$encodeErrorFormat = function (error) {
+var $author$project$ErrorFormat$encodeErrorFormat = function (error) {
 	return $elm$json$Json$Encode$object(
 		_List_fromArray(
 			[
@@ -6218,14 +6218,14 @@ var $elm_community$random_extra$Random$String$string = F2(
 			$elm$core$String$fromList,
 			A2($elm$random$Random$list, stringLength, charGenerator));
 	});
-var $author$project$EventLog$Names$nameGenerator = A2($elm_community$random_extra$Random$String$string, 10, $elm_community$random_extra$Random$Char$english);
+var $author$project$Names$nameGenerator = A2($elm_community$random_extra$Random$String$string, 10, $elm_community$random_extra$Random$Char$english);
 var $author$project$Http$Response$ok200json = function (msg) {
 	return A2(
 		$author$project$Http$Response$setBody,
 		$author$project$Http$Body$json(msg),
 		$author$project$Http$Response$init);
 };
-var $author$project$EventLog$Names$cacheName = function (channel) {
+var $author$project$Names$cacheName = function (channel) {
 	return 'elm-realtime' + '-cache';
 };
 var $author$project$Momento$errorToDetails = function (_v0) {
@@ -6248,7 +6248,7 @@ var $author$project$EventLog$OpenMomentoCache$openMomentoCache = F2(
 				$author$project$EventLog$Apis$momentoApi.open(
 					{
 						apiKey: component.momentoApiKey,
-						cache: $author$project$EventLog$Names$cacheName(channelName)
+						cache: $author$project$Names$cacheName(channelName)
 					})));
 	});
 var $author$project$Ports$dynamoBatchGet = _Platform_outgoingPort(
@@ -7885,16 +7885,16 @@ var $author$project$AWS$Dynamo$errorToDetails = function (error) {
 			};
 	}
 };
-var $author$project$EventLog$Names$modelTopicName = function (channel) {
+var $author$project$Names$modelTopicName = function (channel) {
 	return channel + '-modeltopic';
 };
-var $author$project$EventLog$Names$notifyTopicName = function (channel) {
+var $author$project$Names$notifyTopicName = function (channel) {
 	return channel + '-savetopic';
 };
-var $author$project$EventLog$Names$saveListName = function (channel) {
+var $author$project$Names$saveListName = function (channel) {
 	return channel + '-savelist';
 };
-var $author$project$EventLog$Names$webhookName = function (channel) {
+var $author$project$Names$webhookName = function (channel) {
 	return channel + '-webhook';
 };
 var $author$project$EventLog$CreateChannel$recordChannel = F3(
@@ -7904,11 +7904,11 @@ var $author$project$EventLog$CreateChannel$recordChannel = F3(
 			function (timestamp) {
 				var channelRecord = {
 					id: channelName,
-					modelTopic: $author$project$EventLog$Names$modelTopicName(channelName),
-					saveList: $author$project$EventLog$Names$saveListName(channelName),
-					saveTopic: $author$project$EventLog$Names$notifyTopicName(channelName),
+					modelTopic: $author$project$Names$modelTopicName(channelName),
+					saveList: $author$project$Names$saveListName(channelName),
+					saveTopic: $author$project$Names$notifyTopicName(channelName),
 					updatedAt: timestamp,
-					webhook: $author$project$EventLog$Names$webhookName(channelName)
+					webhook: $author$project$Names$webhookName(channelName)
 				};
 				return A2(
 					$brian_watkins$elm_procedure$Procedure$mapError,
@@ -7982,7 +7982,7 @@ var $author$project$DB$EventLogTable$metadataOperations = A3(
 	$miniBill$elm_codec$Codec$encoder($author$project$DB$EventLogTable$metadataRecordCodec),
 	$miniBill$elm_codec$Codec$decoder($author$project$DB$EventLogTable$metadataRecordCodec));
 var $author$project$EventLog$Apis$eventLogTableMetadataApi = A2($author$project$DB$EventLogTable$metadataOperations, $author$project$EventLog$Msg$ProcedureMsg, $author$project$EventLog$Apis$dynamoPorts);
-var $author$project$EventLog$Names$metadataKeyName = function (channel) {
+var $author$project$Names$metadataKeyName = function (channel) {
 	return channel + '-metadata';
 };
 var $author$project$EventLog$CreateChannel$recordEventsLogMetaData = F3(
@@ -7991,7 +7991,7 @@ var $author$project$EventLog$CreateChannel$recordEventsLogMetaData = F3(
 			$brian_watkins$elm_procedure$Procedure$andThen,
 			function (timestamp) {
 				var metadataRecord = {
-					id: $author$project$EventLog$Names$metadataKeyName(channelName),
+					id: $author$project$Names$metadataKeyName(channelName),
 					lastId: 0,
 					seq: 0,
 					updatedAt: timestamp
@@ -8027,8 +8027,8 @@ var $author$project$EventLog$CreateChannel$setupChannelWebhook = F3(
 						$author$project$EventLog$Apis$momentoApi.webhook,
 						sessionKey,
 						{
-							name: $author$project$EventLog$Names$webhookName(channelName),
-							topic: $author$project$EventLog$Names$notifyTopicName(channelName),
+							name: $author$project$Names$webhookName(channelName),
+							topic: $author$project$Names$notifyTopicName(channelName),
 							url: component.channelApiUrl + ('/v1/channel/' + channelName)
 						}))));
 	});
@@ -8040,7 +8040,7 @@ var $author$project$EventLog$CreateChannel$switchState = F2(
 	});
 var $author$project$EventLog$CreateChannel$createChannel = F3(
 	function (session, state, component) {
-		var _v0 = A2($elm$random$Random$step, $author$project$EventLog$Names$nameGenerator, state.seed);
+		var _v0 = A2($elm$random$Random$step, $author$project$Names$nameGenerator, state.seed);
 		var channelName = _v0.a;
 		var nextSeed = _v0.b;
 		var procedure = A2(
@@ -8051,7 +8051,7 @@ var $author$project$EventLog$CreateChannel$createChannel = F3(
 				$author$project$Http$Response$ok200json),
 			A2(
 				$brian_watkins$elm_procedure$Procedure$mapError,
-				A2($elm$core$Basics$composeR, $author$project$EventLog$ErrorFormat$encodeErrorFormat, $author$project$Http$Response$err500json),
+				A2($elm$core$Basics$composeR, $author$project$ErrorFormat$encodeErrorFormat, $author$project$Http$Response$err500json),
 				A2(
 					$brian_watkins$elm_procedure$Procedure$andThen,
 					A2($author$project$EventLog$CreateChannel$recordChannel, component, channelName),
@@ -8136,7 +8136,7 @@ var $author$project$EventLog$GetAvailableChannel$getAvailableChannel = F3(
 			},
 			A2(
 				$brian_watkins$elm_procedure$Procedure$mapError,
-				A2($elm$core$Basics$composeR, $author$project$EventLog$ErrorFormat$encodeErrorFormat, $author$project$Http$Response$err500json),
+				A2($elm$core$Basics$composeR, $author$project$ErrorFormat$encodeErrorFormat, $author$project$Http$Response$err500json),
 				A2(
 					$brian_watkins$elm_procedure$Procedure$andThen,
 					$author$project$EventLog$GetAvailableChannel$findAvailableChannel(component),
@@ -8292,7 +8292,7 @@ var $author$project$EventLog$JoinChannel$joinChannel = F5(
 				A2(
 					$elm$core$Basics$composeR,
 					$elm$core$Debug$log('error'),
-					A2($elm$core$Basics$composeR, $author$project$EventLog$ErrorFormat$encodeErrorFormat, $author$project$Http$Response$err500json)),
+					A2($elm$core$Basics$composeR, $author$project$ErrorFormat$encodeErrorFormat, $author$project$Http$Response$err500json)),
 				A2(
 					$brian_watkins$elm_procedure$Procedure$andThen,
 					A2($author$project$EventLog$JoinChannel$fetchSavedEventsSince, component, 1),
@@ -8349,13 +8349,13 @@ var $author$project$EventLog$SaveChannel$publishEvent = F3(
 						state.sessionKey,
 						{
 							payload: payload,
-							topic: $author$project$EventLog$Names$modelTopicName(channelName)
+							topic: $author$project$Names$modelTopicName(channelName)
 						}))));
 	});
 var $author$project$EventLog$SaveChannel$getEventsLogMetaData = F3(
 	function (component, channelName, state) {
 		var key = {
-			id: $author$project$EventLog$Names$metadataKeyName(channelName),
+			id: $author$project$Names$metadataKeyName(channelName),
 			seq: 0
 		};
 		return A2(
@@ -8431,7 +8431,7 @@ var $author$project$EventLog$SaveChannel$recordEventsAndMetadata = F3(
 									$author$project$AWS$Dynamo$int(state.lastSeqNo))
 								])),
 						key: {
-							id: $author$project$EventLog$Names$metadataKeyName(channelName),
+							id: $author$project$Names$metadataKeyName(channelName),
 							seq: 0
 						},
 						returnConsumedCapacity: $elm$core$Maybe$Nothing,
@@ -8541,7 +8541,7 @@ var $author$project$EventLog$SaveChannel$tryReadEvent = F3(
 						$author$project$EventLog$Apis$momentoApi.popList,
 						sessionKey,
 						{
-							list: $author$project$EventLog$Names$saveListName(channelName)
+							list: $author$project$Names$saveListName(channelName)
 						}))));
 	});
 var $author$project$EventLog$SaveChannel$drainSaveListInner = F3(
@@ -12054,7 +12054,7 @@ var $author$project$EventLog$SaveChannel$saveChannel = F5(
 				A2(
 					$elm$core$Basics$composeR,
 					$elm$core$Debug$log('error'),
-					A2($elm$core$Basics$composeR, $author$project$EventLog$ErrorFormat$encodeErrorFormat, $author$project$Http$Response$err500json)),
+					A2($elm$core$Basics$composeR, $author$project$ErrorFormat$encodeErrorFormat, $author$project$Http$Response$err500json)),
 				A2(
 					$brian_watkins$elm_procedure$Procedure$andThen,
 					A2($author$project$EventLog$SaveChannel$notifyCompactor, component, channelName),
@@ -12356,29 +12356,29 @@ var $author$project$Snapshot$Component$update = F3(
 	function (protocol, msg, component) {
 		var model = component.snapshot;
 		var _v0 = _Utils_Tuple2(model, msg);
-		_v0$3:
+		_v0$4:
 		while (true) {
-			if (_v0.a.$ === 'ModelStart') {
-				if (_v0.b.$ === 'RandomSeed') {
-					var seed = _v0.b.a;
-					return protocol.onUpdate(
-						A2(
-							$elm$core$Tuple$mapSecond,
-							$elm$core$Platform$Cmd$map(protocol.toMsg),
+			switch (_v0.b.$) {
+				case 'RandomSeed':
+					if (_v0.a.$ === 'ModelStart') {
+						var seed = _v0.b.a;
+						return protocol.onUpdate(
 							A2(
-								$elm$core$Tuple$mapFirst,
-								$author$project$Snapshot$Component$setModel(component),
+								$elm$core$Tuple$mapSecond,
+								$elm$core$Platform$Cmd$map(protocol.toMsg),
 								A2(
-									$the_sett$elm_update_helper$Update2$andMap,
-									$author$project$Snapshot$Component$switchState($author$project$Snapshot$Model$ModelReady),
-									$the_sett$elm_update_helper$Update2$pure(
-										{procedure: $brian_watkins$elm_procedure$Procedure$Program$init, seed: seed})))));
-				} else {
-					break _v0$3;
-				}
-			} else {
-				switch (_v0.b.$) {
-					case 'ProcedureMsg':
+									$elm$core$Tuple$mapFirst,
+									$author$project$Snapshot$Component$setModel(component),
+									A2(
+										$the_sett$elm_update_helper$Update2$andMap,
+										$author$project$Snapshot$Component$switchState($author$project$Snapshot$Model$ModelReady),
+										$the_sett$elm_update_helper$Update2$pure(
+											{procedure: $brian_watkins$elm_procedure$Procedure$Program$init, seed: seed})))));
+					} else {
+						break _v0$4;
+					}
+				case 'ProcedureMsg':
+					if (_v0.a.$ === 'ModelReady') {
 						var state = _v0.a.a;
 						var innerMsg = _v0.b.a;
 						var _v1 = A2($brian_watkins$elm_procedure$Procedure$Program$update, innerMsg, state.procedure);
@@ -12399,7 +12399,11 @@ var $author$project$Snapshot$Component$update = F3(
 												state,
 												{procedure: procMdl}),
 											procMsg)))));
-					case 'SqsEvent':
+					} else {
+						break _v0$4;
+					}
+				case 'SqsEvent':
+					if (_v0.a.$ === 'ModelReady') {
 						var state = _v0.a.a;
 						var _v2 = _v0.b;
 						var session = _v2.a;
@@ -12418,9 +12422,23 @@ var $author$project$Snapshot$Component$update = F3(
 											$author$project$Snapshot$Apis$httpServerApi.response,
 											session,
 											$author$project$Http$Response$ok200('Ok'))))));
-					default:
-						break _v0$3;
-				}
+					} else {
+						break _v0$4;
+					}
+				default:
+					var _v4 = _v0.b;
+					var session = _v4.a;
+					var result = _v4.b;
+					return protocol.onUpdate(
+						A2(
+							$elm$core$Tuple$mapSecond,
+							$elm$core$Platform$Cmd$map(protocol.toMsg),
+							_Utils_Tuple2(
+								component,
+								A2(
+									$author$project$Snapshot$Apis$httpServerApi.response,
+									session,
+									$elm_community$result_extra$Result$Extra$merge(result)))));
 			}
 		}
 		return protocol.onUpdate(
