@@ -3516,7 +3516,7 @@ var $author$project$API$init = function (flags) {
 	var eventLogMdl = _v1.a;
 	var eventLogCmds = _v1.b;
 	return _Utils_Tuple2(
-		{awsAccessKeyId: flags.awsAccessKeyId, awsRegion: flags.awsRegion, awsSecretAccessKey: flags.awsSecretAccessKey, awsSessionToken: flags.awsSessionToken, channelApiUrl: flags.channelApiUrl, channelTable: flags.channelTable, defaultCredentials: credentials, eventLog: eventLogMdl, eventLogTable: flags.eventLogTable, momentoApiKey: flags.momentoSecret.apiKey, snapshot: snapshotMdl, snapshotQueueUrl: flags.snapshotQueueUrl},
+		{awsAccessKeyId: flags.awsAccessKeyId, awsRegion: flags.awsRegion, awsSecretAccessKey: flags.awsSecretAccessKey, awsSessionToken: flags.awsSessionToken, channelApiUrl: flags.channelApiUrl, channelTable: flags.channelTable, defaultCredentials: credentials, eventLog: eventLogMdl, eventLogTable: flags.eventLogTable, momentoApiKey: flags.momentoSecret.apiKey, snapshot: snapshotMdl, snapshotQueueUrl: flags.snapshotQueueUrl, snapshotTable: flags.snapshotTable},
 		$elm$core$Platform$Cmd$batch(
 			_List_fromArray(
 				[eventLogCmds, snapshotCmds])));
@@ -12383,37 +12383,274 @@ var $author$project$Snapshot$Msg$HttpResponse = F2(
 var $author$project$Snapshot$Msg$ProcedureMsg = function (a) {
 	return {$: 'ProcedureMsg', a: a};
 };
-var $author$project$Snapshot$SnapshotChannel$fetchLatestSnapshot = F3(
-	function (component, state, event) {
-		return $brian_watkins$elm_procedure$Procedure$provide(_Utils_Tuple0);
+var $author$project$Snapshot$SnapshotChannel$LaterFound = function (a) {
+	return {$: 'LaterFound', a: a};
+};
+var $author$project$Snapshot$SnapshotChannel$New = {$: 'New'};
+var $author$project$Snapshot$SnapshotChannel$OutOfDate = function (a) {
+	return {$: 'OutOfDate', a: a};
+};
+var $author$project$Snapshot$SnapshotChannel$getLatestSnapshotFromCache = F3(
+	function (component, event, state) {
+		return $brian_watkins$elm_procedure$Procedure$provide(
+			{
+				cache: state.cache,
+				maybeLatest: A2($elm$core$Dict$get, event.channel, state.cache)
+			});
+	});
+var $author$project$AWS$Dynamo$Reverse = {$: 'Reverse'};
+var $author$project$AWS$Dynamo$limitResults = F2(
+	function (limit, q) {
+		return _Utils_update(
+			q,
+			{
+				limit: $elm$core$Maybe$Just(limit)
+			});
+	});
+var $author$project$Snapshot$Apis$dynamoPorts = {batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse, scan: $author$project$Ports$dynamoScan, update: $author$project$Ports$dynamoUpdate, writeTx: $author$project$Ports$dynamoWriteTx};
+var $author$project$DB$SnapshotTable$encodeKey = function (key) {
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'id',
+				$elm$json$Json$Encode$string(key.id)),
+				_Utils_Tuple2(
+				'seq',
+				$elm$json$Json$Encode$int(key.seq))
+			]));
+};
+var $author$project$DB$SnapshotTable$Record = F4(
+	function (id, seq, updatedAt, snapshot) {
+		return {id: id, seq: seq, snapshot: snapshot, updatedAt: updatedAt};
+	});
+var $author$project$DB$SnapshotTable$posixCodec = A2(
+	$miniBill$elm_codec$Codec$build,
+	function (timestamp) {
+		return $elm$json$Json$Encode$int(
+			$elm$time$Time$posixToMillis(timestamp));
+	},
+	A2($elm$json$Json$Decode$map, $elm$time$Time$millisToPosix, $elm$json$Json$Decode$int));
+var $author$project$DB$SnapshotTable$recordCodec = $miniBill$elm_codec$Codec$buildObject(
+	A4(
+		$miniBill$elm_codec$Codec$field,
+		'snapshot',
+		function ($) {
+			return $.snapshot;
+		},
+		$miniBill$elm_codec$Codec$value,
+		A4(
+			$miniBill$elm_codec$Codec$field,
+			'updatedAt',
+			function ($) {
+				return $.updatedAt;
+			},
+			$author$project$DB$SnapshotTable$posixCodec,
+			A4(
+				$miniBill$elm_codec$Codec$field,
+				'seq',
+				function ($) {
+					return $.seq;
+				},
+				$miniBill$elm_codec$Codec$int,
+				A4(
+					$miniBill$elm_codec$Codec$field,
+					'id',
+					function ($) {
+						return $.id;
+					},
+					$miniBill$elm_codec$Codec$string,
+					$miniBill$elm_codec$Codec$object($author$project$DB$SnapshotTable$Record))))));
+var $author$project$DB$SnapshotTable$operations = A3(
+	$author$project$AWS$Dynamo$dynamoTypedApi,
+	$author$project$DB$SnapshotTable$encodeKey,
+	$miniBill$elm_codec$Codec$encoder($author$project$DB$SnapshotTable$recordCodec),
+	$miniBill$elm_codec$Codec$decoder($author$project$DB$SnapshotTable$recordCodec));
+var $author$project$Snapshot$Apis$snapshotTableApi = A2($author$project$DB$SnapshotTable$operations, $author$project$Snapshot$Msg$ProcedureMsg, $author$project$Snapshot$Apis$dynamoPorts);
+var $author$project$Snapshot$SnapshotChannel$getLatestSnapshotFromTable = F3(
+	function (component, event, state) {
+		var matchLatestSnapshot = A2(
+			$author$project$AWS$Dynamo$limitResults,
+			1,
+			A2(
+				$author$project$AWS$Dynamo$orderResults,
+				$author$project$AWS$Dynamo$Reverse,
+				A2($author$project$AWS$Dynamo$partitionKeyEquals, 'id', event.channel)));
+		var query = {match: matchLatestSnapshot, tableName: component.snapshotTable};
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$map,
+			function (queryResult) {
+				if (!queryResult.b) {
+					return {cache: state.cache, maybeLatest: $elm$core$Maybe$Nothing};
+				} else {
+					var r = queryResult.a;
+					return {
+						cache: state.cache,
+						maybeLatest: $elm$core$Maybe$Just(
+							{model: r.snapshot, seq: r.seq})
+					};
+				}
+			},
+			A2(
+				$brian_watkins$elm_procedure$Procedure$mapError,
+				$author$project$AWS$Dynamo$errorToDetails,
+				$brian_watkins$elm_procedure$Procedure$fetchResult(
+					$author$project$Snapshot$Apis$snapshotTableApi.query(query))));
+	});
+var $author$project$Snapshot$SnapshotChannel$checkAgainstCurrentSnapshot = F3(
+	function (component, event, state) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (_v2) {
+				var cache = _v2.cache;
+				var maybeLatest = _v2.maybeLatest;
+				if (maybeLatest.$ === 'Just') {
+					var latest = maybeLatest.a;
+					return (_Utils_cmp(latest.seq, event.seq) > -1) ? $brian_watkins$elm_procedure$Procedure$provide(
+						$author$project$Snapshot$SnapshotChannel$LaterFound(
+							A3($elm$core$Dict$insert, event.channel, latest, cache))) : $brian_watkins$elm_procedure$Procedure$provide(
+						$author$project$Snapshot$SnapshotChannel$OutOfDate(latest));
+				} else {
+					return $brian_watkins$elm_procedure$Procedure$provide($author$project$Snapshot$SnapshotChannel$New);
+				}
+			},
+			A2(
+				$brian_watkins$elm_procedure$Procedure$andThen,
+				function (_v0) {
+					var cache = _v0.cache;
+					var maybeLatest = _v0.maybeLatest;
+					if (maybeLatest.$ === 'Just') {
+						var latest = maybeLatest.a;
+						return (_Utils_cmp(latest.seq, event.seq) > -1) ? $brian_watkins$elm_procedure$Procedure$provide(
+							{
+								cache: cache,
+								maybeLatest: $elm$core$Maybe$Just(latest)
+							}) : A3(
+							$author$project$Snapshot$SnapshotChannel$getLatestSnapshotFromTable,
+							component,
+							event,
+							{cache: state.cache});
+					} else {
+						return A3(
+							$author$project$Snapshot$SnapshotChannel$getLatestSnapshotFromTable,
+							component,
+							event,
+							{cache: state.cache});
+					}
+				},
+				A2(
+					$brian_watkins$elm_procedure$Procedure$andThen,
+					A2($author$project$Snapshot$SnapshotChannel$getLatestSnapshotFromCache, component, event),
+					$brian_watkins$elm_procedure$Procedure$provide(state))));
+	});
+var $author$project$Snapshot$Apis$eventLogTableApi = A2($author$project$DB$EventLogTable$operations, $author$project$Snapshot$Msg$ProcedureMsg, $author$project$Snapshot$Apis$dynamoPorts);
+var $author$project$AWS$Dynamo$GreaterThan = F2(
+	function (a, b) {
+		return {$: 'GreaterThan', a: a, b: b};
+	});
+var $author$project$AWS$Dynamo$rangeKeyGreaterThan = F3(
+	function (keyName, attr, q) {
+		return _Utils_update(
+			q,
+			{
+				rangeKeyCondition: $elm$core$Maybe$Just(
+					A2($author$project$AWS$Dynamo$GreaterThan, keyName, attr))
+			});
+	});
+var $author$project$Snapshot$SnapshotChannel$readLaterEvents = F3(
+	function (component, event, state) {
+		var seq = A2(
+			$elm$core$Maybe$withDefault,
+			0,
+			A2(
+				$elm$core$Maybe$map,
+				function ($) {
+					return $.seq;
+				},
+				state.baseSnapshot));
+		var matchLaterEvents = A2(
+			$author$project$AWS$Dynamo$orderResults,
+			$author$project$AWS$Dynamo$Forward,
+			A3(
+				$author$project$AWS$Dynamo$rangeKeyGreaterThan,
+				'seq',
+				$author$project$AWS$Dynamo$int(seq),
+				A2($author$project$AWS$Dynamo$partitionKeyEquals, 'id', event.channel)));
+		var query = {match: matchLaterEvents, tableName: component.eventLogTable};
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$map,
+			function (laterEvents) {
+				return {baseSnapshot: state.baseSnapshot, cache: state.cache, laterEvents: laterEvents};
+			},
+			A2(
+				$brian_watkins$elm_procedure$Procedure$mapError,
+				$author$project$AWS$Dynamo$errorToDetails,
+				$brian_watkins$elm_procedure$Procedure$fetchResult(
+					$author$project$Snapshot$Apis$eventLogTableApi.query(query))));
+	});
+var $elm$core$Debug$todo = _Debug_todo;
+var $author$project$Snapshot$SnapshotChannel$saveNextSnapshot = F3(
+	function (component, event, state) {
+		return _Debug_todo(
+			'Snapshot.SnapshotChannel',
+			{
+				start: {line: 313, column: 5},
+				end: {line: 313, column: 15}
+			})('');
 	});
 var $author$project$Snapshot$SnapshotChannel$snapshotChannel = F3(
-	function (component, state, event) {
-		var laterCachedSnapshot = A2(
-			$elm$core$Maybe$andThen,
-			function (cachedSnapshot) {
-				return (_Utils_cmp(cachedSnapshot.seq, event.seq) > -1) ? $elm$core$Maybe$Just(cachedSnapshot) : $elm$core$Maybe$Nothing;
+	function (component, event, state) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (condition) {
+				switch (condition.$) {
+					case 'LaterFound':
+						var cache = condition.a;
+						return $brian_watkins$elm_procedure$Procedure$provide(
+							{cache: cache});
+					case 'OutOfDate':
+						var snapshot = condition.a;
+						return A2(
+							$brian_watkins$elm_procedure$Procedure$andThen,
+							A2($author$project$Snapshot$SnapshotChannel$saveNextSnapshot, component, event),
+							A2(
+								$brian_watkins$elm_procedure$Procedure$andThen,
+								A2($author$project$Snapshot$SnapshotChannel$readLaterEvents, component, event),
+								$brian_watkins$elm_procedure$Procedure$provide(
+									{
+										baseSnapshot: $elm$core$Maybe$Just(snapshot),
+										cache: state.cache
+									})));
+					default:
+						return A2(
+							$brian_watkins$elm_procedure$Procedure$andThen,
+							A2($author$project$Snapshot$SnapshotChannel$saveNextSnapshot, component, event),
+							A2(
+								$brian_watkins$elm_procedure$Procedure$andThen,
+								A2($author$project$Snapshot$SnapshotChannel$readLaterEvents, component, event),
+								$brian_watkins$elm_procedure$Procedure$provide(
+									{baseSnapshot: $elm$core$Maybe$Nothing, cache: state.cache})));
+				}
 			},
-			A2($elm$core$Dict$get, event.channel, state.cache));
-		if (laterCachedSnapshot.$ === 'Just') {
-			return $brian_watkins$elm_procedure$Procedure$provide(_Utils_Tuple0);
-		} else {
-			return A3($author$project$Snapshot$SnapshotChannel$fetchLatestSnapshot, component, state, event);
-		}
+			A2(
+				$brian_watkins$elm_procedure$Procedure$andThen,
+				A2($author$project$Snapshot$SnapshotChannel$checkAgainstCurrentSnapshot, component, event),
+				$brian_watkins$elm_procedure$Procedure$provide(state)));
 	});
 var $author$project$Snapshot$SnapshotChannel$drainSnapshotRequests = F3(
-	function (component, state, snapshotSeqByChannel) {
+	function (component, snapshotSeqByChannel, state) {
 		if (!snapshotSeqByChannel.b) {
-			return $brian_watkins$elm_procedure$Procedure$provide(_Utils_Tuple0);
+			return $brian_watkins$elm_procedure$Procedure$provide(state);
 		} else {
 			var snapshotEvent = snapshotSeqByChannel.a;
 			var events = snapshotSeqByChannel.b;
 			return A2(
 				$brian_watkins$elm_procedure$Procedure$andThen,
-				function (_v1) {
-					return A3($author$project$Snapshot$SnapshotChannel$drainSnapshotRequests, component, state, events);
-				},
-				A3($author$project$Snapshot$SnapshotChannel$snapshotChannel, component, state, snapshotEvent));
+				A2($author$project$Snapshot$SnapshotChannel$drainSnapshotRequests, component, events),
+				A2(
+					$brian_watkins$elm_procedure$Procedure$andThen,
+					A2($author$project$Snapshot$SnapshotChannel$snapshotChannel, component, snapshotEvent),
+					$brian_watkins$elm_procedure$Procedure$provide(state)));
 		}
 	});
 var $author$project$Snapshot$SnapshotChannel$setModel = F2(
@@ -12507,8 +12744,9 @@ var $author$project$Snapshot$SnapshotChannel$procedure = F4(
 					A2($elm$core$Basics$composeR, $author$project$ErrorFormat$encodeErrorFormat, $author$project$Http$Response$err500json)),
 				A2(
 					$brian_watkins$elm_procedure$Procedure$andThen,
-					A2($author$project$Snapshot$SnapshotChannel$drainSnapshotRequests, component, state),
-					$brian_watkins$elm_procedure$Procedure$provide(snapshotSeqByChannel))));
+					A2($author$project$Snapshot$SnapshotChannel$drainSnapshotRequests, component, snapshotSeqByChannel),
+					$brian_watkins$elm_procedure$Procedure$provide(
+						{cache: state.cache}))));
 		return A2(
 			$elm$core$Tuple$mapFirst,
 			$author$project$Snapshot$SnapshotChannel$setModel(component),
@@ -12653,67 +12891,72 @@ var $author$project$API$main = $elm$core$Platform$worker(
 _Platform_export({'API':{'init':$author$project$API$main(
 	A2(
 		$elm$json$Json$Decode$andThen,
-		function (snapshotQueueUrl) {
+		function (snapshotTable) {
 			return A2(
 				$elm$json$Json$Decode$andThen,
-				function (momentoSecret) {
+				function (snapshotQueueUrl) {
 					return A2(
 						$elm$json$Json$Decode$andThen,
-						function (eventLogTable) {
+						function (momentoSecret) {
 							return A2(
 								$elm$json$Json$Decode$andThen,
-								function (channelTable) {
+								function (eventLogTable) {
 									return A2(
 										$elm$json$Json$Decode$andThen,
-										function (channelApiUrl) {
+										function (channelTable) {
 											return A2(
 												$elm$json$Json$Decode$andThen,
-												function (awsSessionToken) {
+												function (channelApiUrl) {
 													return A2(
 														$elm$json$Json$Decode$andThen,
-														function (awsSecretAccessKey) {
+														function (awsSessionToken) {
 															return A2(
 																$elm$json$Json$Decode$andThen,
-																function (awsRegion) {
+																function (awsSecretAccessKey) {
 																	return A2(
 																		$elm$json$Json$Decode$andThen,
-																		function (awsAccessKeyId) {
-																			return $elm$json$Json$Decode$succeed(
-																				{awsAccessKeyId: awsAccessKeyId, awsRegion: awsRegion, awsSecretAccessKey: awsSecretAccessKey, awsSessionToken: awsSessionToken, channelApiUrl: channelApiUrl, channelTable: channelTable, eventLogTable: eventLogTable, momentoSecret: momentoSecret, snapshotQueueUrl: snapshotQueueUrl});
+																		function (awsRegion) {
+																			return A2(
+																				$elm$json$Json$Decode$andThen,
+																				function (awsAccessKeyId) {
+																					return $elm$json$Json$Decode$succeed(
+																						{awsAccessKeyId: awsAccessKeyId, awsRegion: awsRegion, awsSecretAccessKey: awsSecretAccessKey, awsSessionToken: awsSessionToken, channelApiUrl: channelApiUrl, channelTable: channelTable, eventLogTable: eventLogTable, momentoSecret: momentoSecret, snapshotQueueUrl: snapshotQueueUrl, snapshotTable: snapshotTable});
+																				},
+																				A2($elm$json$Json$Decode$field, 'awsAccessKeyId', $elm$json$Json$Decode$string));
 																		},
-																		A2($elm$json$Json$Decode$field, 'awsAccessKeyId', $elm$json$Json$Decode$string));
+																		A2($elm$json$Json$Decode$field, 'awsRegion', $elm$json$Json$Decode$string));
 																},
-																A2($elm$json$Json$Decode$field, 'awsRegion', $elm$json$Json$Decode$string));
+																A2($elm$json$Json$Decode$field, 'awsSecretAccessKey', $elm$json$Json$Decode$string));
 														},
-														A2($elm$json$Json$Decode$field, 'awsSecretAccessKey', $elm$json$Json$Decode$string));
+														A2($elm$json$Json$Decode$field, 'awsSessionToken', $elm$json$Json$Decode$string));
 												},
-												A2($elm$json$Json$Decode$field, 'awsSessionToken', $elm$json$Json$Decode$string));
+												A2($elm$json$Json$Decode$field, 'channelApiUrl', $elm$json$Json$Decode$string));
 										},
-										A2($elm$json$Json$Decode$field, 'channelApiUrl', $elm$json$Json$Decode$string));
+										A2($elm$json$Json$Decode$field, 'channelTable', $elm$json$Json$Decode$string));
 								},
-								A2($elm$json$Json$Decode$field, 'channelTable', $elm$json$Json$Decode$string));
+								A2($elm$json$Json$Decode$field, 'eventLogTable', $elm$json$Json$Decode$string));
 						},
-						A2($elm$json$Json$Decode$field, 'eventLogTable', $elm$json$Json$Decode$string));
-				},
-				A2(
-					$elm$json$Json$Decode$field,
-					'momentoSecret',
-					A2(
-						$elm$json$Json$Decode$andThen,
-						function (restEndpoint) {
-							return A2(
+						A2(
+							$elm$json$Json$Decode$field,
+							'momentoSecret',
+							A2(
 								$elm$json$Json$Decode$andThen,
-								function (refreshToken) {
+								function (restEndpoint) {
 									return A2(
 										$elm$json$Json$Decode$andThen,
-										function (apiKey) {
-											return $elm$json$Json$Decode$succeed(
-												{apiKey: apiKey, refreshToken: refreshToken, restEndpoint: restEndpoint});
+										function (refreshToken) {
+											return A2(
+												$elm$json$Json$Decode$andThen,
+												function (apiKey) {
+													return $elm$json$Json$Decode$succeed(
+														{apiKey: apiKey, refreshToken: refreshToken, restEndpoint: restEndpoint});
+												},
+												A2($elm$json$Json$Decode$field, 'apiKey', $elm$json$Json$Decode$string));
 										},
-										A2($elm$json$Json$Decode$field, 'apiKey', $elm$json$Json$Decode$string));
+										A2($elm$json$Json$Decode$field, 'refreshToken', $elm$json$Json$Decode$string));
 								},
-								A2($elm$json$Json$Decode$field, 'refreshToken', $elm$json$Json$Decode$string));
-						},
-						A2($elm$json$Json$Decode$field, 'restEndpoint', $elm$json$Json$Decode$string))));
+								A2($elm$json$Json$Decode$field, 'restEndpoint', $elm$json$Json$Decode$string))));
+				},
+				A2($elm$json$Json$Decode$field, 'snapshotQueueUrl', $elm$json$Json$Decode$string));
 		},
-		A2($elm$json$Json$Decode$field, 'snapshotQueueUrl', $elm$json$Json$Decode$string)))(0)}});}(this));
+		A2($elm$json$Json$Decode$field, 'snapshotTable', $elm$json$Json$Decode$string)))(0)}});}(this));

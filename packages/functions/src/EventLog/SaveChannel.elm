@@ -15,7 +15,6 @@ import EventLog.Route exposing (Route)
 import Http.Response as Response exposing (Response)
 import HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Json.Decode as Decode exposing (Decoder, Value)
-import Json.Decode.Extra as DE
 import Json.Encode as Encode
 import Momento exposing (CacheItem, Error, MomentoSessionKey)
 import Names
