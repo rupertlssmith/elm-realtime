@@ -15,6 +15,7 @@ import Snapshot.Apis as Apis
 import Snapshot.Model exposing (Model(..), ReadyState)
 import Snapshot.Msg exposing (Msg(..))
 import SqsLambda exposing (SqsEvent)
+import Time
 import Update2 as U2
 
 
@@ -310,4 +311,23 @@ saveNextSnapshot :
             }
             Msg
 saveNextSnapshot component event state =
-    Debug.todo ""
+    let
+        nextSnapshot =
+            { seq = 0, model = Encode.null }
+    in
+    Procedure.fromTask Time.now
+        |> Procedure.andThen
+            (\timestamp ->
+                Apis.snapshotTableApi.put
+                    { tableName = component.snapshotTable
+                    , item =
+                        { id = event.channel
+                        , seq = nextSnapshot.seq
+                        , updatedAt = timestamp
+                        , snapshot = nextSnapshot.model
+                        }
+                    }
+                    |> Procedure.fetchResult
+                    |> Procedure.mapError Dynamo.errorToDetails
+                    |> Procedure.map (\_ -> { cache = Dict.insert event.channel nextSnapshot state.cache })
+            )

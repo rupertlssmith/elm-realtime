@@ -12588,15 +12588,30 @@ var $author$project$Snapshot$SnapshotChannel$readLaterEvents = F3(
 				$brian_watkins$elm_procedure$Procedure$fetchResult(
 					$author$project$Snapshot$Apis$eventLogTableApi.query(query))));
 	});
-var $elm$core$Debug$todo = _Debug_todo;
 var $author$project$Snapshot$SnapshotChannel$saveNextSnapshot = F3(
 	function (component, event, state) {
-		return _Debug_todo(
-			'Snapshot.SnapshotChannel',
-			{
-				start: {line: 313, column: 5},
-				end: {line: 313, column: 15}
-			})('');
+		var nextSnapshot = {model: $elm$json$Json$Encode$null, seq: 0};
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (timestamp) {
+				return A2(
+					$brian_watkins$elm_procedure$Procedure$map,
+					function (_v0) {
+						return {
+							cache: A3($elm$core$Dict$insert, event.channel, nextSnapshot, state.cache)
+						};
+					},
+					A2(
+						$brian_watkins$elm_procedure$Procedure$mapError,
+						$author$project$AWS$Dynamo$errorToDetails,
+						$brian_watkins$elm_procedure$Procedure$fetchResult(
+							$author$project$Snapshot$Apis$snapshotTableApi.put(
+								{
+									item: {id: event.channel, seq: nextSnapshot.seq, snapshot: nextSnapshot.model, updatedAt: timestamp},
+									tableName: component.snapshotTable
+								}))));
+			},
+			$brian_watkins$elm_procedure$Procedure$fromTask($elm$time$Time$now));
 	});
 var $author$project$Snapshot$SnapshotChannel$snapshotChannel = F3(
 	function (component, event, state) {
