@@ -12,6 +12,7 @@ module Snapshot.Component exposing
 -}
 
 import AWS.Credentials exposing (Credentials)
+import Dict
 import Http.Response as Response exposing (Response)
 import HttpServer exposing (HttpSessionKey)
 import Procedure.Program
@@ -99,6 +100,7 @@ update protocol msg component =
         ( ModelStart _, RandomSeed seed ) ->
             { seed = seed
             , procedure = Procedure.Program.init
+            , cache = Dict.empty
             }
                 |> U2.pure
                 |> U2.andMap (switchState ModelReady)

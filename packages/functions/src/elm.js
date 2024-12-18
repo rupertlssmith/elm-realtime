@@ -8491,20 +8491,29 @@ var $author$project$EventLog$SaveChannel$recordEventWithUniqueSeqNo = F3(
 					A2($author$project$EventLog$SaveChannel$getEventsLogMetaData, component, channelName),
 					$brian_watkins$elm_procedure$Procedure$provide(state))));
 	});
-var $author$project$EventLog$SaveChannel$UnsavedEvent = F3(
+var $author$project$Realtime$UnsavedEvent = F3(
 	function (rt, client, payload) {
 		return {client: client, payload: payload, rt: rt};
 	});
-var $author$project$EventLog$SaveChannel$decodeNoticeEvent = A2(
-	$elm_community$json_extra$Json$Decode$Extra$andMap,
-	A2($elm$json$Json$Decode$field, 'payload', $elm$json$Json$Decode$value),
-	A2(
-		$elm_community$json_extra$Json$Decode$Extra$andMap,
-		A2($elm$json$Json$Decode$field, 'client', $elm$json$Json$Decode$string),
-		A2(
-			$elm_community$json_extra$Json$Decode$Extra$andMap,
-			A2($elm$json$Json$Decode$field, 'rt', $elm$json$Json$Decode$string),
-			$elm$json$Json$Decode$succeed($author$project$EventLog$SaveChannel$UnsavedEvent))));
+var $author$project$Realtime$unsavedEventDecoder = A2(
+	$elm$json$Json$Decode$andThen,
+	function (ctor) {
+		if (ctor === 'U') {
+			return A2(
+				$elm_community$json_extra$Json$Decode$Extra$andMap,
+				A2($elm$json$Json$Decode$field, 'payload', $elm$json$Json$Decode$value),
+				A2(
+					$elm_community$json_extra$Json$Decode$Extra$andMap,
+					A2($elm$json$Json$Decode$field, 'client', $elm$json$Json$Decode$string),
+					A2(
+						$elm_community$json_extra$Json$Decode$Extra$andMap,
+						A2($elm$json$Json$Decode$field, 'rt', $elm$json$Json$Decode$string),
+						$elm$json$Json$Decode$succeed($author$project$Realtime$UnsavedEvent))));
+		} else {
+			return $elm$json$Json$Decode$fail('Unrecognized constructor');
+		}
+	},
+	A2($elm$json$Json$Decode$field, 'rt', $elm$json$Json$Decode$string));
 var $author$project$EventLog$SaveChannel$tryReadEvent = F3(
 	function (component, channelName, sessionKey) {
 		return A2(
@@ -8512,7 +8521,7 @@ var $author$project$EventLog$SaveChannel$tryReadEvent = F3(
 			function (maybeCacheItem) {
 				if (maybeCacheItem.$ === 'Just') {
 					var cacheItem = maybeCacheItem.a;
-					var _v1 = A2($elm$json$Json$Decode$decodeValue, $author$project$EventLog$SaveChannel$decodeNoticeEvent, cacheItem.payload);
+					var _v1 = A2($elm$json$Json$Decode$decodeValue, $author$project$Realtime$unsavedEventDecoder, cacheItem.payload);
 					if (_v1.$ === 'Ok') {
 						var unsavedEvent = _v1.a;
 						return $brian_watkins$elm_procedure$Procedure$provide(
@@ -8613,6 +8622,22 @@ var $author$project$EventLog$SaveChannel$awsErrorToDetails = function (err) {
 		};
 	}
 };
+var $author$project$Realtime$encodeSnapshotEvent = F2(
+	function (channel, seq) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'rt',
+					$elm$json$Json$Encode$string('S')),
+					_Utils_Tuple2(
+					'channel',
+					$elm$json$Json$Encode$string(channel)),
+					_Utils_Tuple2(
+					'seq',
+					$elm$json$Json$Encode$int(seq))
+				]));
+	});
 var $elm$http$Http$BadBody = function (a) {
 	return {$: 'BadBody', a: a};
 };
@@ -12006,11 +12031,15 @@ var $author$project$EventLog$SaveChannel$notifyCompactor = F3(
 			return $brian_watkins$elm_procedure$Procedure$provide(_Utils_Tuple0);
 		} else {
 			var lastSeqNo = drainState.a.lastSeqNo;
-			var notice = $the_sett$elm_aws_messaging$AWS$Sqs$sendMessage(
+			var request = A2(
+				$elm$json$Json$Encode$encode,
+				2,
+				A2($author$project$Realtime$encodeSnapshotEvent, channelName, lastSeqNo));
+			var sqsMessage = $the_sett$elm_aws_messaging$AWS$Sqs$sendMessage(
 				{
 					delaySeconds: $elm$core$Maybe$Nothing,
 					messageAttributes: $elm$core$Maybe$Nothing,
-					messageBody: 'test',
+					messageBody: request,
 					messageDeduplicationId: $elm$core$Maybe$Just(
 						channelName + (':' + $elm$core$String$fromInt(lastSeqNo))),
 					messageGroupId: $elm$core$Maybe$Just(channelName),
@@ -12021,7 +12050,7 @@ var $author$project$EventLog$SaveChannel$notifyCompactor = F3(
 				$the_sett$elm_aws_core$AWS$Http$send,
 				$the_sett$elm_aws_messaging$AWS$Sqs$service(component.awsRegion),
 				component.defaultCredentials,
-				notice);
+				sqsMessage);
 			return A2(
 				$brian_watkins$elm_procedure$Procedure$map,
 				$elm$core$Basics$always(_Utils_Tuple0),
@@ -12373,7 +12402,7 @@ var $author$project$Snapshot$Component$update = F3(
 										$the_sett$elm_update_helper$Update2$andMap,
 										$author$project$Snapshot$Component$switchState($author$project$Snapshot$Model$ModelReady),
 										$the_sett$elm_update_helper$Update2$pure(
-											{procedure: $brian_watkins$elm_procedure$Procedure$Program$init, seed: seed})))));
+											{cache: $elm$core$Dict$empty, procedure: $brian_watkins$elm_procedure$Procedure$Program$init, seed: seed})))));
 					} else {
 						break _v0$4;
 					}

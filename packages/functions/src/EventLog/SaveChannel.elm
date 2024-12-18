@@ -20,6 +20,7 @@ import Json.Encode as Encode
 import Momento exposing (CacheItem, Error, MomentoSessionKey)
 import Names
 import Procedure
+import Realtime exposing (UnsavedEvent)
 import Time exposing (Posix)
 import Update2 as U2
 
@@ -139,21 +140,6 @@ drainSaveListInner component channelName state =
             )
 
 
-type alias UnsavedEvent =
-    { rt : String
-    , client : String
-    , payload : Value
-    }
-
-
-decodeNoticeEvent : Decoder UnsavedEvent
-decodeNoticeEvent =
-    Decode.succeed UnsavedEvent
-        |> DE.andMap (Decode.field "rt" Decode.string)
-        |> DE.andMap (Decode.field "client" Decode.string)
-        |> DE.andMap (Decode.field "payload" Decode.value)
-
-
 {-| Tries to pop one event from the save list. If no event can be found Nothing will be retured in the
 `unsavedEvent` field. This is an expected condition and not an error.
 -}
@@ -178,7 +164,7 @@ tryReadEvent component channelName sessionKey =
             (\maybeCacheItem ->
                 case maybeCacheItem of
                     Just cacheItem ->
-                        case Decode.decodeValue decodeNoticeEvent cacheItem.payload of
+                        case Decode.decodeValue Realtime.unsavedEventDecoder cacheItem.payload of
                             Ok unsavedEvent ->
                                 { sessionKey = sessionKey
                                 , unsavedEvent = Just unsavedEvent
@@ -437,11 +423,15 @@ notifyCompactor component channelName drainState =
 
         DrainedToSeq { lastSeqNo } ->
             let
-                notice =
+                request =
+                    Realtime.encodeSnapshotEvent channelName lastSeqNo
+                        |> Encode.encode 2
+
+                sqsMessage =
                     Sqs.sendMessage
                         { delaySeconds = Nothing
                         , messageAttributes = Nothing
-                        , messageBody = "test"
+                        , messageBody = request
                         , messageDeduplicationId = channelName ++ ":" ++ String.fromInt lastSeqNo |> Just
                         , messageGroupId = Just channelName
                         , messageSystemAttributes = Nothing
@@ -449,7 +439,7 @@ notifyCompactor component channelName drainState =
                         }
 
                 notifyCmd =
-                    notice
+                    sqsMessage
                         |> AWS.Http.send (Sqs.service component.awsRegion) component.defaultCredentials
             in
             Procedure.fromTask notifyCmd

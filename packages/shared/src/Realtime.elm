@@ -4,6 +4,7 @@ module Realtime exposing
     , RealtimeApi, realtimeApi
     , AsyncEvent(..), RTMessage(..), Snapshot, next
     , Error, errorToDetails, errorToString
+    , SnapshotEvent, UnsavedEvent, encodeSnapshotEvent, snapshotEventDecoder, unsavedEventDecoder
     )
 
 {-| Realtime channels.
@@ -85,13 +86,6 @@ type alias Snapshot a =
     { seq : Int
     , model : a
     }
-
-
-{-| A Realtime message.
--}
-type RTMessage
-    = Persisted Int Value
-    | Transient Value
 
 
 {-| The Realtime model tracking the state of the messaging system.
@@ -670,6 +664,15 @@ cacheName _ =
     "elm-realtime-cache"
 
 
+
+-- Message formats
+
+
+type RTMessage
+    = Persisted Int Value
+    | Transient Value
+
+
 rtMessageDecoder : Decoder RTMessage
 rtMessageDecoder =
     Decode.field "rt" Decode.string
@@ -707,6 +710,13 @@ encodeNotice =
         |> Encode.object
 
 
+type alias UnsavedEvent =
+    { rt : String
+    , client : String
+    , payload : Value
+    }
+
+
 encodeUnsaved : Value -> Value
 encodeUnsaved payload =
     [ ( "rt", Encode.string "U" )
@@ -714,3 +724,53 @@ encodeUnsaved payload =
     , ( "payload", payload )
     ]
         |> Encode.object
+
+
+unsavedEventDecoder : Decoder UnsavedEvent
+unsavedEventDecoder =
+    Decode.field "rt" Decode.string
+        |> Decode.andThen
+            (\ctor ->
+                case ctor of
+                    "U" ->
+                        Decode.succeed UnsavedEvent
+                            |> DE.andMap (Decode.field "rt" Decode.string)
+                            |> DE.andMap (Decode.field "client" Decode.string)
+                            |> DE.andMap (Decode.field "payload" Decode.value)
+
+                    _ ->
+                        Decode.fail "Unrecognized constructor"
+            )
+
+
+type alias SnapshotEvent =
+    { rt : String
+    , channel : String
+    , seq : Int
+    }
+
+
+encodeSnapshotEvent : String -> Int -> Value
+encodeSnapshotEvent channel seq =
+    [ ( "rt", Encode.string "S" )
+    , ( "channel", Encode.string channel )
+    , ( "seq", Encode.int seq )
+    ]
+        |> Encode.object
+
+
+snapshotEventDecoder : Decoder SnapshotEvent
+snapshotEventDecoder =
+    Decode.field "rt" Decode.string
+        |> Decode.andThen
+            (\ctor ->
+                case ctor of
+                    "U" ->
+                        Decode.succeed SnapshotEvent
+                            |> DE.andMap (Decode.field "rt" Decode.string)
+                            |> DE.andMap (Decode.field "channel" Decode.string)
+                            |> DE.andMap (Decode.field "seq" Decode.int)
+
+                    _ ->
+                        Decode.fail "Unrecognized constructor"
+            )
