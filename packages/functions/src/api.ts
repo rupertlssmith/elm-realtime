@@ -17,6 +17,7 @@ const app = Elm.API.init({
         momentoSecret: momentoSecret,
         channelTable: Resource.ChannelTable.name,
         eventLogTable: Resource.EventLogTable.name,
+        snapshotTable : Resource.SnapshotTable.name,
         channelApiUrl: channelApiUrl,
         snapshotQueueUrl : Resource.SnapshotQueue.url
     },

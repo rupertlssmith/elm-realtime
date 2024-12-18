@@ -17,6 +17,7 @@ type alias Model =
     , channelApiUrl : String
     , channelTable : String
     , eventLogTable : String
+    , snapshotTable : String
     , snapshotQueueUrl : String
     , defaultCredentials : Credentials
 
@@ -49,6 +50,7 @@ type alias Flags =
     , channelApiUrl : String
     , channelTable : String
     , eventLogTable : String
+    , snapshotTable : String
     , snapshotQueueUrl : String
     }
 
@@ -85,6 +87,7 @@ init flags =
       , channelApiUrl = flags.channelApiUrl
       , channelTable = flags.channelTable
       , eventLogTable = flags.eventLogTable
+      , snapshotTable = flags.snapshotTable
       , snapshotQueueUrl = flags.snapshotQueueUrl
       , defaultCredentials = credentials
       , eventLog = eventLogMdl

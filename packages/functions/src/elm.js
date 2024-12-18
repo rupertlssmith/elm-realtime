@@ -12363,18 +12363,166 @@ var $author$project$EventLog$Component$update = F3(
 var $author$project$Snapshot$Model$ModelReady = function (a) {
 	return {$: 'ModelReady', a: a};
 };
+var $author$project$SqsLambda$errorToDetails = function (error) {
+	var decodeError = error.a;
+	return {
+		details: $elm$json$Json$Encode$null,
+		message: 'Problem decoding the request: ' + $elm$json$Json$Decode$errorToString(decodeError)
+	};
+};
 var $author$project$Snapshot$Apis$httpServerApi = $author$project$HttpServer$httpServerApi(
 	{
 		parseRoute: $elm$core$Basics$always(
 			$elm$core$Maybe$Just(_Utils_Tuple0)),
 		ports: {request: $author$project$Ports$requestPort, response: $author$project$Ports$responsePort}
 	});
-var $author$project$Http$Response$ok200 = function (msg) {
-	return A2(
-		$author$project$Http$Response$setBody,
-		$author$project$Http$Body$text(msg),
-		$author$project$Http$Response$init);
+var $author$project$Snapshot$Msg$HttpResponse = F2(
+	function (a, b) {
+		return {$: 'HttpResponse', a: a, b: b};
+	});
+var $author$project$Snapshot$Msg$ProcedureMsg = function (a) {
+	return {$: 'ProcedureMsg', a: a};
 };
+var $author$project$Snapshot$SnapshotChannel$fetchLatestSnapshot = F3(
+	function (component, state, event) {
+		return $brian_watkins$elm_procedure$Procedure$provide(_Utils_Tuple0);
+	});
+var $author$project$Snapshot$SnapshotChannel$snapshotChannel = F3(
+	function (component, state, event) {
+		var laterCachedSnapshot = A2(
+			$elm$core$Maybe$andThen,
+			function (cachedSnapshot) {
+				return (_Utils_cmp(cachedSnapshot.seq, event.seq) > -1) ? $elm$core$Maybe$Just(cachedSnapshot) : $elm$core$Maybe$Nothing;
+			},
+			A2($elm$core$Dict$get, event.channel, state.cache));
+		if (laterCachedSnapshot.$ === 'Just') {
+			return $brian_watkins$elm_procedure$Procedure$provide(_Utils_Tuple0);
+		} else {
+			return A3($author$project$Snapshot$SnapshotChannel$fetchLatestSnapshot, component, state, event);
+		}
+	});
+var $author$project$Snapshot$SnapshotChannel$drainSnapshotRequests = F3(
+	function (component, state, snapshotSeqByChannel) {
+		if (!snapshotSeqByChannel.b) {
+			return $brian_watkins$elm_procedure$Procedure$provide(_Utils_Tuple0);
+		} else {
+			var snapshotEvent = snapshotSeqByChannel.a;
+			var events = snapshotSeqByChannel.b;
+			return A2(
+				$brian_watkins$elm_procedure$Procedure$andThen,
+				function (_v1) {
+					return A3($author$project$Snapshot$SnapshotChannel$drainSnapshotRequests, component, state, events);
+				},
+				A3($author$project$Snapshot$SnapshotChannel$snapshotChannel, component, state, snapshotEvent));
+		}
+	});
+var $author$project$Snapshot$SnapshotChannel$setModel = F2(
+	function (m, x) {
+		return _Utils_update(
+			m,
+			{snapshot: x});
+	});
+var $author$project$Realtime$SnapshotEvent = F3(
+	function (rt, channel, seq) {
+		return {channel: channel, rt: rt, seq: seq};
+	});
+var $author$project$Realtime$snapshotEventDecoder = A2(
+	$elm$json$Json$Decode$andThen,
+	function (ctor) {
+		if (ctor === 'S') {
+			return A2(
+				$elm_community$json_extra$Json$Decode$Extra$andMap,
+				A2($elm$json$Json$Decode$field, 'seq', $elm$json$Json$Decode$int),
+				A2(
+					$elm_community$json_extra$Json$Decode$Extra$andMap,
+					A2($elm$json$Json$Decode$field, 'channel', $elm$json$Json$Decode$string),
+					A2(
+						$elm_community$json_extra$Json$Decode$Extra$andMap,
+						A2($elm$json$Json$Decode$field, 'rt', $elm$json$Json$Decode$string),
+						$elm$json$Json$Decode$succeed($author$project$Realtime$SnapshotEvent))));
+		} else {
+			return $elm$json$Json$Decode$fail('Unrecognized constructor');
+		}
+	},
+	A2($elm$json$Json$Decode$field, 'rt', $elm$json$Json$Decode$string));
+var $author$project$Snapshot$SnapshotChannel$switchState = F2(
+	function (cons, state) {
+		return _Utils_Tuple2(
+			cons(state),
+			$elm$core$Platform$Cmd$none);
+	});
+var $elm$core$Result$withDefault = F2(
+	function (def, result) {
+		if (result.$ === 'Ok') {
+			var a = result.a;
+			return a;
+		} else {
+			return def;
+		}
+	});
+var $author$project$Snapshot$SnapshotChannel$procedure = F4(
+	function (session, state, sqsEvent, component) {
+		var updateHighest = F2(
+			function (_new, maybeExisting) {
+				if (maybeExisting.$ === 'Just') {
+					var existing = maybeExisting.a;
+					return (_Utils_cmp(_new.seq, existing.seq) > 0) ? $elm$core$Maybe$Just(_new) : $elm$core$Maybe$Just(existing);
+				} else {
+					return $elm$core$Maybe$Just(_new);
+				}
+			});
+		var snapshotSeqByChannel = A2(
+			$elm$core$Debug$log,
+			'snapshotSeqByChannel',
+			$elm$core$Dict$values(
+				A3(
+					$elm$core$List$foldl,
+					F2(
+						function (sqsMessage, acc) {
+							return A2(
+								$elm$core$Result$withDefault,
+								acc,
+								A2(
+									$elm$core$Result$map,
+									function (snapshotEvent) {
+										return A3(
+											$elm$core$Dict$update,
+											snapshotEvent.channel,
+											updateHighest(snapshotEvent),
+											acc);
+									},
+									A2($elm$json$Json$Decode$decodeString, $author$project$Realtime$snapshotEventDecoder, sqsMessage.body)));
+						}),
+					$elm$core$Dict$empty,
+					sqsEvent)));
+		var innerProc = A2(
+			$brian_watkins$elm_procedure$Procedure$map,
+			$elm$core$Basics$always(
+				$author$project$Http$Response$ok200json($elm$json$Json$Encode$null)),
+			A2(
+				$brian_watkins$elm_procedure$Procedure$mapError,
+				A2(
+					$elm$core$Basics$composeR,
+					$elm$core$Debug$log('error'),
+					A2($elm$core$Basics$composeR, $author$project$ErrorFormat$encodeErrorFormat, $author$project$Http$Response$err500json)),
+				A2(
+					$brian_watkins$elm_procedure$Procedure$andThen,
+					A2($author$project$Snapshot$SnapshotChannel$drainSnapshotRequests, component, state),
+					$brian_watkins$elm_procedure$Procedure$provide(snapshotSeqByChannel))));
+		return A2(
+			$elm$core$Tuple$mapFirst,
+			$author$project$Snapshot$SnapshotChannel$setModel(component),
+			A2(
+				$the_sett$elm_update_helper$Update2$andMap,
+				$author$project$Snapshot$SnapshotChannel$switchState($author$project$Snapshot$Model$ModelReady),
+				_Utils_Tuple2(
+					state,
+					A3(
+						$brian_watkins$elm_procedure$Procedure$try,
+						$author$project$Snapshot$Msg$ProcedureMsg,
+						$author$project$Snapshot$Msg$HttpResponse(session),
+						innerProc))));
+	});
 var $author$project$Snapshot$Component$setModel = F2(
 	function (m, x) {
 		return _Utils_update(
@@ -12385,7 +12533,7 @@ var $author$project$Snapshot$Component$update = F3(
 	function (protocol, msg, component) {
 		var model = component.snapshot;
 		var _v0 = _Utils_Tuple2(model, msg);
-		_v0$4:
+		_v0$5:
 		while (true) {
 			switch (_v0.b.$) {
 				case 'RandomSeed':
@@ -12404,7 +12552,7 @@ var $author$project$Snapshot$Component$update = F3(
 										$the_sett$elm_update_helper$Update2$pure(
 											{cache: $elm$core$Dict$empty, procedure: $brian_watkins$elm_procedure$Procedure$Program$init, seed: seed})))));
 					} else {
-						break _v0$4;
+						break _v0$5;
 					}
 				case 'ProcedureMsg':
 					if (_v0.a.$ === 'ModelReady') {
@@ -12429,30 +12577,46 @@ var $author$project$Snapshot$Component$update = F3(
 												{procedure: procMdl}),
 											procMsg)))));
 					} else {
-						break _v0$4;
+						break _v0$5;
 					}
 				case 'SqsEvent':
 					if (_v0.a.$ === 'ModelReady') {
-						var state = _v0.a.a;
-						var _v2 = _v0.b;
-						var session = _v2.a;
-						var event = _v2.b;
-						var _v3 = A2($elm$core$Debug$log, 'Got SQS event', event);
-						return protocol.onUpdate(
-							A2(
-								$elm$core$Tuple$mapSecond,
-								$elm$core$Platform$Cmd$map(protocol.toMsg),
+						if (_v0.b.b.$ === 'Ok') {
+							var state = _v0.a.a;
+							var _v2 = _v0.b;
+							var session = _v2.a;
+							var event = _v2.b.a;
+							return protocol.onUpdate(
 								A2(
-									$elm$core$Tuple$mapFirst,
-									$author$project$Snapshot$Component$setModel(component),
-									_Utils_Tuple2(
-										$author$project$Snapshot$Model$ModelReady(state),
-										A2(
-											$author$project$Snapshot$Apis$httpServerApi.response,
-											session,
-											$author$project$Http$Response$ok200('Ok'))))));
+									$elm$core$Tuple$mapSecond,
+									$elm$core$Platform$Cmd$map(protocol.toMsg),
+									A2(
+										$the_sett$elm_update_helper$Update2$andMap,
+										A3($author$project$Snapshot$SnapshotChannel$procedure, session, state, event),
+										$the_sett$elm_update_helper$Update2$pure(component))));
+						} else {
+							var state = _v0.a.a;
+							var _v3 = _v0.b;
+							var session = _v3.a;
+							var err = _v3.b.a;
+							return protocol.onUpdate(
+								A2(
+									$elm$core$Tuple$mapSecond,
+									$elm$core$Platform$Cmd$map(protocol.toMsg),
+									A2(
+										$elm$core$Tuple$mapFirst,
+										$author$project$Snapshot$Component$setModel(component),
+										_Utils_Tuple2(
+											$author$project$Snapshot$Model$ModelReady(state),
+											A2(
+												$author$project$Snapshot$Apis$httpServerApi.response,
+												session,
+												$author$project$Http$Response$err500json(
+													$author$project$ErrorFormat$encodeErrorFormat(
+														$author$project$SqsLambda$errorToDetails(err))))))));
+						}
 					} else {
-						break _v0$4;
+						break _v0$5;
 					}
 				default:
 					var _v4 = _v0.b;

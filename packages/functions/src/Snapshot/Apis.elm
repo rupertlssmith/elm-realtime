@@ -4,12 +4,15 @@ module Snapshot.Apis exposing
     , eventLogTableMetadataApi
     , httpServerApi
     , momentoApi
+    , snapshotTableApi
+    , snapshotTableMetadataApi
     , sqsLambdaApi
     )
 
 import AWS.Dynamo as Dynamo exposing (Error(..))
 import DB.ChannelTable as ChannelTable
 import DB.EventLogTable as EventLogTable
+import DB.SnapshotTable as SnapshotTable
 import HttpServer as HttpServer exposing (HttpSessionKey)
 import Momento exposing (CacheItem, Error, MomentoSessionKey)
 import Ports
@@ -45,6 +48,16 @@ eventLogTableApi =
 eventLogTableMetadataApi : Dynamo.DynamoTypedApi EventLogTable.Key EventLogTable.MetadataRecord Msg
 eventLogTableMetadataApi =
     EventLogTable.metadataOperations ProcedureMsg dynamoPorts
+
+
+snapshotTableApi : Dynamo.DynamoTypedApi SnapshotTable.Key SnapshotTable.Record Msg
+snapshotTableApi =
+    SnapshotTable.operations ProcedureMsg dynamoPorts
+
+
+snapshotTableMetadataApi : Dynamo.DynamoTypedApi SnapshotTable.Key SnapshotTable.MetadataRecord Msg
+snapshotTableMetadataApi =
+    SnapshotTable.metadataOperations ProcedureMsg dynamoPorts
 
 
 momentoApi : Momento.MomentoApi Msg

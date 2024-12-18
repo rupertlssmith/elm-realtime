@@ -765,7 +765,7 @@ snapshotEventDecoder =
         |> Decode.andThen
             (\ctor ->
                 case ctor of
-                    "U" ->
+                    "S" ->
                         Decode.succeed SnapshotEvent
                             |> DE.andMap (Decode.field "rt" Decode.string)
                             |> DE.andMap (Decode.field "channel" Decode.string)

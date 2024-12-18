@@ -54,10 +54,6 @@ export default $config({
         snapshotQueue.subscribe(
             {
                 handler: "packages/functions/src/snapshot.main",
-                // batch {
-                //     size: 100,
-                //     window: "1 second"
-                // },
                 link: [
                     momentoApiKey,
                     api,

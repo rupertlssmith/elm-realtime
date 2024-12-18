@@ -13,6 +13,7 @@ module Snapshot.Component exposing
 
 import AWS.Credentials exposing (Credentials)
 import Dict
+import ErrorFormat
 import Http.Response as Response exposing (Response)
 import HttpServer exposing (HttpSessionKey)
 import Procedure.Program
@@ -22,6 +23,7 @@ import Snapshot.Apis as Apis
 import Snapshot.Model as Model exposing (Model(..), ReadyState, StartState)
 import Snapshot.Msg as Msg exposing (Msg(..))
 import Snapshot.SnapshotChannel as SnapshotChannel
+import SqsLambda
 import Update2 as U2
 
 
@@ -47,6 +49,7 @@ type alias Component a =
         , channelApiUrl : String
         , channelTable : String
         , eventLogTable : String
+        , snapshotTable : String
         , snapshotQueueUrl : String
         , snapshot : Model
     }
@@ -119,14 +122,18 @@ update protocol msg component =
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 
-        ( ModelReady state, SqsEvent session event ) ->
-            let
-                _ =
-                    Debug.log "Got SQS event" event
-            in
+        ( ModelReady state, SqsEvent session (Ok event) ) ->
+            U2.pure component
+                |> U2.andMap (SnapshotChannel.procedure session state event)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
+        ( ModelReady state, SqsEvent session (Err err) ) ->
             ( ModelReady state
-            , "Ok"
-                |> Response.ok200
+            , err
+                |> SqsLambda.errorToDetails
+                |> ErrorFormat.encodeErrorFormat
+                |> Response.err500json
                 |> Apis.httpServerApi.response session
             )
                 |> Tuple.mapFirst (setModel component)
