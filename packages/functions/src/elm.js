@@ -6011,13 +6011,13 @@ var $author$project$EventLog$SnapshotChannel$New = {$: 'New'};
 var $author$project$EventLog$SnapshotChannel$OutOfDate = function (a) {
 	return {$: 'OutOfDate', a: a};
 };
-var $author$project$EventLog$SnapshotChannel$getLatestSnapshotFromCache = F3(
-	function (component, event, state) {
-		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.getLatestSnapshotFromCache', 'called');
+var $author$project$EventLog$LatestSnapshot$getLatestSnapshotFromCache = F3(
+	function (component, channelName, state) {
+		var _v0 = A2($elm$core$Debug$log, 'LatestSnapshot.getLatestSnapshotFromCache', 'called');
 		return $brian_watkins$elm_procedure$Procedure$provide(
 			{
 				cache: state.cache,
-				maybeLatest: A2($elm$core$Dict$get, event.channel, state.cache)
+				maybeLatest: A2($elm$core$Dict$get, channelName, state.cache)
 			});
 	});
 var $author$project$AWS$Dynamo$errorToDetails = function (error) {
@@ -7732,9 +7732,9 @@ var $author$project$DB$SnapshotTable$operations = F3(
 var $author$project$EventLog$Apis$snapshotTableApi = function (tableName) {
 	return A3($author$project$DB$SnapshotTable$operations, $author$project$EventLog$Msg$ProcedureMsg, $author$project$EventLog$Apis$dynamoPorts, tableName);
 };
-var $author$project$EventLog$SnapshotChannel$getLatestSnapshotFromTable = F3(
-	function (component, event, state) {
-		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.getLatestSnapshotFromTable', 'called');
+var $author$project$EventLog$LatestSnapshot$getLatestSnapshotFromTable = F3(
+	function (component, channelName, state) {
+		var _v0 = A2($elm$core$Debug$log, 'LatestSnapshot.getLatestSnapshotFromTable', 'called');
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$map,
 			function (queryResult) {
@@ -7753,7 +7753,7 @@ var $author$project$EventLog$SnapshotChannel$getLatestSnapshotFromTable = F3(
 				$brian_watkins$elm_procedure$Procedure$mapError,
 				$author$project$AWS$Dynamo$errorToDetails,
 				$brian_watkins$elm_procedure$Procedure$fetchResult(
-					$author$project$EventLog$Apis$snapshotTableApi(component.snapshotTable).findLatestSnapshot(event.channel))));
+					$author$project$EventLog$Apis$snapshotTableApi(component.snapshotTable).findLatestSnapshot(channelName))));
 	});
 var $author$project$EventLog$SnapshotChannel$checkAgainstCurrentSnapshot = F3(
 	function (component, event, state) {
@@ -7785,21 +7785,21 @@ var $author$project$EventLog$SnapshotChannel$checkAgainstCurrentSnapshot = F3(
 								cache: cache,
 								maybeLatest: $elm$core$Maybe$Just(latest)
 							}) : A3(
-							$author$project$EventLog$SnapshotChannel$getLatestSnapshotFromTable,
+							$author$project$EventLog$LatestSnapshot$getLatestSnapshotFromTable,
 							component,
-							event,
+							event.channel,
 							{cache: state.cache});
 					} else {
 						return A3(
-							$author$project$EventLog$SnapshotChannel$getLatestSnapshotFromTable,
+							$author$project$EventLog$LatestSnapshot$getLatestSnapshotFromTable,
 							component,
-							event,
+							event.channel,
 							{cache: state.cache});
 					}
 				},
 				A2(
 					$brian_watkins$elm_procedure$Procedure$andThen,
-					A2($author$project$EventLog$SnapshotChannel$getLatestSnapshotFromCache, component, event),
+					A2($author$project$EventLog$LatestSnapshot$getLatestSnapshotFromCache, component, event.channel),
 					$brian_watkins$elm_procedure$Procedure$provide(state))));
 	});
 var $author$project$DB$EventLogTable$encodeKey = function (key) {

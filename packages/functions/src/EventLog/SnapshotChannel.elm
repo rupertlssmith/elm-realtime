@@ -9,6 +9,7 @@ import DB.EventLogTable as EventLog
 import Dict exposing (Dict)
 import ErrorFormat exposing (ErrorFormat)
 import EventLog.Apis as Apis
+import EventLog.LatestSnapshot as LatestSnapshot
 import EventLog.Model exposing (Model(..), ReadyState)
 import EventLog.Msg exposing (Msg(..))
 import Http.Response as Response exposing (Response)
@@ -183,7 +184,11 @@ checkAgainstCurrentSnapshot component event state =
             Debug.log "SnapshotChannel.checkAgainstCurrentSnapshot" "called"
     in
     Procedure.provide state
-        |> Procedure.andThen (getLatestSnapshotFromCache component event)
+        |> Procedure.andThen
+            (LatestSnapshot.getLatestSnapshotFromCache
+                component
+                event.channel
+            )
         |> Procedure.andThen
             (\{ cache, maybeLatest } ->
                 case maybeLatest of
@@ -192,10 +197,16 @@ checkAgainstCurrentSnapshot component event state =
                             Procedure.provide { cache = cache, maybeLatest = Just latest }
 
                         else
-                            getLatestSnapshotFromTable component event { cache = state.cache }
+                            LatestSnapshot.getLatestSnapshotFromTable
+                                component
+                                event.channel
+                                { cache = state.cache }
 
                     Nothing ->
-                        getLatestSnapshotFromTable component event { cache = state.cache }
+                        LatestSnapshot.getLatestSnapshotFromTable
+                            component
+                            event.channel
+                            { cache = state.cache }
             )
         |> Procedure.andThen
             (\{ cache, maybeLatest } ->
@@ -218,56 +229,6 @@ type SnapshotCondition
     = LaterFound (Dict String (Snapshot Value))
     | OutOfDate (Snapshot Value)
     | New
-
-
-getLatestSnapshotFromCache :
-    SnapshotChannel a
-    -> SnapshotEvent
-    -> { cache : Dict String (Snapshot Value) }
-    ->
-        Procedure.Procedure ErrorFormat
-            { cache : Dict String (Snapshot Value)
-            , maybeLatest : Maybe (Snapshot Value)
-            }
-            Msg
-getLatestSnapshotFromCache component event state =
-    let
-        _ =
-            Debug.log "SnapshotChannel.getLatestSnapshotFromCache" "called"
-    in
-    Procedure.provide
-        { cache = state.cache
-        , maybeLatest = Dict.get event.channel state.cache
-        }
-
-
-getLatestSnapshotFromTable :
-    SnapshotChannel a
-    -> SnapshotEvent
-    -> { cache : Dict String (Snapshot Value) }
-    ->
-        Procedure.Procedure ErrorFormat
-            { cache : Dict String (Snapshot Value)
-            , maybeLatest : Maybe (Snapshot Value)
-            }
-            Msg
-getLatestSnapshotFromTable component event state =
-    let
-        _ =
-            Debug.log "SnapshotChannel.getLatestSnapshotFromTable" "called"
-    in
-    (Apis.snapshotTableApi component.snapshotTable).findLatestSnapshot event.channel
-        |> Procedure.fetchResult
-        |> Procedure.mapError Dynamo.errorToDetails
-        |> Procedure.map
-            (\queryResult ->
-                case queryResult of
-                    [] ->
-                        { cache = state.cache, maybeLatest = Nothing }
-
-                    r :: _ ->
-                        { cache = state.cache, maybeLatest = Just { seq = r.seq, model = r.snapshot } }
-            )
 
 
 readLaterEvents :
