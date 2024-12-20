@@ -436,9 +436,13 @@ notifyCompactor component channelName drainState =
                     sqsMessage
                         |> AWS.Http.send (Sqs.service component.awsRegion) component.defaultCredentials
             in
-            Procedure.fromTask notifyCmd
-                |> Procedure.mapError awsErrorToDetails
-                |> Procedure.map (always ())
+            if modBy 5 lastSeqNo == 0 then
+                Procedure.fromTask notifyCmd
+                    |> Procedure.mapError awsErrorToDetails
+                    |> Procedure.map (always ())
+
+            else
+                Procedure.provide ()
 
 
 awsErrorToDetails : AWS.Http.Error AWS.Http.AWSAppError -> ErrorFormat

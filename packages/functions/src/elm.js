@@ -9104,6 +9104,7 @@ var $author$project$Realtime$encodeSnapshotRequestEvent = F2(
 					$elm$json$Json$Encode$int(seq))
 				]));
 	});
+var $elm$core$Basics$modBy = _Basics_modBy;
 var $elm$http$Http$BadBody = function (a) {
 	return {$: 'BadBody', a: a};
 };
@@ -9271,7 +9272,6 @@ var $ktonon$elm_word$Word$carry32 = F2(
 				return (1 === ((($ktonon$elm_word$Word$low31mask & x) + ($ktonon$elm_word$Word$low31mask & y)) >>> 31)) ? 1 : 0;
 		}
 	});
-var $elm$core$Basics$modBy = _Basics_modBy;
 var $elm$core$Basics$pow = _Basics_pow;
 var $ktonon$elm_word$Word$mod32 = function (val) {
 	return A2(
@@ -12517,13 +12517,13 @@ var $author$project$EventLog$SaveChannel$notifyCompactor = F3(
 				$the_sett$elm_aws_messaging$AWS$Sqs$service(component.awsRegion),
 				component.defaultCredentials,
 				sqsMessage);
-			return A2(
+			return (!A2($elm$core$Basics$modBy, 5, lastSeqNo)) ? A2(
 				$brian_watkins$elm_procedure$Procedure$map,
 				$elm$core$Basics$always(_Utils_Tuple0),
 				A2(
 					$brian_watkins$elm_procedure$Procedure$mapError,
 					$author$project$EventLog$SaveChannel$awsErrorToDetails,
-					$brian_watkins$elm_procedure$Procedure$fromTask(notifyCmd)));
+					$brian_watkins$elm_procedure$Procedure$fromTask(notifyCmd))) : $brian_watkins$elm_procedure$Procedure$provide(_Utils_Tuple0);
 		}
 	});
 var $author$project$EventLog$SaveChannel$setModel = F2(
