@@ -68,6 +68,7 @@ createChannel session state component =
     in
     ( { seed = nextSeed
       , procedure = state.procedure
+      , cache = state.cache
       }
     , Procedure.try ProcedureMsg (HttpResponse session) procedure
     )

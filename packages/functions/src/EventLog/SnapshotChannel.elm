@@ -1,4 +1,4 @@
-module Snapshot.SnapshotChannel exposing
+module EventLog.SnapshotChannel exposing
     ( SnapshotChannel
     , procedure
     )
@@ -8,15 +8,15 @@ import AWS.Dynamo as Dynamo exposing (Error(..), Order(..))
 import DB.EventLogTable as EventLog
 import Dict exposing (Dict)
 import ErrorFormat exposing (ErrorFormat)
+import EventLog.Apis as Apis
+import EventLog.Model exposing (Model(..), ReadyState)
+import EventLog.Msg exposing (Msg(..))
 import Http.Response as Response exposing (Response)
 import HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode
 import Procedure
 import Realtime exposing (RTMessage(..), Snapshot, SnapshotEvent)
-import Snapshot.Apis as Apis
-import Snapshot.Model exposing (Model(..), ReadyState)
-import Snapshot.Msg exposing (Msg(..))
 import SqsLambda exposing (SqsEvent)
 import Time
 import Update2 as U2
@@ -30,13 +30,13 @@ type alias SnapshotChannel a =
         , eventLogTable : String
         , snapshotTable : String
         , snapshotQueueUrl : String
-        , snapshot : Model
+        , eventLog : Model
     }
 
 
 setModel : SnapshotChannel a -> Model -> SnapshotChannel a
 setModel m x =
-    { m | snapshot = x }
+    { m | eventLog = x }
 
 
 switchState : (a -> Model) -> a -> ( Model, Cmd Msg )

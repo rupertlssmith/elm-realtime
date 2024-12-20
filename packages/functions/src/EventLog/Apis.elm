@@ -4,16 +4,20 @@ module EventLog.Apis exposing
     , eventLogTableMetadataApi
     , httpServerApi
     , momentoApi
+    , snapshotTableApi
+    , sqsLambdaApi
     )
 
 import AWS.Dynamo as Dynamo exposing (Error(..))
 import DB.ChannelTable as ChannelTable
 import DB.EventLogTable as EventLogTable
+import DB.SnapshotTable as SnapshotTable
 import EventLog.Msg exposing (Msg(..))
 import EventLog.Route as Route exposing (Route(..))
 import HttpServer as HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Momento exposing (CacheItem, Error, MomentoSessionKey)
 import Ports
+import SqsLambda
 
 
 dynamoPorts : Dynamo.Ports Msg
@@ -46,6 +50,11 @@ eventLogTableMetadataApi =
     EventLogTable.metadataOperations ProcedureMsg dynamoPorts
 
 
+snapshotTableApi : String -> SnapshotTable.Operations Msg
+snapshotTableApi tableName =
+    SnapshotTable.operations ProcedureMsg dynamoPorts tableName
+
+
 momentoApi : Momento.MomentoApi Msg
 momentoApi =
     { open = Ports.mmOpen
@@ -71,3 +80,9 @@ httpServerApi =
     , parseRoute = Route.routeParser
     }
         |> HttpServer.httpServerApi
+
+
+sqsLambdaApi : SqsLambda.SqsEventApi Msg
+sqsLambdaApi =
+    { sqsLambdaSubscribe = Ports.sqsLambdaSubscribe }
+        |> SqsLambda.sqsEventApi

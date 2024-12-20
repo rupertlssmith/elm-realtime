@@ -3209,11 +3209,11 @@ var $elm$core$Result$isOk = function (result) {
 };
 var $elm$json$Json$Decode$andThen = _Json_andThen;
 var $elm$json$Json$Decode$field = _Json_decodeField;
+var $elm$core$Basics$identity = function (x) {
+	return x;
+};
 var $author$project$API$EventLogMsg = function (a) {
 	return {$: 'EventLogMsg', a: a};
-};
-var $author$project$API$SnapshotMsg = function (a) {
-	return {$: 'SnapshotMsg', a: a};
 };
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $the_sett$elm_aws_core$AWS$Credentials$fromAccessKeys = F2(
@@ -3251,9 +3251,6 @@ var $the_sett$elm_update_helper$Update2$pure = function (model) {
 };
 var $author$project$EventLog$Msg$RandomSeed = function (a) {
 	return {$: 'RandomSeed', a: a};
-};
-var $elm$core$Basics$identity = function (x) {
-	return x;
 };
 var $elm$random$Random$Generate = function (a) {
 	return {$: 'Generate', a: a};
@@ -3466,36 +3463,6 @@ var $author$project$EventLog$Component$init = function (toMsg) {
 				$the_sett$elm_update_helper$Update2$pure(
 					{}))));
 };
-var $author$project$Snapshot$Model$ModelStart = function (a) {
-	return {$: 'ModelStart', a: a};
-};
-var $author$project$Snapshot$Msg$RandomSeed = function (a) {
-	return {$: 'RandomSeed', a: a};
-};
-var $author$project$Snapshot$Component$randomize = function (model) {
-	return _Utils_Tuple2(
-		model,
-		A2($elm$random$Random$generate, $author$project$Snapshot$Msg$RandomSeed, $elm$random$Random$independentSeed));
-};
-var $author$project$Snapshot$Component$switchState = F2(
-	function (cons, state) {
-		return _Utils_Tuple2(
-			cons(state),
-			$elm$core$Platform$Cmd$none);
-	});
-var $author$project$Snapshot$Component$init = function (toMsg) {
-	return A2(
-		$elm$core$Tuple$mapSecond,
-		$elm$core$Platform$Cmd$map(toMsg),
-		A2(
-			$the_sett$elm_update_helper$Update2$andMap,
-			$author$project$Snapshot$Component$switchState($author$project$Snapshot$Model$ModelStart),
-			A2(
-				$the_sett$elm_update_helper$Update2$andMap,
-				$author$project$Snapshot$Component$randomize,
-				$the_sett$elm_update_helper$Update2$pure(
-					{}))));
-};
 var $the_sett$elm_aws_core$AWS$Credentials$withSessionToken = F2(
 	function (token, creds) {
 		return _Utils_update(
@@ -3509,22 +3476,18 @@ var $author$project$API$init = function (flags) {
 		$the_sett$elm_aws_core$AWS$Credentials$withSessionToken,
 		flags.awsSessionToken,
 		A2($the_sett$elm_aws_core$AWS$Credentials$fromAccessKeys, flags.awsAccessKeyId, flags.awsSecretAccessKey));
-	var _v0 = $author$project$Snapshot$Component$init($author$project$API$SnapshotMsg);
-	var snapshotMdl = _v0.a;
-	var snapshotCmds = _v0.b;
-	var _v1 = $author$project$EventLog$Component$init($author$project$API$EventLogMsg);
-	var eventLogMdl = _v1.a;
-	var eventLogCmds = _v1.b;
+	var _v0 = $author$project$EventLog$Component$init($author$project$API$EventLogMsg);
+	var eventLogMdl = _v0.a;
+	var eventLogCmds = _v0.b;
 	return _Utils_Tuple2(
-		{awsAccessKeyId: flags.awsAccessKeyId, awsRegion: flags.awsRegion, awsSecretAccessKey: flags.awsSecretAccessKey, awsSessionToken: flags.awsSessionToken, channelApiUrl: flags.channelApiUrl, channelTable: flags.channelTable, defaultCredentials: credentials, eventLog: eventLogMdl, eventLogTable: flags.eventLogTable, momentoApiKey: flags.momentoSecret.apiKey, snapshot: snapshotMdl, snapshotQueueUrl: flags.snapshotQueueUrl, snapshotTable: flags.snapshotTable},
+		{awsAccessKeyId: flags.awsAccessKeyId, awsRegion: flags.awsRegion, awsSecretAccessKey: flags.awsSecretAccessKey, awsSessionToken: flags.awsSessionToken, channelApiUrl: flags.channelApiUrl, channelTable: flags.channelTable, defaultCredentials: credentials, eventLog: eventLogMdl, eventLogTable: flags.eventLogTable, momentoApiKey: flags.momentoSecret.apiKey, snapshotQueueUrl: flags.snapshotQueueUrl, snapshotTable: flags.snapshotTable},
 		$elm$core$Platform$Cmd$batch(
 			_List_fromArray(
-				[eventLogCmds, snapshotCmds])));
+				[eventLogCmds])));
 };
 var $elm$json$Json$Decode$string = _Json_decodeString;
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $author$project$API$eventLogProtocol = {onUpdate: $elm$core$Basics$identity, toMsg: $author$project$API$EventLogMsg};
-var $author$project$API$snapshotProtocol = {onUpdate: $elm$core$Basics$identity, toMsg: $author$project$API$SnapshotMsg};
 var $author$project$EventLog$Msg$HttpRequest = F2(
 	function (a, b) {
 		return {$: 'HttpRequest', a: a, b: b};
@@ -3532,6 +3495,10 @@ var $author$project$EventLog$Msg$HttpRequest = F2(
 var $author$project$EventLog$Msg$MomentoError = function (a) {
 	return {$: 'MomentoError', a: a};
 };
+var $author$project$EventLog$Msg$SqsEvent = F2(
+	function (a, b) {
+		return {$: 'SqsEvent', a: a, b: b};
+	});
 var $author$project$HttpServer$HttpSessionKey = function (a) {
 	return {$: 'HttpSessionKey', a: a};
 };
@@ -5756,44 +5723,6 @@ var $author$project$EventLog$Apis$momentoApi = A2(
 	$author$project$EventLog$Msg$ProcedureMsg,
 	{asyncError: $author$project$Ports$mmAsyncError, close: $author$project$Ports$mmClose, createWebhook: $author$project$Ports$mmCreateWebhook, onMessage: $author$project$Ports$mmOnMessage, open: $author$project$Ports$mmOpen, popList: $author$project$Ports$mmPopList, publish: $author$project$Ports$mmPublish, pushList: $author$project$Ports$mmPushList, response: $author$project$Ports$mmResponse, subscribe: $author$project$Ports$mmSubscribe});
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
-var $elm$core$Dict$values = function (dict) {
-	return A3(
-		$elm$core$Dict$foldr,
-		F3(
-			function (key, value, valueList) {
-				return A2($elm$core$List$cons, value, valueList);
-			}),
-		_List_Nil,
-		dict);
-};
-var $brian_watkins$elm_procedure$Procedure$Program$subscriptions = function (_v0) {
-	var registry = _v0.a;
-	return $elm$core$Platform$Sub$batch(
-		$elm$core$Dict$values(registry.channels));
-};
-var $author$project$EventLog$Component$subscriptions = F2(
-	function (protocol, component) {
-		var model = component.eventLog;
-		if (model.$ === 'ModelReady') {
-			var state = model.a;
-			return A2(
-				$elm$core$Platform$Sub$map,
-				protocol.toMsg,
-				$elm$core$Platform$Sub$batch(
-					_List_fromArray(
-						[
-							$brian_watkins$elm_procedure$Procedure$Program$subscriptions(state.procedure),
-							$author$project$EventLog$Apis$httpServerApi.request($author$project$EventLog$Msg$HttpRequest),
-							$author$project$EventLog$Apis$momentoApi.asyncError($author$project$EventLog$Msg$MomentoError)
-						])));
-		} else {
-			return $elm$core$Platform$Sub$none;
-		}
-	});
-var $author$project$Snapshot$Msg$SqsEvent = F2(
-	function (a, b) {
-		return {$: 'SqsEvent', a: a, b: b};
-	});
 var $author$project$SqsLambda$InvalidRequestFormat = function (a) {
 	return {$: 'InvalidRequestFormat', a: a};
 };
@@ -5855,11 +5784,26 @@ var $author$project$Ports$sqsLambdaSubscribe = _Platform_incomingPort(
 				A2($elm$json$Json$Decode$field, 'req', $elm$json$Json$Decode$value));
 		},
 		A2($elm$json$Json$Decode$field, 'session', $elm$json$Json$Decode$value)));
-var $author$project$Snapshot$Apis$sqsLambdaApi = $author$project$SqsLambda$sqsEventApi(
+var $author$project$EventLog$Apis$sqsLambdaApi = $author$project$SqsLambda$sqsEventApi(
 	{sqsLambdaSubscribe: $author$project$Ports$sqsLambdaSubscribe});
-var $author$project$Snapshot$Component$subscriptions = F2(
+var $elm$core$Dict$values = function (dict) {
+	return A3(
+		$elm$core$Dict$foldr,
+		F3(
+			function (key, value, valueList) {
+				return A2($elm$core$List$cons, value, valueList);
+			}),
+		_List_Nil,
+		dict);
+};
+var $brian_watkins$elm_procedure$Procedure$Program$subscriptions = function (_v0) {
+	var registry = _v0.a;
+	return $elm$core$Platform$Sub$batch(
+		$elm$core$Dict$values(registry.channels));
+};
+var $author$project$EventLog$Component$subscriptions = F2(
 	function (protocol, component) {
-		var model = component.snapshot;
+		var model = component.eventLog;
 		if (model.$ === 'ModelReady') {
 			var state = model.a;
 			return A2(
@@ -5869,7 +5813,9 @@ var $author$project$Snapshot$Component$subscriptions = F2(
 					_List_fromArray(
 						[
 							$brian_watkins$elm_procedure$Procedure$Program$subscriptions(state.procedure),
-							$author$project$Snapshot$Apis$sqsLambdaApi.event($author$project$Snapshot$Msg$SqsEvent)
+							$author$project$EventLog$Apis$httpServerApi.request($author$project$EventLog$Msg$HttpRequest),
+							$author$project$EventLog$Apis$momentoApi.asyncError($author$project$EventLog$Msg$MomentoError),
+							$author$project$EventLog$Apis$sqsLambdaApi.event($author$project$EventLog$Msg$SqsEvent)
 						])));
 		} else {
 			return $elm$core$Platform$Sub$none;
@@ -5879,12 +5825,21 @@ var $author$project$API$subscriptions = function (model) {
 	return $elm$core$Platform$Sub$batch(
 		_List_fromArray(
 			[
-				A2($author$project$EventLog$Component$subscriptions, $author$project$API$eventLogProtocol, model),
-				A2($author$project$Snapshot$Component$subscriptions, $author$project$API$snapshotProtocol, model)
+				A2($author$project$EventLog$Component$subscriptions, $author$project$API$eventLogProtocol, model)
 			]));
 };
 var $author$project$EventLog$Model$ModelReady = function (a) {
 	return {$: 'ModelReady', a: a};
+};
+var $author$project$ErrorFormat$encodeErrorFormat = function (error) {
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'message',
+				$elm$json$Json$Encode$string(error.message)),
+				_Utils_Tuple2('details', error.details)
+			]));
 };
 var $author$project$Http$Response$Model = F4(
 	function (body, charset, headers, status) {
@@ -5931,6 +5886,23 @@ var $author$project$Http$Response$err500 = function (err) {
 			$author$project$Http$Response$setBody,
 			$author$project$Http$Body$text(err),
 			$author$project$Http$Response$init));
+};
+var $author$project$Http$Body$json = $author$project$Http$Body$Json;
+var $author$project$Http$Response$err500json = function (err) {
+	return A2(
+		$author$project$Http$Response$setStatus,
+		500,
+		A2(
+			$author$project$Http$Response$setBody,
+			$author$project$Http$Body$json(err),
+			$author$project$Http$Response$init));
+};
+var $author$project$SqsLambda$errorToDetails = function (error) {
+	var decodeError = error.a;
+	return {
+		details: $elm$json$Json$Encode$null,
+		message: 'Problem decoding the request: ' + $elm$json$Json$Decode$errorToString(decodeError)
+	};
 };
 var $author$project$HttpServer$errorToString = function (error) {
 	if (error.$ === 'NoMatchingRoute') {
@@ -6031,31 +6003,48 @@ var $brian_watkins$elm_procedure$Procedure$andThen = F2(
 				}
 			});
 	});
-var $author$project$ErrorFormat$encodeErrorFormat = function (error) {
-	return $elm$json$Json$Encode$object(
-		_List_fromArray(
-			[
-				_Utils_Tuple2(
-				'message',
-				$elm$json$Json$Encode$string(error.message)),
-				_Utils_Tuple2('details', error.details)
-			]));
-};
-var $miniBill$elm_codec$Codec$encoder = function (_v0) {
-	var m = _v0.a;
-	return m.encoder;
-};
-var $author$project$Http$Body$json = $author$project$Http$Body$Json;
-var $author$project$Http$Response$err500json = function (err) {
-	return A2(
-		$author$project$Http$Response$setStatus,
-		500,
-		A2(
-			$author$project$Http$Response$setBody,
-			$author$project$Http$Body$json(err),
-			$author$project$Http$Response$init));
-};
 var $brian_watkins$elm_procedure$Procedure$provide = A2($elm$core$Basics$composeL, $brian_watkins$elm_procedure$Procedure$fromTask, $elm$core$Task$succeed);
+var $author$project$EventLog$SnapshotChannel$LaterFound = function (a) {
+	return {$: 'LaterFound', a: a};
+};
+var $author$project$EventLog$SnapshotChannel$New = {$: 'New'};
+var $author$project$EventLog$SnapshotChannel$OutOfDate = function (a) {
+	return {$: 'OutOfDate', a: a};
+};
+var $author$project$EventLog$SnapshotChannel$getLatestSnapshotFromCache = F3(
+	function (component, event, state) {
+		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.getLatestSnapshotFromCache', 'called');
+		return $brian_watkins$elm_procedure$Procedure$provide(
+			{
+				cache: state.cache,
+				maybeLatest: A2($elm$core$Dict$get, event.channel, state.cache)
+			});
+	});
+var $author$project$AWS$Dynamo$errorToDetails = function (error) {
+	switch (error.$) {
+		case 'Error':
+			var message = error.a.message;
+			var details = error.a.details;
+			return {details: details, message: message};
+		case 'ConditionCheckFailed':
+			var message = error.a.message;
+			var details = error.a.details;
+			return {details: details, message: message};
+		default:
+			var err = error.a;
+			return {
+				details: $elm$json$Json$Encode$null,
+				message: $elm$json$Json$Decode$errorToString(err)
+			};
+	}
+};
+var $brian_watkins$elm_procedure$Procedure$fetchResult = function (generator) {
+	return $brian_watkins$elm_procedure$Procedure$Internal$Procedure(
+		F3(
+			function (_v0, _v1, tagger) {
+				return generator(tagger);
+			}));
+};
 var $brian_watkins$elm_procedure$Procedure$map = function (mapper) {
 	return $brian_watkins$elm_procedure$Procedure$andThen(
 		A2($elm$core$Basics$composeL, $brian_watkins$elm_procedure$Procedure$provide, mapper));
@@ -6075,181 +6064,6 @@ var $brian_watkins$elm_procedure$Procedure$mapError = F2(
 						mapper(eData));
 				}
 			});
-	});
-var $elm$core$Basics$abs = function (n) {
-	return (n < 0) ? (-n) : n;
-};
-var $elm$random$Random$andThen = F2(
-	function (callback, _v0) {
-		var genA = _v0.a;
-		return $elm$random$Random$Generator(
-			function (seed) {
-				var _v1 = genA(seed);
-				var result = _v1.a;
-				var newSeed = _v1.b;
-				var _v2 = callback(result);
-				var genB = _v2.a;
-				return genB(newSeed);
-			});
-	});
-var $elm$random$Random$float = F2(
-	function (a, b) {
-		return $elm$random$Random$Generator(
-			function (seed0) {
-				var seed1 = $elm$random$Random$next(seed0);
-				var range = $elm$core$Basics$abs(b - a);
-				var n1 = $elm$random$Random$peel(seed1);
-				var n0 = $elm$random$Random$peel(seed0);
-				var lo = (134217727 & n1) * 1.0;
-				var hi = (67108863 & n0) * 1.0;
-				var val = ((hi * 134217728.0) + lo) / 9007199254740992.0;
-				var scaled = (val * range) + a;
-				return _Utils_Tuple2(
-					scaled,
-					$elm$random$Random$next(seed1));
-			});
-	});
-var $elm$core$Tuple$second = function (_v0) {
-	var y = _v0.b;
-	return y;
-};
-var $elm$core$List$sum = function (numbers) {
-	return A3($elm$core$List$foldl, $elm$core$Basics$add, 0, numbers);
-};
-var $elm_community$random_extra$Random$Extra$frequency = F2(
-	function (head, pairs) {
-		var total = $elm$core$List$sum(
-			A2(
-				$elm$core$List$map,
-				A2($elm$core$Basics$composeL, $elm$core$Basics$abs, $elm$core$Tuple$first),
-				A2($elm$core$List$cons, head, pairs)));
-		var pick = F2(
-			function (someChoices, n) {
-				pick:
-				while (true) {
-					if (someChoices.b) {
-						var _v1 = someChoices.a;
-						var k = _v1.a;
-						var g = _v1.b;
-						var rest = someChoices.b;
-						if (_Utils_cmp(n, k) < 1) {
-							return g;
-						} else {
-							var $temp$someChoices = rest,
-								$temp$n = n - k;
-							someChoices = $temp$someChoices;
-							n = $temp$n;
-							continue pick;
-						}
-					} else {
-						return head.b;
-					}
-				}
-			});
-		return A2(
-			$elm$random$Random$andThen,
-			pick(
-				A2($elm$core$List$cons, head, pairs)),
-			A2($elm$random$Random$float, 0, total));
-	});
-var $elm_community$random_extra$Random$Extra$choices = F2(
-	function (hd, gens) {
-		return A2(
-			$elm_community$random_extra$Random$Extra$frequency,
-			_Utils_Tuple2(1, hd),
-			A2(
-				$elm$core$List$map,
-				function (g) {
-					return _Utils_Tuple2(1, g);
-				},
-				gens));
-	});
-var $elm$core$Char$fromCode = _Char_fromCode;
-var $elm_community$random_extra$Random$Char$char = F2(
-	function (start, end) {
-		return A2(
-			$elm$random$Random$map,
-			$elm$core$Char$fromCode,
-			A2($elm$random$Random$int, start, end));
-	});
-var $elm_community$random_extra$Random$Char$lowerCaseLatin = A2($elm_community$random_extra$Random$Char$char, 97, 122);
-var $elm_community$random_extra$Random$Char$upperCaseLatin = A2($elm_community$random_extra$Random$Char$char, 65, 90);
-var $elm_community$random_extra$Random$Char$latin = A2(
-	$elm_community$random_extra$Random$Extra$choices,
-	$elm_community$random_extra$Random$Char$lowerCaseLatin,
-	_List_fromArray(
-		[$elm_community$random_extra$Random$Char$upperCaseLatin]));
-var $elm_community$random_extra$Random$Char$english = $elm_community$random_extra$Random$Char$latin;
-var $elm$core$String$fromList = _String_fromList;
-var $elm$random$Random$listHelp = F4(
-	function (revList, n, gen, seed) {
-		listHelp:
-		while (true) {
-			if (n < 1) {
-				return _Utils_Tuple2(revList, seed);
-			} else {
-				var _v0 = gen(seed);
-				var value = _v0.a;
-				var newSeed = _v0.b;
-				var $temp$revList = A2($elm$core$List$cons, value, revList),
-					$temp$n = n - 1,
-					$temp$gen = gen,
-					$temp$seed = newSeed;
-				revList = $temp$revList;
-				n = $temp$n;
-				gen = $temp$gen;
-				seed = $temp$seed;
-				continue listHelp;
-			}
-		}
-	});
-var $elm$random$Random$list = F2(
-	function (n, _v0) {
-		var gen = _v0.a;
-		return $elm$random$Random$Generator(
-			function (seed) {
-				return A4($elm$random$Random$listHelp, _List_Nil, n, gen, seed);
-			});
-	});
-var $elm_community$random_extra$Random$String$string = F2(
-	function (stringLength, charGenerator) {
-		return A2(
-			$elm$random$Random$map,
-			$elm$core$String$fromList,
-			A2($elm$random$Random$list, stringLength, charGenerator));
-	});
-var $author$project$Names$nameGenerator = A2($elm_community$random_extra$Random$String$string, 10, $elm_community$random_extra$Random$Char$english);
-var $author$project$Http$Response$ok200json = function (msg) {
-	return A2(
-		$author$project$Http$Response$setBody,
-		$author$project$Http$Body$json(msg),
-		$author$project$Http$Response$init);
-};
-var $author$project$Names$cacheName = function (channel) {
-	return 'elm-realtime' + '-cache';
-};
-var $author$project$Momento$errorToDetails = function (_v0) {
-	var err = _v0.a;
-	return err;
-};
-var $brian_watkins$elm_procedure$Procedure$fetchResult = function (generator) {
-	return $brian_watkins$elm_procedure$Procedure$Internal$Procedure(
-		F3(
-			function (_v0, _v1, tagger) {
-				return generator(tagger);
-			}));
-};
-var $author$project$EventLog$OpenMomentoCache$openMomentoCache = F2(
-	function (component, channelName) {
-		return A2(
-			$brian_watkins$elm_procedure$Procedure$mapError,
-			$author$project$Momento$errorToDetails,
-			$brian_watkins$elm_procedure$Procedure$fetchResult(
-				$author$project$EventLog$Apis$momentoApi.open(
-					{
-						apiKey: component.momentoApiKey,
-						cache: $author$project$Names$cacheName(channelName)
-					})));
 	});
 var $author$project$Ports$dynamoBatchGet = _Platform_outgoingPort(
 	'dynamoBatchGet',
@@ -7736,18 +7550,66 @@ var $author$project$AWS$Dynamo$dynamoTypedApi = F5(
 			writeTx: A2($author$project$AWS$Dynamo$writeTx, pt, ports)
 		};
 	});
-var $author$project$DB$ChannelTable$encodeKey = function (key) {
+var $author$project$DB$SnapshotTable$encodeKey = function (key) {
 	return $elm$json$Json$Encode$object(
 		_List_fromArray(
 			[
 				_Utils_Tuple2(
 				'id',
-				$elm$json$Json$Encode$string(key.id))
+				$elm$json$Json$Encode$string(key.id)),
+				_Utils_Tuple2(
+				'seq',
+				$elm$json$Json$Encode$int(key.seq))
 			]));
 };
-var $author$project$DB$ChannelTable$Record = F6(
-	function (id, updatedAt, modelTopic, saveTopic, saveList, webhook) {
-		return {id: id, modelTopic: modelTopic, saveList: saveList, saveTopic: saveTopic, updatedAt: updatedAt, webhook: webhook};
+var $miniBill$elm_codec$Codec$encoder = function (_v0) {
+	var m = _v0.a;
+	return m.encoder;
+};
+var $author$project$AWS$Dynamo$Reverse = {$: 'Reverse'};
+var $author$project$AWS$Dynamo$limitResults = F2(
+	function (limit, q) {
+		return _Utils_update(
+			q,
+			{
+				limit: $elm$core$Maybe$Just(limit)
+			});
+	});
+var $author$project$AWS$Dynamo$orderResults = F2(
+	function (ord, q) {
+		return _Utils_update(
+			q,
+			{order: ord});
+	});
+var $author$project$AWS$Dynamo$Forward = {$: 'Forward'};
+var $author$project$AWS$Dynamo$StringAttr = function (a) {
+	return {$: 'StringAttr', a: a};
+};
+var $author$project$AWS$Dynamo$partitionKeyEquals = F2(
+	function (key, val) {
+		return {
+			exclusiveStartKey: $elm$core$Maybe$Nothing,
+			limit: $elm$core$Maybe$Nothing,
+			order: $author$project$AWS$Dynamo$Forward,
+			partitionKeyName: key,
+			partitionKeyValue: $author$project$AWS$Dynamo$StringAttr(val),
+			rangeKeyCondition: $elm$core$Maybe$Nothing
+		};
+	});
+var $author$project$DB$SnapshotTable$findLatestSnapshotQuery = F2(
+	function (tableName, channel) {
+		var matchLatestSnapshot = A2(
+			$author$project$AWS$Dynamo$limitResults,
+			1,
+			A2(
+				$author$project$AWS$Dynamo$orderResults,
+				$author$project$AWS$Dynamo$Reverse,
+				A2($author$project$AWS$Dynamo$partitionKeyEquals, 'id', channel)));
+		return {match: matchLatestSnapshot, tableName: tableName};
+	});
+var $author$project$DB$SnapshotTable$Record = F4(
+	function (id, seq, updatedAt, snapshot) {
+		return {id: id, seq: seq, snapshot: snapshot, updatedAt: updatedAt};
 	});
 var $miniBill$elm_codec$Codec$Codec = function (a) {
 	return {$: 'Codec', a: a};
@@ -7795,6 +7657,12 @@ var $miniBill$elm_codec$Codec$field = F4(
 				}
 			});
 	});
+var $miniBill$elm_codec$Codec$build = F2(
+	function (encoder_, decoder_) {
+		return $miniBill$elm_codec$Codec$Codec(
+			{decoder: decoder_, encoder: encoder_});
+	});
+var $miniBill$elm_codec$Codec$int = A2($miniBill$elm_codec$Codec$build, $elm$json$Json$Encode$int, $elm$json$Json$Decode$int);
 var $miniBill$elm_codec$Codec$object = function (ctor) {
 	return $miniBill$elm_codec$Codec$ObjectCodec(
 		{
@@ -7804,10 +7672,672 @@ var $miniBill$elm_codec$Codec$object = function (ctor) {
 			}
 		});
 };
-var $miniBill$elm_codec$Codec$build = F2(
-	function (encoder_, decoder_) {
-		return $miniBill$elm_codec$Codec$Codec(
-			{decoder: decoder_, encoder: encoder_});
+var $author$project$DB$SnapshotTable$posixCodec = A2(
+	$miniBill$elm_codec$Codec$build,
+	function (timestamp) {
+		return $elm$json$Json$Encode$int(
+			$elm$time$Time$posixToMillis(timestamp));
+	},
+	A2($elm$json$Json$Decode$map, $elm$time$Time$millisToPosix, $elm$json$Json$Decode$int));
+var $miniBill$elm_codec$Codec$string = A2($miniBill$elm_codec$Codec$build, $elm$json$Json$Encode$string, $elm$json$Json$Decode$string);
+var $miniBill$elm_codec$Codec$value = $miniBill$elm_codec$Codec$Codec(
+	{decoder: $elm$json$Json$Decode$value, encoder: $elm$core$Basics$identity});
+var $author$project$DB$SnapshotTable$recordCodec = $miniBill$elm_codec$Codec$buildObject(
+	A4(
+		$miniBill$elm_codec$Codec$field,
+		'snapshot',
+		function ($) {
+			return $.snapshot;
+		},
+		$miniBill$elm_codec$Codec$value,
+		A4(
+			$miniBill$elm_codec$Codec$field,
+			'updatedAt',
+			function ($) {
+				return $.updatedAt;
+			},
+			$author$project$DB$SnapshotTable$posixCodec,
+			A4(
+				$miniBill$elm_codec$Codec$field,
+				'seq',
+				function ($) {
+					return $.seq;
+				},
+				$miniBill$elm_codec$Codec$int,
+				A4(
+					$miniBill$elm_codec$Codec$field,
+					'id',
+					function ($) {
+						return $.id;
+					},
+					$miniBill$elm_codec$Codec$string,
+					$miniBill$elm_codec$Codec$object($author$project$DB$SnapshotTable$Record))))));
+var $author$project$DB$SnapshotTable$operations = F3(
+	function (proc, ports, tableName) {
+		var typedApi = A5(
+			$author$project$AWS$Dynamo$dynamoTypedApi,
+			$author$project$DB$SnapshotTable$encodeKey,
+			$miniBill$elm_codec$Codec$encoder($author$project$DB$SnapshotTable$recordCodec),
+			$miniBill$elm_codec$Codec$decoder($author$project$DB$SnapshotTable$recordCodec),
+			proc,
+			ports);
+		return {
+			findLatestSnapshot: function (channel) {
+				return typedApi.query(
+					A2($author$project$DB$SnapshotTable$findLatestSnapshotQuery, tableName, channel));
+			},
+			put: typedApi.put
+		};
+	});
+var $author$project$EventLog$Apis$snapshotTableApi = function (tableName) {
+	return A3($author$project$DB$SnapshotTable$operations, $author$project$EventLog$Msg$ProcedureMsg, $author$project$EventLog$Apis$dynamoPorts, tableName);
+};
+var $author$project$EventLog$SnapshotChannel$getLatestSnapshotFromTable = F3(
+	function (component, event, state) {
+		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.getLatestSnapshotFromTable', 'called');
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$map,
+			function (queryResult) {
+				if (!queryResult.b) {
+					return {cache: state.cache, maybeLatest: $elm$core$Maybe$Nothing};
+				} else {
+					var r = queryResult.a;
+					return {
+						cache: state.cache,
+						maybeLatest: $elm$core$Maybe$Just(
+							{model: r.snapshot, seq: r.seq})
+					};
+				}
+			},
+			A2(
+				$brian_watkins$elm_procedure$Procedure$mapError,
+				$author$project$AWS$Dynamo$errorToDetails,
+				$brian_watkins$elm_procedure$Procedure$fetchResult(
+					$author$project$EventLog$Apis$snapshotTableApi(component.snapshotTable).findLatestSnapshot(event.channel))));
+	});
+var $author$project$EventLog$SnapshotChannel$checkAgainstCurrentSnapshot = F3(
+	function (component, event, state) {
+		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.checkAgainstCurrentSnapshot', 'called');
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (_v3) {
+				var cache = _v3.cache;
+				var maybeLatest = _v3.maybeLatest;
+				if (maybeLatest.$ === 'Just') {
+					var latest = maybeLatest.a;
+					return (_Utils_cmp(latest.seq, event.seq) > -1) ? $brian_watkins$elm_procedure$Procedure$provide(
+						$author$project$EventLog$SnapshotChannel$LaterFound(
+							A3($elm$core$Dict$insert, event.channel, latest, cache))) : $brian_watkins$elm_procedure$Procedure$provide(
+						$author$project$EventLog$SnapshotChannel$OutOfDate(latest));
+				} else {
+					return $brian_watkins$elm_procedure$Procedure$provide($author$project$EventLog$SnapshotChannel$New);
+				}
+			},
+			A2(
+				$brian_watkins$elm_procedure$Procedure$andThen,
+				function (_v1) {
+					var cache = _v1.cache;
+					var maybeLatest = _v1.maybeLatest;
+					if (maybeLatest.$ === 'Just') {
+						var latest = maybeLatest.a;
+						return (_Utils_cmp(latest.seq, event.seq) > -1) ? $brian_watkins$elm_procedure$Procedure$provide(
+							{
+								cache: cache,
+								maybeLatest: $elm$core$Maybe$Just(latest)
+							}) : A3(
+							$author$project$EventLog$SnapshotChannel$getLatestSnapshotFromTable,
+							component,
+							event,
+							{cache: state.cache});
+					} else {
+						return A3(
+							$author$project$EventLog$SnapshotChannel$getLatestSnapshotFromTable,
+							component,
+							event,
+							{cache: state.cache});
+					}
+				},
+				A2(
+					$brian_watkins$elm_procedure$Procedure$andThen,
+					A2($author$project$EventLog$SnapshotChannel$getLatestSnapshotFromCache, component, event),
+					$brian_watkins$elm_procedure$Procedure$provide(state))));
+	});
+var $author$project$DB$EventLogTable$encodeKey = function (key) {
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'id',
+				$elm$json$Json$Encode$string(key.id)),
+				_Utils_Tuple2(
+				'seq',
+				$elm$json$Json$Encode$int(key.seq))
+			]));
+};
+var $author$project$DB$EventLogTable$Record = F4(
+	function (id, seq, updatedAt, event) {
+		return {event: event, id: id, seq: seq, updatedAt: updatedAt};
+	});
+var $author$project$DB$EventLogTable$posixCodec = A2(
+	$miniBill$elm_codec$Codec$build,
+	function (timestamp) {
+		return $elm$json$Json$Encode$int(
+			$elm$time$Time$posixToMillis(timestamp));
+	},
+	A2($elm$json$Json$Decode$map, $elm$time$Time$millisToPosix, $elm$json$Json$Decode$int));
+var $author$project$DB$EventLogTable$recordCodec = $miniBill$elm_codec$Codec$buildObject(
+	A4(
+		$miniBill$elm_codec$Codec$field,
+		'event',
+		function ($) {
+			return $.event;
+		},
+		$miniBill$elm_codec$Codec$value,
+		A4(
+			$miniBill$elm_codec$Codec$field,
+			'updatedAt',
+			function ($) {
+				return $.updatedAt;
+			},
+			$author$project$DB$EventLogTable$posixCodec,
+			A4(
+				$miniBill$elm_codec$Codec$field,
+				'seq',
+				function ($) {
+					return $.seq;
+				},
+				$miniBill$elm_codec$Codec$int,
+				A4(
+					$miniBill$elm_codec$Codec$field,
+					'id',
+					function ($) {
+						return $.id;
+					},
+					$miniBill$elm_codec$Codec$string,
+					$miniBill$elm_codec$Codec$object($author$project$DB$EventLogTable$Record))))));
+var $author$project$DB$EventLogTable$operations = A3(
+	$author$project$AWS$Dynamo$dynamoTypedApi,
+	$author$project$DB$EventLogTable$encodeKey,
+	$miniBill$elm_codec$Codec$encoder($author$project$DB$EventLogTable$recordCodec),
+	$miniBill$elm_codec$Codec$decoder($author$project$DB$EventLogTable$recordCodec));
+var $author$project$EventLog$Apis$eventLogTableApi = A2($author$project$DB$EventLogTable$operations, $author$project$EventLog$Msg$ProcedureMsg, $author$project$EventLog$Apis$dynamoPorts);
+var $author$project$AWS$Dynamo$NumberAttr = function (a) {
+	return {$: 'NumberAttr', a: a};
+};
+var $author$project$AWS$Dynamo$int = function (val) {
+	return $author$project$AWS$Dynamo$NumberAttr(val);
+};
+var $author$project$AWS$Dynamo$GreaterThan = F2(
+	function (a, b) {
+		return {$: 'GreaterThan', a: a, b: b};
+	});
+var $author$project$AWS$Dynamo$rangeKeyGreaterThan = F3(
+	function (keyName, attr, q) {
+		return _Utils_update(
+			q,
+			{
+				rangeKeyCondition: $elm$core$Maybe$Just(
+					A2($author$project$AWS$Dynamo$GreaterThan, keyName, attr))
+			});
+	});
+var $author$project$EventLog$SnapshotChannel$readLaterEvents = F3(
+	function (component, event, state) {
+		var seq = A2(
+			$elm$core$Maybe$withDefault,
+			0,
+			A2(
+				$elm$core$Maybe$map,
+				function ($) {
+					return $.seq;
+				},
+				state.baseSnapshot));
+		var matchLaterEvents = A2(
+			$author$project$AWS$Dynamo$orderResults,
+			$author$project$AWS$Dynamo$Forward,
+			A3(
+				$author$project$AWS$Dynamo$rangeKeyGreaterThan,
+				'seq',
+				$author$project$AWS$Dynamo$int(seq),
+				A2($author$project$AWS$Dynamo$partitionKeyEquals, 'id', event.channel)));
+		var query = {match: matchLaterEvents, tableName: component.eventLogTable};
+		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.readLaterEvents', 'called');
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$map,
+			function (laterEvents) {
+				return {baseSnapshot: state.baseSnapshot, cache: state.cache, laterEvents: laterEvents};
+			},
+			A2(
+				$brian_watkins$elm_procedure$Procedure$mapError,
+				$author$project$AWS$Dynamo$errorToDetails,
+				$brian_watkins$elm_procedure$Procedure$fetchResult(
+					$author$project$EventLog$Apis$eventLogTableApi.query(query))));
+	});
+var $author$project$Realtime$Persisted = F2(
+	function (a, b) {
+		return {$: 'Persisted', a: a, b: b};
+	});
+var $author$project$EventLog$SnapshotChannel$initialSnapshot = function (rtmessage) {
+	if (rtmessage.$ === 'Persisted') {
+		var seq = rtmessage.a;
+		var val = rtmessage.b;
+		return $elm$core$Maybe$Just(
+			{
+				model: $elm$json$Json$Encode$string(
+					'hello-' + $elm$core$String$fromInt(seq)),
+				seq: seq
+			});
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $author$project$EventLog$SnapshotChannel$stepSnapshot = F2(
+	function (rtmessage, current) {
+		if (rtmessage.$ === 'Persisted') {
+			var seq = rtmessage.a;
+			var val = rtmessage.b;
+			return {
+				model: $elm$json$Json$Encode$string(
+					'hello-' + $elm$core$String$fromInt(seq)),
+				seq: seq
+			};
+		} else {
+			return current;
+		}
+	});
+var $author$project$EventLog$SnapshotChannel$saveNextSnapshot = F3(
+	function (component, event, state) {
+		var rtMessage = function (record) {
+			return A2($author$project$Realtime$Persisted, record.seq, record.event);
+		};
+		var maybeNextSnapshot = A3(
+			$elm$core$List$foldl,
+			F2(
+				function (rtm, acc) {
+					if (acc.$ === 'Nothing') {
+						return $author$project$EventLog$SnapshotChannel$initialSnapshot(rtm);
+					} else {
+						var prev = acc.a;
+						return $elm$core$Maybe$Just(
+							A2($author$project$EventLog$SnapshotChannel$stepSnapshot, rtm, prev));
+					}
+				}),
+			state.baseSnapshot,
+			A2($elm$core$List$map, rtMessage, state.laterEvents));
+		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.saveNextSnapshot', 'called');
+		if (maybeNextSnapshot.$ === 'Just') {
+			var nextSnapshot = maybeNextSnapshot.a;
+			return A2(
+				$brian_watkins$elm_procedure$Procedure$andThen,
+				function (timestamp) {
+					return A2(
+						$brian_watkins$elm_procedure$Procedure$map,
+						function (_v2) {
+							return {
+								cache: A3($elm$core$Dict$insert, event.channel, nextSnapshot, state.cache)
+							};
+						},
+						A2(
+							$brian_watkins$elm_procedure$Procedure$mapError,
+							$author$project$AWS$Dynamo$errorToDetails,
+							$brian_watkins$elm_procedure$Procedure$fetchResult(
+								$author$project$EventLog$Apis$snapshotTableApi(component.snapshotTable).put(
+									{
+										item: {id: event.channel, seq: nextSnapshot.seq, snapshot: nextSnapshot.model, updatedAt: timestamp},
+										tableName: component.snapshotTable
+									}))));
+				},
+				$brian_watkins$elm_procedure$Procedure$fromTask($elm$time$Time$now));
+		} else {
+			return $brian_watkins$elm_procedure$Procedure$provide(
+				{cache: state.cache});
+		}
+	});
+var $author$project$EventLog$SnapshotChannel$snapshotChannel = F3(
+	function (component, event, state) {
+		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.snapshotChannel', 'called');
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$andThen,
+			function (condition) {
+				switch (condition.$) {
+					case 'LaterFound':
+						var cache = condition.a;
+						return $brian_watkins$elm_procedure$Procedure$provide(
+							{cache: cache});
+					case 'OutOfDate':
+						var snapshot = condition.a;
+						return A2(
+							$brian_watkins$elm_procedure$Procedure$andThen,
+							A2($author$project$EventLog$SnapshotChannel$saveNextSnapshot, component, event),
+							A2(
+								$brian_watkins$elm_procedure$Procedure$andThen,
+								A2($author$project$EventLog$SnapshotChannel$readLaterEvents, component, event),
+								$brian_watkins$elm_procedure$Procedure$provide(
+									{
+										baseSnapshot: $elm$core$Maybe$Just(snapshot),
+										cache: state.cache
+									})));
+					default:
+						return A2(
+							$brian_watkins$elm_procedure$Procedure$andThen,
+							A2($author$project$EventLog$SnapshotChannel$saveNextSnapshot, component, event),
+							A2(
+								$brian_watkins$elm_procedure$Procedure$andThen,
+								A2($author$project$EventLog$SnapshotChannel$readLaterEvents, component, event),
+								$brian_watkins$elm_procedure$Procedure$provide(
+									{baseSnapshot: $elm$core$Maybe$Nothing, cache: state.cache})));
+				}
+			},
+			A2(
+				$brian_watkins$elm_procedure$Procedure$andThen,
+				A2($author$project$EventLog$SnapshotChannel$checkAgainstCurrentSnapshot, component, event),
+				$brian_watkins$elm_procedure$Procedure$provide(state)));
+	});
+var $author$project$EventLog$SnapshotChannel$drainSnapshotRequests = F3(
+	function (component, snapshotSeqByChannel, state) {
+		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.drainSnapshotRequests', 'called');
+		if (!snapshotSeqByChannel.b) {
+			return $brian_watkins$elm_procedure$Procedure$provide(state);
+		} else {
+			var snapshotEvent = snapshotSeqByChannel.a;
+			var events = snapshotSeqByChannel.b;
+			return A2(
+				$brian_watkins$elm_procedure$Procedure$andThen,
+				A2($author$project$EventLog$SnapshotChannel$drainSnapshotRequests, component, events),
+				A2(
+					$brian_watkins$elm_procedure$Procedure$andThen,
+					A2($author$project$EventLog$SnapshotChannel$snapshotChannel, component, snapshotEvent),
+					$brian_watkins$elm_procedure$Procedure$provide(state)));
+		}
+	});
+var $author$project$Http$Response$ok200json = function (msg) {
+	return A2(
+		$author$project$Http$Response$setBody,
+		$author$project$Http$Body$json(msg),
+		$author$project$Http$Response$init);
+};
+var $author$project$EventLog$SnapshotChannel$setModel = F2(
+	function (m, x) {
+		return _Utils_update(
+			m,
+			{eventLog: x});
+	});
+var $author$project$Realtime$SnapshotEvent = F3(
+	function (rt, channel, seq) {
+		return {channel: channel, rt: rt, seq: seq};
+	});
+var $author$project$Realtime$snapshotEventDecoder = A2(
+	$elm$json$Json$Decode$andThen,
+	function (ctor) {
+		if (ctor === 'S') {
+			return A2(
+				$elm_community$json_extra$Json$Decode$Extra$andMap,
+				A2($elm$json$Json$Decode$field, 'seq', $elm$json$Json$Decode$int),
+				A2(
+					$elm_community$json_extra$Json$Decode$Extra$andMap,
+					A2($elm$json$Json$Decode$field, 'channel', $elm$json$Json$Decode$string),
+					A2(
+						$elm_community$json_extra$Json$Decode$Extra$andMap,
+						$elm$json$Json$Decode$succeed('S'),
+						$elm$json$Json$Decode$succeed($author$project$Realtime$SnapshotEvent))));
+		} else {
+			return $elm$json$Json$Decode$fail('Unrecognized constructor');
+		}
+	},
+	A2($elm$json$Json$Decode$field, 'rt', $elm$json$Json$Decode$string));
+var $author$project$EventLog$SnapshotChannel$switchState = F2(
+	function (cons, state) {
+		return _Utils_Tuple2(
+			cons(state),
+			$elm$core$Platform$Cmd$none);
+	});
+var $elm$core$Result$withDefault = F2(
+	function (def, result) {
+		if (result.$ === 'Ok') {
+			var a = result.a;
+			return a;
+		} else {
+			return def;
+		}
+	});
+var $author$project$EventLog$SnapshotChannel$procedure = F4(
+	function (session, state, sqsEvent, component) {
+		var updateHighest = F2(
+			function (_new, maybeExisting) {
+				if (maybeExisting.$ === 'Just') {
+					var existing = maybeExisting.a;
+					return (_Utils_cmp(_new.seq, existing.seq) > 0) ? $elm$core$Maybe$Just(_new) : $elm$core$Maybe$Just(existing);
+				} else {
+					return $elm$core$Maybe$Just(_new);
+				}
+			});
+		var snapshotSeqByChannel = A2(
+			$elm$core$Debug$log,
+			'snapshotSeqByChannel',
+			$elm$core$Dict$values(
+				A3(
+					$elm$core$List$foldl,
+					F2(
+						function (sqsMessage, acc) {
+							return A2(
+								$elm$core$Result$withDefault,
+								acc,
+								A2(
+									$elm$core$Result$map,
+									function (snapshotEvent) {
+										return A3(
+											$elm$core$Dict$update,
+											snapshotEvent.channel,
+											updateHighest(snapshotEvent),
+											acc);
+									},
+									A2($elm$json$Json$Decode$decodeString, $author$project$Realtime$snapshotEventDecoder, sqsMessage.body)));
+						}),
+					$elm$core$Dict$empty,
+					sqsEvent)));
+		var innerProc = A2(
+			$brian_watkins$elm_procedure$Procedure$map,
+			$elm$core$Basics$always(
+				$author$project$Http$Response$ok200json($elm$json$Json$Encode$null)),
+			A2(
+				$brian_watkins$elm_procedure$Procedure$mapError,
+				A2(
+					$elm$core$Basics$composeR,
+					$elm$core$Debug$log('error'),
+					A2($elm$core$Basics$composeR, $author$project$ErrorFormat$encodeErrorFormat, $author$project$Http$Response$err500json)),
+				A2(
+					$brian_watkins$elm_procedure$Procedure$andThen,
+					A2($author$project$EventLog$SnapshotChannel$drainSnapshotRequests, component, snapshotSeqByChannel),
+					$brian_watkins$elm_procedure$Procedure$provide(
+						{cache: state.cache}))));
+		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.procedure', 'called');
+		return A2(
+			$elm$core$Tuple$mapFirst,
+			$author$project$EventLog$SnapshotChannel$setModel(component),
+			A2(
+				$the_sett$elm_update_helper$Update2$andMap,
+				$author$project$EventLog$SnapshotChannel$switchState($author$project$EventLog$Model$ModelReady),
+				_Utils_Tuple2(
+					state,
+					A3(
+						$brian_watkins$elm_procedure$Procedure$try,
+						$author$project$EventLog$Msg$ProcedureMsg,
+						$author$project$EventLog$Msg$HttpResponse(session),
+						innerProc))));
+	});
+var $elm$core$Basics$abs = function (n) {
+	return (n < 0) ? (-n) : n;
+};
+var $elm$random$Random$andThen = F2(
+	function (callback, _v0) {
+		var genA = _v0.a;
+		return $elm$random$Random$Generator(
+			function (seed) {
+				var _v1 = genA(seed);
+				var result = _v1.a;
+				var newSeed = _v1.b;
+				var _v2 = callback(result);
+				var genB = _v2.a;
+				return genB(newSeed);
+			});
+	});
+var $elm$random$Random$float = F2(
+	function (a, b) {
+		return $elm$random$Random$Generator(
+			function (seed0) {
+				var seed1 = $elm$random$Random$next(seed0);
+				var range = $elm$core$Basics$abs(b - a);
+				var n1 = $elm$random$Random$peel(seed1);
+				var n0 = $elm$random$Random$peel(seed0);
+				var lo = (134217727 & n1) * 1.0;
+				var hi = (67108863 & n0) * 1.0;
+				var val = ((hi * 134217728.0) + lo) / 9007199254740992.0;
+				var scaled = (val * range) + a;
+				return _Utils_Tuple2(
+					scaled,
+					$elm$random$Random$next(seed1));
+			});
+	});
+var $elm$core$Tuple$second = function (_v0) {
+	var y = _v0.b;
+	return y;
+};
+var $elm$core$List$sum = function (numbers) {
+	return A3($elm$core$List$foldl, $elm$core$Basics$add, 0, numbers);
+};
+var $elm_community$random_extra$Random$Extra$frequency = F2(
+	function (head, pairs) {
+		var total = $elm$core$List$sum(
+			A2(
+				$elm$core$List$map,
+				A2($elm$core$Basics$composeL, $elm$core$Basics$abs, $elm$core$Tuple$first),
+				A2($elm$core$List$cons, head, pairs)));
+		var pick = F2(
+			function (someChoices, n) {
+				pick:
+				while (true) {
+					if (someChoices.b) {
+						var _v1 = someChoices.a;
+						var k = _v1.a;
+						var g = _v1.b;
+						var rest = someChoices.b;
+						if (_Utils_cmp(n, k) < 1) {
+							return g;
+						} else {
+							var $temp$someChoices = rest,
+								$temp$n = n - k;
+							someChoices = $temp$someChoices;
+							n = $temp$n;
+							continue pick;
+						}
+					} else {
+						return head.b;
+					}
+				}
+			});
+		return A2(
+			$elm$random$Random$andThen,
+			pick(
+				A2($elm$core$List$cons, head, pairs)),
+			A2($elm$random$Random$float, 0, total));
+	});
+var $elm_community$random_extra$Random$Extra$choices = F2(
+	function (hd, gens) {
+		return A2(
+			$elm_community$random_extra$Random$Extra$frequency,
+			_Utils_Tuple2(1, hd),
+			A2(
+				$elm$core$List$map,
+				function (g) {
+					return _Utils_Tuple2(1, g);
+				},
+				gens));
+	});
+var $elm$core$Char$fromCode = _Char_fromCode;
+var $elm_community$random_extra$Random$Char$char = F2(
+	function (start, end) {
+		return A2(
+			$elm$random$Random$map,
+			$elm$core$Char$fromCode,
+			A2($elm$random$Random$int, start, end));
+	});
+var $elm_community$random_extra$Random$Char$lowerCaseLatin = A2($elm_community$random_extra$Random$Char$char, 97, 122);
+var $elm_community$random_extra$Random$Char$upperCaseLatin = A2($elm_community$random_extra$Random$Char$char, 65, 90);
+var $elm_community$random_extra$Random$Char$latin = A2(
+	$elm_community$random_extra$Random$Extra$choices,
+	$elm_community$random_extra$Random$Char$lowerCaseLatin,
+	_List_fromArray(
+		[$elm_community$random_extra$Random$Char$upperCaseLatin]));
+var $elm_community$random_extra$Random$Char$english = $elm_community$random_extra$Random$Char$latin;
+var $elm$core$String$fromList = _String_fromList;
+var $elm$random$Random$listHelp = F4(
+	function (revList, n, gen, seed) {
+		listHelp:
+		while (true) {
+			if (n < 1) {
+				return _Utils_Tuple2(revList, seed);
+			} else {
+				var _v0 = gen(seed);
+				var value = _v0.a;
+				var newSeed = _v0.b;
+				var $temp$revList = A2($elm$core$List$cons, value, revList),
+					$temp$n = n - 1,
+					$temp$gen = gen,
+					$temp$seed = newSeed;
+				revList = $temp$revList;
+				n = $temp$n;
+				gen = $temp$gen;
+				seed = $temp$seed;
+				continue listHelp;
+			}
+		}
+	});
+var $elm$random$Random$list = F2(
+	function (n, _v0) {
+		var gen = _v0.a;
+		return $elm$random$Random$Generator(
+			function (seed) {
+				return A4($elm$random$Random$listHelp, _List_Nil, n, gen, seed);
+			});
+	});
+var $elm_community$random_extra$Random$String$string = F2(
+	function (stringLength, charGenerator) {
+		return A2(
+			$elm$random$Random$map,
+			$elm$core$String$fromList,
+			A2($elm$random$Random$list, stringLength, charGenerator));
+	});
+var $author$project$Names$nameGenerator = A2($elm_community$random_extra$Random$String$string, 10, $elm_community$random_extra$Random$Char$english);
+var $author$project$Names$cacheName = function (channel) {
+	return 'elm-realtime' + '-cache';
+};
+var $author$project$Momento$errorToDetails = function (_v0) {
+	var err = _v0.a;
+	return err;
+};
+var $author$project$EventLog$OpenMomentoCache$openMomentoCache = F2(
+	function (component, channelName) {
+		return A2(
+			$brian_watkins$elm_procedure$Procedure$mapError,
+			$author$project$Momento$errorToDetails,
+			$brian_watkins$elm_procedure$Procedure$fetchResult(
+				$author$project$EventLog$Apis$momentoApi.open(
+					{
+						apiKey: component.momentoApiKey,
+						cache: $author$project$Names$cacheName(channelName)
+					})));
+	});
+var $author$project$DB$ChannelTable$encodeKey = function (key) {
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'id',
+				$elm$json$Json$Encode$string(key.id))
+			]));
+};
+var $author$project$DB$ChannelTable$Record = F6(
+	function (id, updatedAt, modelTopic, saveTopic, saveList, webhook) {
+		return {id: id, modelTopic: modelTopic, saveList: saveList, saveTopic: saveTopic, updatedAt: updatedAt, webhook: webhook};
 	});
 var $author$project$DB$ChannelTable$posixCodec = A2(
 	$miniBill$elm_codec$Codec$build,
@@ -7816,7 +8346,6 @@ var $author$project$DB$ChannelTable$posixCodec = A2(
 			$elm$time$Time$posixToMillis(timestamp));
 	},
 	A2($elm$json$Json$Decode$map, $elm$time$Time$millisToPosix, $elm$json$Json$Decode$int));
-var $miniBill$elm_codec$Codec$string = A2($miniBill$elm_codec$Codec$build, $elm$json$Json$Encode$string, $elm$json$Json$Decode$string);
 var $author$project$DB$ChannelTable$recordCodec = $miniBill$elm_codec$Codec$buildObject(
 	A4(
 		$miniBill$elm_codec$Codec$field,
@@ -7867,24 +8396,6 @@ var $author$project$DB$ChannelTable$operations = A3(
 	$miniBill$elm_codec$Codec$encoder($author$project$DB$ChannelTable$recordCodec),
 	$miniBill$elm_codec$Codec$decoder($author$project$DB$ChannelTable$recordCodec));
 var $author$project$EventLog$Apis$channelTableApi = A2($author$project$DB$ChannelTable$operations, $author$project$EventLog$Msg$ProcedureMsg, $author$project$EventLog$Apis$dynamoPorts);
-var $author$project$AWS$Dynamo$errorToDetails = function (error) {
-	switch (error.$) {
-		case 'Error':
-			var message = error.a.message;
-			var details = error.a.details;
-			return {details: details, message: message};
-		case 'ConditionCheckFailed':
-			var message = error.a.message;
-			var details = error.a.details;
-			return {details: details, message: message};
-		default:
-			var err = error.a;
-			return {
-				details: $elm$json$Json$Encode$null,
-				message: $elm$json$Json$Decode$errorToString(err)
-			};
-	}
-};
 var $author$project$Names$modelTopicName = function (channel) {
 	return channel + '-modeltopic';
 };
@@ -7922,30 +8433,10 @@ var $author$project$EventLog$CreateChannel$recordChannel = F3(
 			},
 			$brian_watkins$elm_procedure$Procedure$fromTask($elm$time$Time$now));
 	});
-var $author$project$DB$EventLogTable$encodeKey = function (key) {
-	return $elm$json$Json$Encode$object(
-		_List_fromArray(
-			[
-				_Utils_Tuple2(
-				'id',
-				$elm$json$Json$Encode$string(key.id)),
-				_Utils_Tuple2(
-				'seq',
-				$elm$json$Json$Encode$int(key.seq))
-			]));
-};
 var $author$project$DB$EventLogTable$MetadataRecord = F4(
 	function (id, seq, updatedAt, lastId) {
 		return {id: id, lastId: lastId, seq: seq, updatedAt: updatedAt};
 	});
-var $miniBill$elm_codec$Codec$int = A2($miniBill$elm_codec$Codec$build, $elm$json$Json$Encode$int, $elm$json$Json$Decode$int);
-var $author$project$DB$EventLogTable$posixCodec = A2(
-	$miniBill$elm_codec$Codec$build,
-	function (timestamp) {
-		return $elm$json$Json$Encode$int(
-			$elm$time$Time$posixToMillis(timestamp));
-	},
-	A2($elm$json$Json$Decode$map, $elm$time$Time$millisToPosix, $elm$json$Json$Decode$int));
 var $author$project$DB$EventLogTable$metadataRecordCodec = $miniBill$elm_codec$Codec$buildObject(
 	A4(
 		$miniBill$elm_codec$Codec$field,
@@ -8072,7 +8563,7 @@ var $author$project$EventLog$CreateChannel$createChannel = F3(
 				$the_sett$elm_update_helper$Update2$andMap,
 				$author$project$EventLog$CreateChannel$switchState($author$project$EventLog$Model$ModelReady),
 				_Utils_Tuple2(
-					{procedure: state.procedure, seed: nextSeed},
+					{cache: state.cache, procedure: state.procedure, seed: nextSeed},
 					A3(
 						$brian_watkins$elm_procedure$Procedure$try,
 						$author$project$EventLog$Msg$ProcedureMsg,
@@ -8148,7 +8639,7 @@ var $author$project$EventLog$GetAvailableChannel$getAvailableChannel = F3(
 				$the_sett$elm_update_helper$Update2$andMap,
 				$author$project$EventLog$GetAvailableChannel$switchState($author$project$EventLog$Model$ModelReady),
 				_Utils_Tuple2(
-					{procedure: state.procedure, seed: state.seed},
+					state,
 					A3(
 						$brian_watkins$elm_procedure$Procedure$try,
 						$author$project$EventLog$Msg$ProcedureMsg,
@@ -8168,75 +8659,6 @@ var $author$project$EventLog$JoinChannel$encodeEvent = function (record) {
 				_Utils_Tuple2('payload', record.event)
 			]));
 };
-var $author$project$AWS$Dynamo$Forward = {$: 'Forward'};
-var $author$project$DB$EventLogTable$Record = F4(
-	function (id, seq, updatedAt, event) {
-		return {event: event, id: id, seq: seq, updatedAt: updatedAt};
-	});
-var $miniBill$elm_codec$Codec$value = $miniBill$elm_codec$Codec$Codec(
-	{decoder: $elm$json$Json$Decode$value, encoder: $elm$core$Basics$identity});
-var $author$project$DB$EventLogTable$recordCodec = $miniBill$elm_codec$Codec$buildObject(
-	A4(
-		$miniBill$elm_codec$Codec$field,
-		'event',
-		function ($) {
-			return $.event;
-		},
-		$miniBill$elm_codec$Codec$value,
-		A4(
-			$miniBill$elm_codec$Codec$field,
-			'updatedAt',
-			function ($) {
-				return $.updatedAt;
-			},
-			$author$project$DB$EventLogTable$posixCodec,
-			A4(
-				$miniBill$elm_codec$Codec$field,
-				'seq',
-				function ($) {
-					return $.seq;
-				},
-				$miniBill$elm_codec$Codec$int,
-				A4(
-					$miniBill$elm_codec$Codec$field,
-					'id',
-					function ($) {
-						return $.id;
-					},
-					$miniBill$elm_codec$Codec$string,
-					$miniBill$elm_codec$Codec$object($author$project$DB$EventLogTable$Record))))));
-var $author$project$DB$EventLogTable$operations = A3(
-	$author$project$AWS$Dynamo$dynamoTypedApi,
-	$author$project$DB$EventLogTable$encodeKey,
-	$miniBill$elm_codec$Codec$encoder($author$project$DB$EventLogTable$recordCodec),
-	$miniBill$elm_codec$Codec$decoder($author$project$DB$EventLogTable$recordCodec));
-var $author$project$EventLog$Apis$eventLogTableApi = A2($author$project$DB$EventLogTable$operations, $author$project$EventLog$Msg$ProcedureMsg, $author$project$EventLog$Apis$dynamoPorts);
-var $author$project$AWS$Dynamo$NumberAttr = function (a) {
-	return {$: 'NumberAttr', a: a};
-};
-var $author$project$AWS$Dynamo$int = function (val) {
-	return $author$project$AWS$Dynamo$NumberAttr(val);
-};
-var $author$project$AWS$Dynamo$orderResults = F2(
-	function (ord, q) {
-		return _Utils_update(
-			q,
-			{order: ord});
-	});
-var $author$project$AWS$Dynamo$StringAttr = function (a) {
-	return {$: 'StringAttr', a: a};
-};
-var $author$project$AWS$Dynamo$partitionKeyEquals = F2(
-	function (key, val) {
-		return {
-			exclusiveStartKey: $elm$core$Maybe$Nothing,
-			limit: $elm$core$Maybe$Nothing,
-			order: $author$project$AWS$Dynamo$Forward,
-			partitionKeyName: key,
-			partitionKeyValue: $author$project$AWS$Dynamo$StringAttr(val),
-			rangeKeyCondition: $elm$core$Maybe$Nothing
-		};
-	});
 var $author$project$AWS$Dynamo$GreaterThanOrEqual = F2(
 	function (a, b) {
 		return {$: 'GreaterThanOrEqual', a: a, b: b};
@@ -12260,7 +12682,7 @@ var $author$project$EventLog$Component$update = F3(
 	function (protocol, msg, component) {
 		var model = component.eventLog;
 		var _v0 = _Utils_Tuple2(model, msg);
-		_v0$5:
+		_v0$7:
 		while (true) {
 			switch (_v0.b.$) {
 				case 'RandomSeed':
@@ -12277,9 +12699,9 @@ var $author$project$EventLog$Component$update = F3(
 										$the_sett$elm_update_helper$Update2$andMap,
 										$author$project$EventLog$Component$switchState($author$project$EventLog$Model$ModelReady),
 										$the_sett$elm_update_helper$Update2$pure(
-											{procedure: $brian_watkins$elm_procedure$Procedure$Program$init, seed: seed})))));
+											{cache: $elm$core$Dict$empty, procedure: $brian_watkins$elm_procedure$Procedure$Program$init, seed: seed})))));
 					} else {
-						break _v0$5;
+						break _v0$7;
 					}
 				case 'ProcedureMsg':
 					if (_v0.a.$ === 'ModelReady') {
@@ -12304,7 +12726,7 @@ var $author$project$EventLog$Component$update = F3(
 												{procedure: procMdl}),
 											procMsg)))));
 					} else {
-						break _v0$5;
+						break _v0$7;
 					}
 				case 'HttpRequest':
 					if (_v0.a.$ === 'ModelReady') {
@@ -12333,7 +12755,7 @@ var $author$project$EventLog$Component$update = F3(
 													$author$project$HttpServer$errorToString(httpError)))))));
 						}
 					} else {
-						break _v0$5;
+						break _v0$7;
 					}
 				case 'HttpResponse':
 					var _v4 = _v0.b;
@@ -12349,6 +12771,45 @@ var $author$project$EventLog$Component$update = F3(
 									$author$project$EventLog$Apis$httpServerApi.response,
 									session,
 									$elm_community$result_extra$Result$Extra$merge(result)))));
+				case 'SqsEvent':
+					if (_v0.a.$ === 'ModelReady') {
+						if (_v0.b.b.$ === 'Ok') {
+							var state = _v0.a.a;
+							var _v5 = _v0.b;
+							var session = _v5.a;
+							var event = _v5.b.a;
+							return protocol.onUpdate(
+								A2(
+									$elm$core$Tuple$mapSecond,
+									$elm$core$Platform$Cmd$map(protocol.toMsg),
+									A2(
+										$the_sett$elm_update_helper$Update2$andMap,
+										A3($author$project$EventLog$SnapshotChannel$procedure, session, state, event),
+										$the_sett$elm_update_helper$Update2$pure(component))));
+						} else {
+							var state = _v0.a.a;
+							var _v6 = _v0.b;
+							var session = _v6.a;
+							var err = _v6.b.a;
+							return protocol.onUpdate(
+								A2(
+									$elm$core$Tuple$mapSecond,
+									$elm$core$Platform$Cmd$map(protocol.toMsg),
+									A2(
+										$elm$core$Tuple$mapFirst,
+										$author$project$EventLog$Component$setModel(component),
+										_Utils_Tuple2(
+											$author$project$EventLog$Model$ModelReady(state),
+											A2(
+												$author$project$EventLog$Apis$httpServerApi.response,
+												session,
+												$author$project$Http$Response$err500json(
+													$author$project$ErrorFormat$encodeErrorFormat(
+														$author$project$SqsLambda$errorToDetails(err))))))));
+						}
+					} else {
+						break _v0$7;
+					}
 				default:
 					var error = _v0.b.a;
 					return protocol.onUpdate(
@@ -12358,624 +12819,10 @@ var $author$project$EventLog$Component$update = F3(
 		return protocol.onUpdate(
 			$the_sett$elm_update_helper$Update2$pure(component));
 	});
-var $author$project$Snapshot$Model$ModelReady = function (a) {
-	return {$: 'ModelReady', a: a};
-};
-var $author$project$SqsLambda$errorToDetails = function (error) {
-	var decodeError = error.a;
-	return {
-		details: $elm$json$Json$Encode$null,
-		message: 'Problem decoding the request: ' + $elm$json$Json$Decode$errorToString(decodeError)
-	};
-};
-var $author$project$Snapshot$Apis$httpServerApi = $author$project$HttpServer$httpServerApi(
-	{
-		parseRoute: $elm$core$Basics$always(
-			$elm$core$Maybe$Just(_Utils_Tuple0)),
-		ports: {request: $author$project$Ports$requestPort, response: $author$project$Ports$responsePort}
-	});
-var $author$project$Snapshot$Msg$HttpResponse = F2(
-	function (a, b) {
-		return {$: 'HttpResponse', a: a, b: b};
-	});
-var $author$project$Snapshot$Msg$ProcedureMsg = function (a) {
-	return {$: 'ProcedureMsg', a: a};
-};
-var $author$project$Snapshot$SnapshotChannel$LaterFound = function (a) {
-	return {$: 'LaterFound', a: a};
-};
-var $author$project$Snapshot$SnapshotChannel$New = {$: 'New'};
-var $author$project$Snapshot$SnapshotChannel$OutOfDate = function (a) {
-	return {$: 'OutOfDate', a: a};
-};
-var $author$project$Snapshot$SnapshotChannel$getLatestSnapshotFromCache = F3(
-	function (component, event, state) {
-		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.getLatestSnapshotFromCache', 'called');
-		return $brian_watkins$elm_procedure$Procedure$provide(
-			{
-				cache: state.cache,
-				maybeLatest: A2($elm$core$Dict$get, event.channel, state.cache)
-			});
-	});
-var $author$project$Snapshot$Apis$dynamoPorts = {batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse, scan: $author$project$Ports$dynamoScan, update: $author$project$Ports$dynamoUpdate, writeTx: $author$project$Ports$dynamoWriteTx};
-var $author$project$DB$SnapshotTable$encodeKey = function (key) {
-	return $elm$json$Json$Encode$object(
-		_List_fromArray(
-			[
-				_Utils_Tuple2(
-				'id',
-				$elm$json$Json$Encode$string(key.id)),
-				_Utils_Tuple2(
-				'seq',
-				$elm$json$Json$Encode$int(key.seq))
-			]));
-};
-var $author$project$AWS$Dynamo$Reverse = {$: 'Reverse'};
-var $author$project$AWS$Dynamo$limitResults = F2(
-	function (limit, q) {
-		return _Utils_update(
-			q,
-			{
-				limit: $elm$core$Maybe$Just(limit)
-			});
-	});
-var $author$project$DB$SnapshotTable$findLatestSnapshotQuery = F2(
-	function (tableName, channel) {
-		var matchLatestSnapshot = A2(
-			$author$project$AWS$Dynamo$limitResults,
-			1,
-			A2(
-				$author$project$AWS$Dynamo$orderResults,
-				$author$project$AWS$Dynamo$Reverse,
-				A2($author$project$AWS$Dynamo$partitionKeyEquals, 'id', channel)));
-		return {match: matchLatestSnapshot, tableName: tableName};
-	});
-var $author$project$DB$SnapshotTable$Record = F4(
-	function (id, seq, updatedAt, snapshot) {
-		return {id: id, seq: seq, snapshot: snapshot, updatedAt: updatedAt};
-	});
-var $author$project$DB$SnapshotTable$posixCodec = A2(
-	$miniBill$elm_codec$Codec$build,
-	function (timestamp) {
-		return $elm$json$Json$Encode$int(
-			$elm$time$Time$posixToMillis(timestamp));
-	},
-	A2($elm$json$Json$Decode$map, $elm$time$Time$millisToPosix, $elm$json$Json$Decode$int));
-var $author$project$DB$SnapshotTable$recordCodec = $miniBill$elm_codec$Codec$buildObject(
-	A4(
-		$miniBill$elm_codec$Codec$field,
-		'snapshot',
-		function ($) {
-			return $.snapshot;
-		},
-		$miniBill$elm_codec$Codec$value,
-		A4(
-			$miniBill$elm_codec$Codec$field,
-			'updatedAt',
-			function ($) {
-				return $.updatedAt;
-			},
-			$author$project$DB$SnapshotTable$posixCodec,
-			A4(
-				$miniBill$elm_codec$Codec$field,
-				'seq',
-				function ($) {
-					return $.seq;
-				},
-				$miniBill$elm_codec$Codec$int,
-				A4(
-					$miniBill$elm_codec$Codec$field,
-					'id',
-					function ($) {
-						return $.id;
-					},
-					$miniBill$elm_codec$Codec$string,
-					$miniBill$elm_codec$Codec$object($author$project$DB$SnapshotTable$Record))))));
-var $author$project$DB$SnapshotTable$operations = F3(
-	function (proc, ports, tableName) {
-		var typedApi = A5(
-			$author$project$AWS$Dynamo$dynamoTypedApi,
-			$author$project$DB$SnapshotTable$encodeKey,
-			$miniBill$elm_codec$Codec$encoder($author$project$DB$SnapshotTable$recordCodec),
-			$miniBill$elm_codec$Codec$decoder($author$project$DB$SnapshotTable$recordCodec),
-			proc,
-			ports);
-		return {
-			findLatestSnapshot: function (channel) {
-				return typedApi.query(
-					A2($author$project$DB$SnapshotTable$findLatestSnapshotQuery, tableName, channel));
-			},
-			put: typedApi.put
-		};
-	});
-var $author$project$Snapshot$Apis$snapshotTableApi = function (tableName) {
-	return A3($author$project$DB$SnapshotTable$operations, $author$project$Snapshot$Msg$ProcedureMsg, $author$project$Snapshot$Apis$dynamoPorts, tableName);
-};
-var $author$project$Snapshot$SnapshotChannel$getLatestSnapshotFromTable = F3(
-	function (component, event, state) {
-		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.getLatestSnapshotFromTable', 'called');
-		return A2(
-			$brian_watkins$elm_procedure$Procedure$map,
-			function (queryResult) {
-				if (!queryResult.b) {
-					return {cache: state.cache, maybeLatest: $elm$core$Maybe$Nothing};
-				} else {
-					var r = queryResult.a;
-					return {
-						cache: state.cache,
-						maybeLatest: $elm$core$Maybe$Just(
-							{model: r.snapshot, seq: r.seq})
-					};
-				}
-			},
-			A2(
-				$brian_watkins$elm_procedure$Procedure$mapError,
-				$author$project$AWS$Dynamo$errorToDetails,
-				$brian_watkins$elm_procedure$Procedure$fetchResult(
-					$author$project$Snapshot$Apis$snapshotTableApi(component.snapshotTable).findLatestSnapshot(event.channel))));
-	});
-var $author$project$Snapshot$SnapshotChannel$checkAgainstCurrentSnapshot = F3(
-	function (component, event, state) {
-		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.checkAgainstCurrentSnapshot', 'called');
-		return A2(
-			$brian_watkins$elm_procedure$Procedure$andThen,
-			function (_v3) {
-				var cache = _v3.cache;
-				var maybeLatest = _v3.maybeLatest;
-				if (maybeLatest.$ === 'Just') {
-					var latest = maybeLatest.a;
-					return (_Utils_cmp(latest.seq, event.seq) > -1) ? $brian_watkins$elm_procedure$Procedure$provide(
-						$author$project$Snapshot$SnapshotChannel$LaterFound(
-							A3($elm$core$Dict$insert, event.channel, latest, cache))) : $brian_watkins$elm_procedure$Procedure$provide(
-						$author$project$Snapshot$SnapshotChannel$OutOfDate(latest));
-				} else {
-					return $brian_watkins$elm_procedure$Procedure$provide($author$project$Snapshot$SnapshotChannel$New);
-				}
-			},
-			A2(
-				$brian_watkins$elm_procedure$Procedure$andThen,
-				function (_v1) {
-					var cache = _v1.cache;
-					var maybeLatest = _v1.maybeLatest;
-					if (maybeLatest.$ === 'Just') {
-						var latest = maybeLatest.a;
-						return (_Utils_cmp(latest.seq, event.seq) > -1) ? $brian_watkins$elm_procedure$Procedure$provide(
-							{
-								cache: cache,
-								maybeLatest: $elm$core$Maybe$Just(latest)
-							}) : A3(
-							$author$project$Snapshot$SnapshotChannel$getLatestSnapshotFromTable,
-							component,
-							event,
-							{cache: state.cache});
-					} else {
-						return A3(
-							$author$project$Snapshot$SnapshotChannel$getLatestSnapshotFromTable,
-							component,
-							event,
-							{cache: state.cache});
-					}
-				},
-				A2(
-					$brian_watkins$elm_procedure$Procedure$andThen,
-					A2($author$project$Snapshot$SnapshotChannel$getLatestSnapshotFromCache, component, event),
-					$brian_watkins$elm_procedure$Procedure$provide(state))));
-	});
-var $author$project$Snapshot$Apis$eventLogTableApi = A2($author$project$DB$EventLogTable$operations, $author$project$Snapshot$Msg$ProcedureMsg, $author$project$Snapshot$Apis$dynamoPorts);
-var $author$project$AWS$Dynamo$GreaterThan = F2(
-	function (a, b) {
-		return {$: 'GreaterThan', a: a, b: b};
-	});
-var $author$project$AWS$Dynamo$rangeKeyGreaterThan = F3(
-	function (keyName, attr, q) {
-		return _Utils_update(
-			q,
-			{
-				rangeKeyCondition: $elm$core$Maybe$Just(
-					A2($author$project$AWS$Dynamo$GreaterThan, keyName, attr))
-			});
-	});
-var $author$project$Snapshot$SnapshotChannel$readLaterEvents = F3(
-	function (component, event, state) {
-		var seq = A2(
-			$elm$core$Maybe$withDefault,
-			0,
-			A2(
-				$elm$core$Maybe$map,
-				function ($) {
-					return $.seq;
-				},
-				state.baseSnapshot));
-		var matchLaterEvents = A2(
-			$author$project$AWS$Dynamo$orderResults,
-			$author$project$AWS$Dynamo$Forward,
-			A3(
-				$author$project$AWS$Dynamo$rangeKeyGreaterThan,
-				'seq',
-				$author$project$AWS$Dynamo$int(seq),
-				A2($author$project$AWS$Dynamo$partitionKeyEquals, 'id', event.channel)));
-		var query = {match: matchLaterEvents, tableName: component.eventLogTable};
-		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.readLaterEvents', 'called');
-		return A2(
-			$brian_watkins$elm_procedure$Procedure$map,
-			function (laterEvents) {
-				return {baseSnapshot: state.baseSnapshot, cache: state.cache, laterEvents: laterEvents};
-			},
-			A2(
-				$brian_watkins$elm_procedure$Procedure$mapError,
-				$author$project$AWS$Dynamo$errorToDetails,
-				$brian_watkins$elm_procedure$Procedure$fetchResult(
-					$author$project$Snapshot$Apis$eventLogTableApi.query(query))));
-	});
-var $author$project$Realtime$Persisted = F2(
-	function (a, b) {
-		return {$: 'Persisted', a: a, b: b};
-	});
-var $author$project$Snapshot$SnapshotChannel$initialSnapshot = function (rtmessage) {
-	if (rtmessage.$ === 'Persisted') {
-		var seq = rtmessage.a;
-		var val = rtmessage.b;
-		return $elm$core$Maybe$Just(
-			{
-				model: $elm$json$Json$Encode$string(
-					'hello-' + $elm$core$String$fromInt(seq)),
-				seq: seq
-			});
-	} else {
-		return $elm$core$Maybe$Nothing;
-	}
-};
-var $author$project$Snapshot$SnapshotChannel$stepSnapshot = F2(
-	function (rtmessage, current) {
-		if (rtmessage.$ === 'Persisted') {
-			var seq = rtmessage.a;
-			var val = rtmessage.b;
-			return {
-				model: $elm$json$Json$Encode$string(
-					'hello-' + $elm$core$String$fromInt(seq)),
-				seq: seq
-			};
-		} else {
-			return current;
-		}
-	});
-var $author$project$Snapshot$SnapshotChannel$saveNextSnapshot = F3(
-	function (component, event, state) {
-		var rtMessage = function (record) {
-			return A2($author$project$Realtime$Persisted, record.seq, record.event);
-		};
-		var maybeNextSnapshot = A3(
-			$elm$core$List$foldl,
-			F2(
-				function (rtm, acc) {
-					if (acc.$ === 'Nothing') {
-						return $author$project$Snapshot$SnapshotChannel$initialSnapshot(rtm);
-					} else {
-						var prev = acc.a;
-						return $elm$core$Maybe$Just(
-							A2($author$project$Snapshot$SnapshotChannel$stepSnapshot, rtm, prev));
-					}
-				}),
-			state.baseSnapshot,
-			A2($elm$core$List$map, rtMessage, state.laterEvents));
-		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.saveNextSnapshot', 'called');
-		if (maybeNextSnapshot.$ === 'Just') {
-			var nextSnapshot = maybeNextSnapshot.a;
-			return A2(
-				$brian_watkins$elm_procedure$Procedure$andThen,
-				function (timestamp) {
-					return A2(
-						$brian_watkins$elm_procedure$Procedure$map,
-						function (_v2) {
-							return {
-								cache: A3($elm$core$Dict$insert, event.channel, nextSnapshot, state.cache)
-							};
-						},
-						A2(
-							$brian_watkins$elm_procedure$Procedure$mapError,
-							$author$project$AWS$Dynamo$errorToDetails,
-							$brian_watkins$elm_procedure$Procedure$fetchResult(
-								$author$project$Snapshot$Apis$snapshotTableApi(component.snapshotTable).put(
-									{
-										item: {id: event.channel, seq: nextSnapshot.seq, snapshot: nextSnapshot.model, updatedAt: timestamp},
-										tableName: component.snapshotTable
-									}))));
-				},
-				$brian_watkins$elm_procedure$Procedure$fromTask($elm$time$Time$now));
-		} else {
-			return $brian_watkins$elm_procedure$Procedure$provide(
-				{cache: state.cache});
-		}
-	});
-var $author$project$Snapshot$SnapshotChannel$snapshotChannel = F3(
-	function (component, event, state) {
-		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.snapshotChannel', 'called');
-		return A2(
-			$brian_watkins$elm_procedure$Procedure$andThen,
-			function (condition) {
-				switch (condition.$) {
-					case 'LaterFound':
-						var cache = condition.a;
-						return $brian_watkins$elm_procedure$Procedure$provide(
-							{cache: cache});
-					case 'OutOfDate':
-						var snapshot = condition.a;
-						return A2(
-							$brian_watkins$elm_procedure$Procedure$andThen,
-							A2($author$project$Snapshot$SnapshotChannel$saveNextSnapshot, component, event),
-							A2(
-								$brian_watkins$elm_procedure$Procedure$andThen,
-								A2($author$project$Snapshot$SnapshotChannel$readLaterEvents, component, event),
-								$brian_watkins$elm_procedure$Procedure$provide(
-									{
-										baseSnapshot: $elm$core$Maybe$Just(snapshot),
-										cache: state.cache
-									})));
-					default:
-						return A2(
-							$brian_watkins$elm_procedure$Procedure$andThen,
-							A2($author$project$Snapshot$SnapshotChannel$saveNextSnapshot, component, event),
-							A2(
-								$brian_watkins$elm_procedure$Procedure$andThen,
-								A2($author$project$Snapshot$SnapshotChannel$readLaterEvents, component, event),
-								$brian_watkins$elm_procedure$Procedure$provide(
-									{baseSnapshot: $elm$core$Maybe$Nothing, cache: state.cache})));
-				}
-			},
-			A2(
-				$brian_watkins$elm_procedure$Procedure$andThen,
-				A2($author$project$Snapshot$SnapshotChannel$checkAgainstCurrentSnapshot, component, event),
-				$brian_watkins$elm_procedure$Procedure$provide(state)));
-	});
-var $author$project$Snapshot$SnapshotChannel$drainSnapshotRequests = F3(
-	function (component, snapshotSeqByChannel, state) {
-		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.drainSnapshotRequests', 'called');
-		if (!snapshotSeqByChannel.b) {
-			return $brian_watkins$elm_procedure$Procedure$provide(state);
-		} else {
-			var snapshotEvent = snapshotSeqByChannel.a;
-			var events = snapshotSeqByChannel.b;
-			return A2(
-				$brian_watkins$elm_procedure$Procedure$andThen,
-				A2($author$project$Snapshot$SnapshotChannel$drainSnapshotRequests, component, events),
-				A2(
-					$brian_watkins$elm_procedure$Procedure$andThen,
-					A2($author$project$Snapshot$SnapshotChannel$snapshotChannel, component, snapshotEvent),
-					$brian_watkins$elm_procedure$Procedure$provide(state)));
-		}
-	});
-var $author$project$Snapshot$SnapshotChannel$setModel = F2(
-	function (m, x) {
-		return _Utils_update(
-			m,
-			{snapshot: x});
-	});
-var $author$project$Realtime$SnapshotEvent = F3(
-	function (rt, channel, seq) {
-		return {channel: channel, rt: rt, seq: seq};
-	});
-var $author$project$Realtime$snapshotEventDecoder = A2(
-	$elm$json$Json$Decode$andThen,
-	function (ctor) {
-		if (ctor === 'S') {
-			return A2(
-				$elm_community$json_extra$Json$Decode$Extra$andMap,
-				A2($elm$json$Json$Decode$field, 'seq', $elm$json$Json$Decode$int),
-				A2(
-					$elm_community$json_extra$Json$Decode$Extra$andMap,
-					A2($elm$json$Json$Decode$field, 'channel', $elm$json$Json$Decode$string),
-					A2(
-						$elm_community$json_extra$Json$Decode$Extra$andMap,
-						$elm$json$Json$Decode$succeed('S'),
-						$elm$json$Json$Decode$succeed($author$project$Realtime$SnapshotEvent))));
-		} else {
-			return $elm$json$Json$Decode$fail('Unrecognized constructor');
-		}
-	},
-	A2($elm$json$Json$Decode$field, 'rt', $elm$json$Json$Decode$string));
-var $author$project$Snapshot$SnapshotChannel$switchState = F2(
-	function (cons, state) {
-		return _Utils_Tuple2(
-			cons(state),
-			$elm$core$Platform$Cmd$none);
-	});
-var $elm$core$Result$withDefault = F2(
-	function (def, result) {
-		if (result.$ === 'Ok') {
-			var a = result.a;
-			return a;
-		} else {
-			return def;
-		}
-	});
-var $author$project$Snapshot$SnapshotChannel$procedure = F4(
-	function (session, state, sqsEvent, component) {
-		var updateHighest = F2(
-			function (_new, maybeExisting) {
-				if (maybeExisting.$ === 'Just') {
-					var existing = maybeExisting.a;
-					return (_Utils_cmp(_new.seq, existing.seq) > 0) ? $elm$core$Maybe$Just(_new) : $elm$core$Maybe$Just(existing);
-				} else {
-					return $elm$core$Maybe$Just(_new);
-				}
-			});
-		var snapshotSeqByChannel = A2(
-			$elm$core$Debug$log,
-			'snapshotSeqByChannel',
-			$elm$core$Dict$values(
-				A3(
-					$elm$core$List$foldl,
-					F2(
-						function (sqsMessage, acc) {
-							return A2(
-								$elm$core$Result$withDefault,
-								acc,
-								A2(
-									$elm$core$Result$map,
-									function (snapshotEvent) {
-										return A3(
-											$elm$core$Dict$update,
-											snapshotEvent.channel,
-											updateHighest(snapshotEvent),
-											acc);
-									},
-									A2($elm$json$Json$Decode$decodeString, $author$project$Realtime$snapshotEventDecoder, sqsMessage.body)));
-						}),
-					$elm$core$Dict$empty,
-					sqsEvent)));
-		var innerProc = A2(
-			$brian_watkins$elm_procedure$Procedure$map,
-			$elm$core$Basics$always(
-				$author$project$Http$Response$ok200json($elm$json$Json$Encode$null)),
-			A2(
-				$brian_watkins$elm_procedure$Procedure$mapError,
-				A2(
-					$elm$core$Basics$composeR,
-					$elm$core$Debug$log('error'),
-					A2($elm$core$Basics$composeR, $author$project$ErrorFormat$encodeErrorFormat, $author$project$Http$Response$err500json)),
-				A2(
-					$brian_watkins$elm_procedure$Procedure$andThen,
-					A2($author$project$Snapshot$SnapshotChannel$drainSnapshotRequests, component, snapshotSeqByChannel),
-					$brian_watkins$elm_procedure$Procedure$provide(
-						{cache: state.cache}))));
-		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.procedure', 'called');
-		return A2(
-			$elm$core$Tuple$mapFirst,
-			$author$project$Snapshot$SnapshotChannel$setModel(component),
-			A2(
-				$the_sett$elm_update_helper$Update2$andMap,
-				$author$project$Snapshot$SnapshotChannel$switchState($author$project$Snapshot$Model$ModelReady),
-				_Utils_Tuple2(
-					state,
-					A3(
-						$brian_watkins$elm_procedure$Procedure$try,
-						$author$project$Snapshot$Msg$ProcedureMsg,
-						$author$project$Snapshot$Msg$HttpResponse(session),
-						innerProc))));
-	});
-var $author$project$Snapshot$Component$setModel = F2(
-	function (m, x) {
-		return _Utils_update(
-			m,
-			{snapshot: x});
-	});
-var $author$project$Snapshot$Component$update = F3(
-	function (protocol, msg, component) {
-		var model = component.snapshot;
-		var _v0 = _Utils_Tuple2(model, msg);
-		_v0$5:
-		while (true) {
-			switch (_v0.b.$) {
-				case 'RandomSeed':
-					if (_v0.a.$ === 'ModelStart') {
-						var seed = _v0.b.a;
-						return protocol.onUpdate(
-							A2(
-								$elm$core$Tuple$mapSecond,
-								$elm$core$Platform$Cmd$map(protocol.toMsg),
-								A2(
-									$elm$core$Tuple$mapFirst,
-									$author$project$Snapshot$Component$setModel(component),
-									A2(
-										$the_sett$elm_update_helper$Update2$andMap,
-										$author$project$Snapshot$Component$switchState($author$project$Snapshot$Model$ModelReady),
-										$the_sett$elm_update_helper$Update2$pure(
-											{cache: $elm$core$Dict$empty, procedure: $brian_watkins$elm_procedure$Procedure$Program$init, seed: seed})))));
-					} else {
-						break _v0$5;
-					}
-				case 'ProcedureMsg':
-					if (_v0.a.$ === 'ModelReady') {
-						var state = _v0.a.a;
-						var innerMsg = _v0.b.a;
-						var _v1 = A2($brian_watkins$elm_procedure$Procedure$Program$update, innerMsg, state.procedure);
-						var procMdl = _v1.a;
-						var procMsg = _v1.b;
-						return protocol.onUpdate(
-							A2(
-								$elm$core$Tuple$mapSecond,
-								$elm$core$Platform$Cmd$map(protocol.toMsg),
-								A2(
-									$elm$core$Tuple$mapFirst,
-									$author$project$Snapshot$Component$setModel(component),
-									A2(
-										$the_sett$elm_update_helper$Update2$andMap,
-										$author$project$Snapshot$Component$switchState($author$project$Snapshot$Model$ModelReady),
-										_Utils_Tuple2(
-											_Utils_update(
-												state,
-												{procedure: procMdl}),
-											procMsg)))));
-					} else {
-						break _v0$5;
-					}
-				case 'SqsEvent':
-					if (_v0.a.$ === 'ModelReady') {
-						if (_v0.b.b.$ === 'Ok') {
-							var state = _v0.a.a;
-							var _v2 = _v0.b;
-							var session = _v2.a;
-							var event = _v2.b.a;
-							return protocol.onUpdate(
-								A2(
-									$elm$core$Tuple$mapSecond,
-									$elm$core$Platform$Cmd$map(protocol.toMsg),
-									A2(
-										$the_sett$elm_update_helper$Update2$andMap,
-										A3($author$project$Snapshot$SnapshotChannel$procedure, session, state, event),
-										$the_sett$elm_update_helper$Update2$pure(component))));
-						} else {
-							var state = _v0.a.a;
-							var _v3 = _v0.b;
-							var session = _v3.a;
-							var err = _v3.b.a;
-							return protocol.onUpdate(
-								A2(
-									$elm$core$Tuple$mapSecond,
-									$elm$core$Platform$Cmd$map(protocol.toMsg),
-									A2(
-										$elm$core$Tuple$mapFirst,
-										$author$project$Snapshot$Component$setModel(component),
-										_Utils_Tuple2(
-											$author$project$Snapshot$Model$ModelReady(state),
-											A2(
-												$author$project$Snapshot$Apis$httpServerApi.response,
-												session,
-												$author$project$Http$Response$err500json(
-													$author$project$ErrorFormat$encodeErrorFormat(
-														$author$project$SqsLambda$errorToDetails(err))))))));
-						}
-					} else {
-						break _v0$5;
-					}
-				default:
-					var _v4 = _v0.b;
-					var session = _v4.a;
-					var result = _v4.b;
-					return protocol.onUpdate(
-						A2(
-							$elm$core$Tuple$mapSecond,
-							$elm$core$Platform$Cmd$map(protocol.toMsg),
-							_Utils_Tuple2(
-								component,
-								A2(
-									$author$project$Snapshot$Apis$httpServerApi.response,
-									session,
-									$elm_community$result_extra$Result$Extra$merge(result)))));
-			}
-		}
-		return protocol.onUpdate(
-			$the_sett$elm_update_helper$Update2$pure(component));
-	});
 var $author$project$API$update = F2(
 	function (msg, model) {
-		if (msg.$ === 'EventLogMsg') {
-			var innerMsg = msg.a;
-			return A3($author$project$EventLog$Component$update, $author$project$API$eventLogProtocol, innerMsg, model);
-		} else {
-			var innerMsg = msg.a;
-			return A3($author$project$Snapshot$Component$update, $author$project$API$snapshotProtocol, innerMsg, model);
-		}
+		var innerMsg = msg.a;
+		return A3($author$project$EventLog$Component$update, $author$project$API$eventLogProtocol, innerMsg, model);
 	});
 var $elm$core$Platform$worker = _Platform_worker;
 var $author$project$API$main = $elm$core$Platform$worker(

@@ -57,9 +57,7 @@ getAvailableChannel session state component =
                                 Response.notFound400json Encode.null
                     )
     in
-    ( { seed = state.seed
-      , procedure = state.procedure
-      }
+    ( state
     , Procedure.try ProcedureMsg (HttpResponse session) procedure
     )
         |> U2.andMap (ModelReady |> switchState)

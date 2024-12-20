@@ -12,6 +12,8 @@ module EventLog.Component exposing
 -}
 
 import AWS.Credentials exposing (Credentials)
+import Dict
+import ErrorFormat
 import EventLog.Apis as Apis
 import EventLog.CreateChannel as CreateChannel
 import EventLog.GetAvailableChannel as GetAvailableChannel
@@ -20,6 +22,7 @@ import EventLog.Model as Model exposing (Model(..), ReadyState, StartState)
 import EventLog.Msg as Msg exposing (Msg(..))
 import EventLog.Route exposing (Route(..))
 import EventLog.SaveChannel as SaveChannel
+import EventLog.SnapshotChannel as SnapshotChannel
 import Http.Request as Request exposing (Method(..))
 import Http.Response as Response exposing (Response)
 import HttpServer as HttpServer exposing (ApiRequest, Error, HttpSessionKey)
@@ -27,6 +30,7 @@ import Momento exposing (CacheItem, Error, MomentoSessionKey)
 import Procedure.Program
 import Random
 import Result.Extra
+import SqsLambda
 import Update2 as U2
 
 
@@ -52,6 +56,7 @@ type alias Component a =
         , channelApiUrl : String
         , channelTable : String
         , eventLogTable : String
+        , snapshotTable : String
         , snapshotQueueUrl : String
         , eventLog : Model
     }
@@ -88,6 +93,7 @@ subscriptions protocol component =
             [ Procedure.Program.subscriptions state.procedure
             , Apis.httpServerApi.request HttpRequest
             , Apis.momentoApi.asyncError MomentoError
+            , Apis.sqsLambdaApi.event SqsEvent
             ]
                 |> Sub.batch
                 |> Sub.map protocol.toMsg
@@ -106,6 +112,7 @@ update protocol msg component =
         ( ModelStart _, RandomSeed seed ) ->
             { seed = seed
             , procedure = Procedure.Program.init
+            , cache = Dict.empty
             }
                 |> U2.pure
                 |> U2.andMap (switchState ModelReady)
@@ -144,6 +151,24 @@ update protocol msg component =
             ( component
             , result |> Result.Extra.merge |> Apis.httpServerApi.response session
             )
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
+        ( ModelReady state, SqsEvent session (Ok event) ) ->
+            U2.pure component
+                |> U2.andMap (SnapshotChannel.procedure session state event)
+                |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                |> protocol.onUpdate
+
+        ( ModelReady state, SqsEvent session (Err err) ) ->
+            ( ModelReady state
+            , err
+                |> SqsLambda.errorToDetails
+                |> ErrorFormat.encodeErrorFormat
+                |> Response.err500json
+                |> Apis.httpServerApi.response session
+            )
+                |> Tuple.mapFirst (setModel component)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 
