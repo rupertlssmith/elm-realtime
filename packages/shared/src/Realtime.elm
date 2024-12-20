@@ -696,6 +696,11 @@ rtMessageDecoder =
                         Decode.map Transient
                             (Decode.field "payload" Decode.value)
 
+                    "R" ->
+                        Decode.map Transient
+                            --(Decode.field "seq" Decode.int)
+                            (Decode.field "payload" Decode.value)
+
                     _ ->
                         Decode.fail "Unrecognized constructor"
             )
