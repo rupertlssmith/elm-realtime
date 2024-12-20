@@ -97,6 +97,7 @@ const app = Elm.API.init({
         awsSessionToken: process.env.AWS_SESSION_TOKEN,
         momentoSecret: momentoSecret,
         channelTable: Resource.ChannelTable.name,
+        snapshotTable : Resource.SnapshotTable.name,
         eventLogTable: Resource.EventLogTable.name,
         channelApiUrl: channelApiUrl,
         snapshotQueueUrl: Resource.SnapshotQueue.url

@@ -4,7 +4,7 @@ module Realtime exposing
     , RealtimeApi, realtimeApi
     , AsyncEvent(..), RTMessage(..), Snapshot, next
     , Error, errorToDetails, errorToString
-    , SnapshotEvent, UnsavedEvent, encodeSnapshotEvent, snapshotEventDecoder, unsavedEventDecoder
+    , SnapshotEvent, UnsavedEvent, encodePersistedEvent, encodeSnapshotEvent, persistedEventDecoder, snapshotEventDecoder, transientEventDecoder, unsavedEventDecoder
     )
 
 {-| Realtime channels.
@@ -506,7 +506,7 @@ publishPersisted pt ports (Private model) payload tag =
     case model.state of
         RunningState state ->
             momentoApi.pushList state.sessionKey
-                { list = state.channel.saveList, payload = encodeUnsaved payload }
+                { list = state.channel.saveList, payload = encodeUnsavedEvent payload }
                 |> Procedure.fetchResult
                 |> Procedure.andThen
                     (\_ ->
@@ -545,7 +545,7 @@ publishTransient pt ports (Private model) payload tag =
         RunningState state ->
             momentoApi.publish state.sessionKey
                 { topic = state.channel.modelTopic
-                , payload = encodeTransient payload
+                , payload = encodeTransientEvent payload
                 }
                 |> Procedure.fetchResult
                 |> Procedure.mapError MomentoError
@@ -693,15 +693,6 @@ rtMessageDecoder =
             )
 
 
-encodeTransient : Value -> Value
-encodeTransient payload =
-    [ ( "rt", Encode.string "T" )
-    , ( "client", Encode.string "abcdef" )
-    , ( "payload", payload )
-    ]
-        |> Encode.object
-
-
 encodeNotice : Value
 encodeNotice =
     [ ( "rt", Encode.string "N" )
@@ -710,17 +701,78 @@ encodeNotice =
         |> Encode.object
 
 
-type alias UnsavedEvent =
+type alias PersistedEvent =
     { rt : String
-    , client : String
+    , seq : Int
     , payload : Value
     }
 
 
-encodeUnsaved : Value -> Value
-encodeUnsaved payload =
+encodePersistedEvent : Int -> Value -> Value
+encodePersistedEvent seq payload =
+    [ ( "rt", Encode.string "P" )
+    , ( "seq", Encode.int seq )
+    , ( "payload", payload )
+    ]
+        |> Encode.object
+
+
+persistedEventDecoder : Decoder PersistedEvent
+persistedEventDecoder =
+    Decode.field "rt" Decode.string
+        |> Decode.andThen
+            (\ctor ->
+                case ctor of
+                    "P" ->
+                        Decode.succeed PersistedEvent
+                            |> DE.andMap (Decode.succeed "P")
+                            |> DE.andMap (Decode.field "seq" Decode.int)
+                            |> DE.andMap (Decode.field "payload" Decode.value)
+
+                    _ ->
+                        Decode.fail "Unrecognized constructor"
+            )
+
+
+type alias TransientEvent =
+    { rt : String
+    , payload : Value
+    }
+
+
+encodeTransientEvent : Value -> Value
+encodeTransientEvent payload =
+    [ ( "rt", Encode.string "T" )
+    , ( "payload", payload )
+    ]
+        |> Encode.object
+
+
+transientEventDecoder : Decoder TransientEvent
+transientEventDecoder =
+    Decode.field "rt" Decode.string
+        |> Decode.andThen
+            (\ctor ->
+                case ctor of
+                    "T" ->
+                        Decode.succeed TransientEvent
+                            |> DE.andMap (Decode.succeed "T")
+                            |> DE.andMap (Decode.field "payload" Decode.value)
+
+                    _ ->
+                        Decode.fail "Unrecognized constructor"
+            )
+
+
+type alias UnsavedEvent =
+    { rt : String
+    , payload : Value
+    }
+
+
+encodeUnsavedEvent : Value -> Value
+encodeUnsavedEvent payload =
     [ ( "rt", Encode.string "U" )
-    , ( "client", Encode.string "abcdef" )
     , ( "payload", payload )
     ]
         |> Encode.object
@@ -734,8 +786,7 @@ unsavedEventDecoder =
                 case ctor of
                     "U" ->
                         Decode.succeed UnsavedEvent
-                            |> DE.andMap (Decode.field "rt" Decode.string)
-                            |> DE.andMap (Decode.field "client" Decode.string)
+                            |> DE.andMap (Decode.succeed "U")
                             |> DE.andMap (Decode.field "payload" Decode.value)
 
                     _ ->
@@ -767,7 +818,7 @@ snapshotEventDecoder =
                 case ctor of
                     "S" ->
                         Decode.succeed SnapshotEvent
-                            |> DE.andMap (Decode.field "rt" Decode.string)
+                            |> DE.andMap (Decode.succeed "S")
                             |> DE.andMap (Decode.field "channel" Decode.string)
                             |> DE.andMap (Decode.field "seq" Decode.int)
 

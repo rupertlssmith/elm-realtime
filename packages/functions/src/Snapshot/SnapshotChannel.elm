@@ -1,4 +1,7 @@
-module Snapshot.SnapshotChannel exposing (..)
+module Snapshot.SnapshotChannel exposing
+    ( SnapshotChannel
+    , procedure
+    )
 
 import AWS.Credentials exposing (Credentials)
 import AWS.Dynamo as Dynamo exposing (Error(..), Order(..))
@@ -10,7 +13,7 @@ import HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode
 import Procedure
-import Realtime exposing (Snapshot, SnapshotEvent)
+import Realtime exposing (RTMessage(..), Snapshot, SnapshotEvent)
 import Snapshot.Apis as Apis
 import Snapshot.Model exposing (Model(..), ReadyState)
 import Snapshot.Msg exposing (Msg(..))
@@ -51,6 +54,9 @@ procedure :
     -> ( SnapshotChannel a, Cmd Msg )
 procedure session state sqsEvent component =
     let
+        _ =
+            Debug.log "SnapshotChannel.procedure" "called"
+
         updateHighest new maybeExisting =
             case maybeExisting of
                 Just existing ->
@@ -101,6 +107,10 @@ drainSnapshotRequests :
     -> { cache : Dict String (Snapshot Value) }
     -> Procedure.Procedure ErrorFormat { cache : Dict String (Snapshot Value) } Msg
 drainSnapshotRequests component snapshotSeqByChannel state =
+    let
+        _ =
+            Debug.log "SnapshotChannel.drainSnapshotRequests" "called"
+    in
     case snapshotSeqByChannel of
         [] ->
             Procedure.provide state
@@ -128,6 +138,10 @@ snapshotChannel :
     -> { cache : Dict String (Snapshot Value) }
     -> Procedure.Procedure ErrorFormat { cache : Dict String (Snapshot Value) } Msg
 snapshotChannel component event state =
+    let
+        _ =
+            Debug.log "SnapshotChannel.snapshotChannel" "called"
+    in
     Procedure.provide state
         |> Procedure.andThen (checkAgainstCurrentSnapshot component event)
         |> Procedure.andThen
@@ -164,6 +178,10 @@ checkAgainstCurrentSnapshot :
     -> { cache : Dict String (Snapshot Value) }
     -> Procedure.Procedure ErrorFormat SnapshotCondition Msg
 checkAgainstCurrentSnapshot component event state =
+    let
+        _ =
+            Debug.log "SnapshotChannel.checkAgainstCurrentSnapshot" "called"
+    in
     Procedure.provide state
         |> Procedure.andThen (getLatestSnapshotFromCache component event)
         |> Procedure.andThen
@@ -213,6 +231,10 @@ getLatestSnapshotFromCache :
             }
             Msg
 getLatestSnapshotFromCache component event state =
+    let
+        _ =
+            Debug.log "SnapshotChannel.getLatestSnapshotFromCache" "called"
+    in
     Procedure.provide
         { cache = state.cache
         , maybeLatest = Dict.get event.channel state.cache
@@ -231,6 +253,9 @@ getLatestSnapshotFromTable :
             Msg
 getLatestSnapshotFromTable component event state =
     let
+        _ =
+            Debug.log "SnapshotChannel.getLatestSnapshotFromTable" "called"
+
         matchLatestSnapshot =
             Dynamo.partitionKeyEquals "id" event.channel
                 |> Dynamo.orderResults Reverse
@@ -271,6 +296,9 @@ readLaterEvents :
             Msg
 readLaterEvents component event state =
     let
+        _ =
+            Debug.log "SnapshotChannel.readLaterEvents" "called"
+
         seq =
             Maybe.map .seq state.baseSnapshot
                 |> Maybe.withDefault 0
@@ -312,22 +340,72 @@ saveNextSnapshot :
             Msg
 saveNextSnapshot component event state =
     let
-        nextSnapshot =
-            { seq = 0, model = Encode.null }
+        _ =
+            Debug.log "SnapshotChannel.saveNextSnapshot" "called"
+
+        rtMessage record =
+            Persisted record.seq record.event
+
+        maybeNextSnapshot =
+            List.foldl
+                (\rtm acc ->
+                    case acc of
+                        Nothing ->
+                            initialSnapshot rtm
+
+                        Just prev ->
+                            stepSnapshot rtm prev |> Just
+                )
+                state.baseSnapshot
+                (List.map rtMessage state.laterEvents)
     in
-    Procedure.fromTask Time.now
-        |> Procedure.andThen
-            (\timestamp ->
-                Apis.snapshotTableApi.put
-                    { tableName = component.snapshotTable
-                    , item =
-                        { id = event.channel
-                        , seq = nextSnapshot.seq
-                        , updatedAt = timestamp
-                        , snapshot = nextSnapshot.model
-                        }
-                    }
-                    |> Procedure.fetchResult
-                    |> Procedure.mapError Dynamo.errorToDetails
-                    |> Procedure.map (\_ -> { cache = Dict.insert event.channel nextSnapshot state.cache })
-            )
+    case maybeNextSnapshot of
+        Just nextSnapshot ->
+            Procedure.fromTask Time.now
+                |> Procedure.andThen
+                    (\timestamp ->
+                        Apis.snapshotTableApi.put
+                            { tableName = component.snapshotTable
+                            , item =
+                                { id = event.channel
+                                , seq = nextSnapshot.seq
+                                , updatedAt = timestamp
+                                , snapshot = nextSnapshot.model
+                                }
+                            }
+                            |> Procedure.fetchResult
+                            |> Procedure.mapError Dynamo.errorToDetails
+                            |> Procedure.map (\_ -> { cache = Dict.insert event.channel nextSnapshot state.cache })
+                    )
+
+        Nothing ->
+            Procedure.provide { cache = state.cache }
+
+
+
+-- Quick and dirty snapshot functions...
+
+
+initialSnapshot : RTMessage -> Maybe (Snapshot Value)
+initialSnapshot rtmessage =
+    case rtmessage of
+        Persisted seq val ->
+            { seq = seq
+            , model = "hello-" ++ String.fromInt seq |> Encode.string
+            }
+                |> Just
+
+        Transient _ ->
+            Nothing
+
+
+stepSnapshot : RTMessage -> Snapshot Value -> Snapshot Value
+stepSnapshot rtmessage current =
+    case rtmessage of
+        Persisted seq val ->
+            { seq = seq
+            , model = "hello-" ++ String.fromInt seq |> Encode.string
+            }
+
+        Transient _ ->
+            current

@@ -393,12 +393,7 @@ publishEvent :
 publishEvent component channelName state =
     let
         payload =
-            [ ( "rt", Encode.string "P" )
-            , ( "client", Encode.string state.unsavedEvent.client )
-            , ( "seq", Encode.int state.lastSeqNo )
-            , ( "payload", state.unsavedEvent.payload )
-            ]
-                |> Encode.object
+            Realtime.encodePersistedEvent state.lastSeqNo state.unsavedEvent.payload
     in
     Apis.momentoApi.publish
         state.sessionKey
