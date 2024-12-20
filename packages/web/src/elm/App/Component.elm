@@ -180,10 +180,10 @@ update protocol msg component =
                         |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                         |> protocol.onUpdate
 
-                ( nextRealtime, OnMessage (Transient payload) ) ->
+                ( nextRealtime, OnMessage (RTTransient payload) ) ->
                     let
                         nextSharedModel =
-                            compact [ Transient payload ] model.sharedModel
+                            compact [ RTTransient payload ] model.sharedModel
                     in
                     { model
                         | realtime = nextRealtime
@@ -198,16 +198,34 @@ update protocol msg component =
                         |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                         |> protocol.onUpdate
 
-                ( nextRealtime, OnMessage (Persisted seq payload) ) ->
+                ( nextRealtime, OnMessage (RTPersisted seq payload) ) ->
                     let
                         nextSharedModel =
-                            compact [ Persisted seq payload ] model.sharedModel
+                            compact [ RTPersisted seq payload ] model.sharedModel
                     in
                     { model
                         | realtime = nextRealtime
                         , log =
                             printSharedModel nextSharedModel
                                 :: printPersistedEvent seq payload
+                                :: model.log
+                        , sharedModel = nextSharedModel
+                    }
+                        |> U2.pure
+                        |> Tuple.mapFirst (setModel component)
+                        |> Tuple.mapSecond (Cmd.map protocol.toMsg)
+                        |> protocol.onUpdate
+
+                ( nextRealtime, OnMessage (RTSnapshot seq payload) ) ->
+                    let
+                        nextSharedModel =
+                            compact [ RTTransient payload ] model.sharedModel
+                    in
+                    { model
+                        | realtime = nextRealtime
+                        , log =
+                            printSharedModel nextSharedModel
+                                :: printTransientEvent payload
                                 :: model.log
                         , sharedModel = nextSharedModel
                     }
@@ -251,10 +269,13 @@ compact events sm =
 
         doOne evt m =
             case evt of
-                Transient payload ->
+                RTTransient payload ->
                     apply payload m
 
-                Persisted seq payload ->
+                RTPersisted seq payload ->
+                    apply payload { m | seq = seq }
+
+                RTSnapshot seq payload ->
                     apply payload { m | seq = seq }
     in
     List.foldl
@@ -274,11 +295,14 @@ printSharedModel sm =
 printRTMessage : RTMessage -> String
 printRTMessage msg =
     case msg of
-        Persisted seq payload ->
+        RTPersisted seq payload ->
             printPersistedEvent seq payload
 
-        Transient payload ->
+        RTTransient payload ->
             printTransientEvent payload
+
+        RTSnapshot seq payload ->
+            printSnapshotEvent seq payload
 
 
 printTransientEvent : Value -> String
@@ -304,6 +328,24 @@ printPersistedEvent seq payload =
             Encode.encode 2 payload
     in
     "Persisted: "
+        ++ String.fromInt seq
+        ++ " "
+        ++ String.slice 0 200 stringPayload
+        ++ (if String.length stringPayload > 200 then
+                "..."
+
+            else
+                ""
+           )
+
+
+printSnapshotEvent : Int -> Value -> String
+printSnapshotEvent seq payload =
+    let
+        stringPayload =
+            Encode.encode 2 payload
+    in
+    "Snapshot: "
         ++ String.fromInt seq
         ++ " "
         ++ String.slice 0 200 stringPayload

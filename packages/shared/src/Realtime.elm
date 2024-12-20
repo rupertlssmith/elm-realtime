@@ -665,20 +665,16 @@ cacheName _ =
 
 
 
--- Message formats
---
--- === Message Key:
--- T: Transient message
--- U: Unsaved message
--- P: Persisted message
--- R: Recovered snapshot
--- N: Notification of unsaved message
--- S: Snapshot request
+-- Client side messages.
 
 
+{-| RTMessage is the client side message. These are the messages that can be received by the client of a
+realtime channel.
+-}
 type RTMessage
-    = Persisted Int Value
-    | Transient Value
+    = RTPersisted Int Value
+    | RTTransient Value
+    | RTSnapshot Int Value
 
 
 rtMessageDecoder : Decoder RTMessage
@@ -688,22 +684,34 @@ rtMessageDecoder =
             (\ctor ->
                 case ctor of
                     "P" ->
-                        Decode.map2 Persisted
+                        Decode.map2 RTPersisted
                             (Decode.field "seq" Decode.int)
                             (Decode.field "payload" Decode.value)
 
                     "T" ->
-                        Decode.map Transient
+                        Decode.map RTTransient
                             (Decode.field "payload" Decode.value)
 
                     "R" ->
-                        Decode.map Transient
-                            --(Decode.field "seq" Decode.int)
+                        Decode.map2 RTSnapshot
+                            (Decode.field "seq" Decode.int)
                             (Decode.field "payload" Decode.value)
 
                     _ ->
                         Decode.fail "Unrecognized constructor"
             )
+
+
+
+-- Wire Message formats
+--
+-- === Message Key:
+-- T: Transient message
+-- U: Unsaved message
+-- P: Persisted message
+-- R: Recovered snapshot
+-- N: Notification of unsaved message
+-- S: Snapshot request
 
 
 type alias PersistedEvent =
@@ -801,13 +809,15 @@ unsavedEventDecoder =
 
 type alias SnapshotEvent =
     { rt : String
+    , seq : Int
     , payload : Value
     }
 
 
-encodeSnapshotEvent : Value -> Value
-encodeSnapshotEvent payload =
+encodeSnapshotEvent : Int -> Value -> Value
+encodeSnapshotEvent seq payload =
     [ ( "rt", Encode.string "R" )
+    , ( "seq", Encode.int seq )
     , ( "payload", payload )
     ]
         |> Encode.object
@@ -822,6 +832,7 @@ snapshotEventDecoder =
                     "R" ->
                         Decode.succeed SnapshotEvent
                             |> DE.andMap (Decode.succeed "R")
+                            |> DE.andMap (Decode.field "seq" Decode.int)
                             |> DE.andMap (Decode.field "payload" Decode.value)
 
                     _ ->

@@ -3,14 +3,14 @@ module EventLog.LatestSnapshot exposing
     , getLatestSnapshotFromTable
     )
 
-import AWS.Dynamo as Dynamo exposing (Error(..), Order(..))
+import AWS.Dynamo as Dynamo exposing (Error)
 import Dict exposing (Dict)
 import ErrorFormat exposing (ErrorFormat)
 import EventLog.Apis as Apis
-import EventLog.Msg exposing (Msg(..))
+import EventLog.Msg exposing (Msg)
 import Json.Decode exposing (Decoder, Value)
 import Procedure
-import Realtime exposing (RTMessage(..), Snapshot, SnapshotRequestEvent)
+import Realtime exposing (Snapshot)
 
 
 type alias LatestSnapshot a =

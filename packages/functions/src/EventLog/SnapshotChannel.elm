@@ -295,7 +295,7 @@ saveNextSnapshot component event state =
             Debug.log "SnapshotChannel.saveNextSnapshot" "called"
 
         rtMessage record =
-            Persisted record.seq record.event
+            RTPersisted record.seq record.event
 
         maybeNextSnapshot =
             List.foldl
@@ -340,23 +340,34 @@ saveNextSnapshot component event state =
 initialSnapshot : RTMessage -> Maybe (Snapshot Value)
 initialSnapshot rtmessage =
     case rtmessage of
-        Persisted seq val ->
+        RTPersisted seq val ->
             { seq = seq
             , model = "hello-" ++ String.fromInt seq |> Encode.string
             }
                 |> Just
 
-        Transient _ ->
+        RTTransient _ ->
             Nothing
+
+        RTSnapshot seq val ->
+            { seq = seq
+            , model = val
+            }
+                |> Just
 
 
 stepSnapshot : RTMessage -> Snapshot Value -> Snapshot Value
 stepSnapshot rtmessage current =
     case rtmessage of
-        Persisted seq val ->
+        RTPersisted seq val ->
             { seq = seq
             , model = "hello-" ++ String.fromInt seq |> Encode.string
             }
 
-        Transient _ ->
+        RTTransient _ ->
             current
+
+        RTSnapshot seq val ->
+            { seq = seq
+            , model = val
+            }

@@ -62,7 +62,7 @@ procedure session state apiRequest channelName component =
             Realtime.encodePersistedEvent record.seq record.event
 
         response snapshot events =
-            Maybe.map (.model >> Realtime.encodeSnapshotEvent) snapshot
+            Maybe.map (\s -> Realtime.encodeSnapshotEvent s.seq s.model) snapshot
                 :: List.map (\event -> encodeEvent event |> Just) events
                 |> List.filterMap identity
                 |> Encode.list identity

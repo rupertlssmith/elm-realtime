@@ -7908,42 +7908,53 @@ var $author$project$EventLog$SnapshotChannel$readLaterEvents = F3(
 				$brian_watkins$elm_procedure$Procedure$fetchResult(
 					$author$project$EventLog$Apis$eventLogTableApi.query(query))));
 	});
-var $author$project$Realtime$Persisted = F2(
+var $author$project$Realtime$RTPersisted = F2(
 	function (a, b) {
-		return {$: 'Persisted', a: a, b: b};
+		return {$: 'RTPersisted', a: a, b: b};
 	});
 var $author$project$EventLog$SnapshotChannel$initialSnapshot = function (rtmessage) {
-	if (rtmessage.$ === 'Persisted') {
-		var seq = rtmessage.a;
-		var val = rtmessage.b;
-		return $elm$core$Maybe$Just(
-			{
-				model: $elm$json$Json$Encode$string(
-					'hello-' + $elm$core$String$fromInt(seq)),
-				seq: seq
-			});
-	} else {
-		return $elm$core$Maybe$Nothing;
+	switch (rtmessage.$) {
+		case 'RTPersisted':
+			var seq = rtmessage.a;
+			var val = rtmessage.b;
+			return $elm$core$Maybe$Just(
+				{
+					model: $elm$json$Json$Encode$string(
+						'hello-' + $elm$core$String$fromInt(seq)),
+					seq: seq
+				});
+		case 'RTTransient':
+			return $elm$core$Maybe$Nothing;
+		default:
+			var seq = rtmessage.a;
+			var val = rtmessage.b;
+			return $elm$core$Maybe$Just(
+				{model: val, seq: seq});
 	}
 };
 var $author$project$EventLog$SnapshotChannel$stepSnapshot = F2(
 	function (rtmessage, current) {
-		if (rtmessage.$ === 'Persisted') {
-			var seq = rtmessage.a;
-			var val = rtmessage.b;
-			return {
-				model: $elm$json$Json$Encode$string(
-					'hello-' + $elm$core$String$fromInt(seq)),
-				seq: seq
-			};
-		} else {
-			return current;
+		switch (rtmessage.$) {
+			case 'RTPersisted':
+				var seq = rtmessage.a;
+				var val = rtmessage.b;
+				return {
+					model: $elm$json$Json$Encode$string(
+						'hello-' + $elm$core$String$fromInt(seq)),
+					seq: seq
+				};
+			case 'RTTransient':
+				return current;
+			default:
+				var seq = rtmessage.a;
+				var val = rtmessage.b;
+				return {model: val, seq: seq};
 		}
 	});
 var $author$project$EventLog$SnapshotChannel$saveNextSnapshot = F3(
 	function (component, event, state) {
 		var rtMessage = function (record) {
-			return A2($author$project$Realtime$Persisted, record.seq, record.event);
+			return A2($author$project$Realtime$RTPersisted, record.seq, record.event);
 		};
 		var maybeNextSnapshot = A3(
 			$elm$core$List$foldl,
@@ -8660,16 +8671,20 @@ var $author$project$Realtime$encodePersistedEvent = F2(
 					_Utils_Tuple2('payload', payload)
 				]));
 	});
-var $author$project$Realtime$encodeSnapshotEvent = function (payload) {
-	return $elm$json$Json$Encode$object(
-		_List_fromArray(
-			[
-				_Utils_Tuple2(
-				'rt',
-				$elm$json$Json$Encode$string('R')),
-				_Utils_Tuple2('payload', payload)
-			]));
-};
+var $author$project$Realtime$encodeSnapshotEvent = F2(
+	function (seq, payload) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'rt',
+					$elm$json$Json$Encode$string('R')),
+					_Utils_Tuple2(
+					'seq',
+					$elm$json$Json$Encode$int(seq)),
+					_Utils_Tuple2('payload', payload)
+				]));
+	});
 var $author$project$AWS$Dynamo$GreaterThanOrEqual = F2(
 	function (a, b) {
 		return {$: 'GreaterThanOrEqual', a: a, b: b};
@@ -8745,12 +8760,9 @@ var $author$project$EventLog$JoinChannel$procedure = F5(
 							$elm$core$List$cons,
 							A2(
 								$elm$core$Maybe$map,
-								A2(
-									$elm$core$Basics$composeR,
-									function ($) {
-										return $.model;
-									},
-									$author$project$Realtime$encodeSnapshotEvent),
+								function (s) {
+									return A2($author$project$Realtime$encodeSnapshotEvent, s.seq, s.model);
+								},
 								snapshot),
 							A2(
 								$elm$core$List$map,
