@@ -255,18 +255,8 @@ getLatestSnapshotFromTable component event state =
     let
         _ =
             Debug.log "SnapshotChannel.getLatestSnapshotFromTable" "called"
-
-        matchLatestSnapshot =
-            Dynamo.partitionKeyEquals "id" event.channel
-                |> Dynamo.orderResults Reverse
-                |> Dynamo.limitResults 1
-
-        query =
-            { tableName = component.snapshotTable
-            , match = matchLatestSnapshot
-            }
     in
-    Apis.snapshotTableApi.query query
+    (Apis.snapshotTableApi component.snapshotTable).findLatestSnapshot event.channel
         |> Procedure.fetchResult
         |> Procedure.mapError Dynamo.errorToDetails
         |> Procedure.map
@@ -364,7 +354,7 @@ saveNextSnapshot component event state =
             Procedure.fromTask Time.now
                 |> Procedure.andThen
                     (\timestamp ->
-                        Apis.snapshotTableApi.put
+                        (Apis.snapshotTableApi component.snapshotTable).put
                             { tableName = component.snapshotTable
                             , item =
                                 { id = event.channel

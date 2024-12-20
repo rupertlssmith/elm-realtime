@@ -12397,15 +12397,6 @@ var $author$project$Snapshot$SnapshotChannel$getLatestSnapshotFromCache = F3(
 				maybeLatest: A2($elm$core$Dict$get, event.channel, state.cache)
 			});
 	});
-var $author$project$AWS$Dynamo$Reverse = {$: 'Reverse'};
-var $author$project$AWS$Dynamo$limitResults = F2(
-	function (limit, q) {
-		return _Utils_update(
-			q,
-			{
-				limit: $elm$core$Maybe$Just(limit)
-			});
-	});
 var $author$project$Snapshot$Apis$dynamoPorts = {batchGet: $author$project$Ports$dynamoBatchGet, batchWrite: $author$project$Ports$dynamoBatchWrite, _delete: $author$project$Ports$dynamoDelete, get: $author$project$Ports$dynamoGet, put: $author$project$Ports$dynamoPut, query: $author$project$Ports$dynamoQuery, response: $author$project$Ports$dynamoResponse, scan: $author$project$Ports$dynamoScan, update: $author$project$Ports$dynamoUpdate, writeTx: $author$project$Ports$dynamoWriteTx};
 var $author$project$DB$SnapshotTable$encodeKey = function (key) {
 	return $elm$json$Json$Encode$object(
@@ -12419,6 +12410,26 @@ var $author$project$DB$SnapshotTable$encodeKey = function (key) {
 				$elm$json$Json$Encode$int(key.seq))
 			]));
 };
+var $author$project$AWS$Dynamo$Reverse = {$: 'Reverse'};
+var $author$project$AWS$Dynamo$limitResults = F2(
+	function (limit, q) {
+		return _Utils_update(
+			q,
+			{
+				limit: $elm$core$Maybe$Just(limit)
+			});
+	});
+var $author$project$DB$SnapshotTable$findLatestSnapshotQuery = F2(
+	function (tableName, channel) {
+		var matchLatestSnapshot = A2(
+			$author$project$AWS$Dynamo$limitResults,
+			1,
+			A2(
+				$author$project$AWS$Dynamo$orderResults,
+				$author$project$AWS$Dynamo$Reverse,
+				A2($author$project$AWS$Dynamo$partitionKeyEquals, 'id', channel)));
+		return {match: matchLatestSnapshot, tableName: tableName};
+	});
 var $author$project$DB$SnapshotTable$Record = F4(
 	function (id, seq, updatedAt, snapshot) {
 		return {id: id, seq: seq, snapshot: snapshot, updatedAt: updatedAt};
@@ -12460,22 +12471,28 @@ var $author$project$DB$SnapshotTable$recordCodec = $miniBill$elm_codec$Codec$bui
 					},
 					$miniBill$elm_codec$Codec$string,
 					$miniBill$elm_codec$Codec$object($author$project$DB$SnapshotTable$Record))))));
-var $author$project$DB$SnapshotTable$operations = A3(
-	$author$project$AWS$Dynamo$dynamoTypedApi,
-	$author$project$DB$SnapshotTable$encodeKey,
-	$miniBill$elm_codec$Codec$encoder($author$project$DB$SnapshotTable$recordCodec),
-	$miniBill$elm_codec$Codec$decoder($author$project$DB$SnapshotTable$recordCodec));
-var $author$project$Snapshot$Apis$snapshotTableApi = A2($author$project$DB$SnapshotTable$operations, $author$project$Snapshot$Msg$ProcedureMsg, $author$project$Snapshot$Apis$dynamoPorts);
+var $author$project$DB$SnapshotTable$operations = F3(
+	function (proc, ports, tableName) {
+		var typedApi = A5(
+			$author$project$AWS$Dynamo$dynamoTypedApi,
+			$author$project$DB$SnapshotTable$encodeKey,
+			$miniBill$elm_codec$Codec$encoder($author$project$DB$SnapshotTable$recordCodec),
+			$miniBill$elm_codec$Codec$decoder($author$project$DB$SnapshotTable$recordCodec),
+			proc,
+			ports);
+		return {
+			findLatestSnapshot: function (channel) {
+				return typedApi.query(
+					A2($author$project$DB$SnapshotTable$findLatestSnapshotQuery, tableName, channel));
+			},
+			put: typedApi.put
+		};
+	});
+var $author$project$Snapshot$Apis$snapshotTableApi = function (tableName) {
+	return A3($author$project$DB$SnapshotTable$operations, $author$project$Snapshot$Msg$ProcedureMsg, $author$project$Snapshot$Apis$dynamoPorts, tableName);
+};
 var $author$project$Snapshot$SnapshotChannel$getLatestSnapshotFromTable = F3(
 	function (component, event, state) {
-		var matchLatestSnapshot = A2(
-			$author$project$AWS$Dynamo$limitResults,
-			1,
-			A2(
-				$author$project$AWS$Dynamo$orderResults,
-				$author$project$AWS$Dynamo$Reverse,
-				A2($author$project$AWS$Dynamo$partitionKeyEquals, 'id', event.channel)));
-		var query = {match: matchLatestSnapshot, tableName: component.snapshotTable};
 		var _v0 = A2($elm$core$Debug$log, 'SnapshotChannel.getLatestSnapshotFromTable', 'called');
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$map,
@@ -12495,7 +12512,7 @@ var $author$project$Snapshot$SnapshotChannel$getLatestSnapshotFromTable = F3(
 				$brian_watkins$elm_procedure$Procedure$mapError,
 				$author$project$AWS$Dynamo$errorToDetails,
 				$brian_watkins$elm_procedure$Procedure$fetchResult(
-					$author$project$Snapshot$Apis$snapshotTableApi.query(query))));
+					$author$project$Snapshot$Apis$snapshotTableApi(component.snapshotTable).findLatestSnapshot(event.channel))));
 	});
 var $author$project$Snapshot$SnapshotChannel$checkAgainstCurrentSnapshot = F3(
 	function (component, event, state) {
@@ -12658,7 +12675,7 @@ var $author$project$Snapshot$SnapshotChannel$saveNextSnapshot = F3(
 							$brian_watkins$elm_procedure$Procedure$mapError,
 							$author$project$AWS$Dynamo$errorToDetails,
 							$brian_watkins$elm_procedure$Procedure$fetchResult(
-								$author$project$Snapshot$Apis$snapshotTableApi.put(
+								$author$project$Snapshot$Apis$snapshotTableApi(component.snapshotTable).put(
 									{
 										item: {id: event.channel, seq: nextSnapshot.seq, snapshot: nextSnapshot.model, updatedAt: timestamp},
 										tableName: component.snapshotTable

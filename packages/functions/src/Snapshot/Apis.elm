@@ -5,7 +5,6 @@ module Snapshot.Apis exposing
     , httpServerApi
     , momentoApi
     , snapshotTableApi
-    , snapshotTableMetadataApi
     , sqsLambdaApi
     )
 
@@ -50,14 +49,9 @@ eventLogTableMetadataApi =
     EventLogTable.metadataOperations ProcedureMsg dynamoPorts
 
 
-snapshotTableApi : Dynamo.DynamoTypedApi SnapshotTable.Key SnapshotTable.Record Msg
-snapshotTableApi =
-    SnapshotTable.operations ProcedureMsg dynamoPorts
-
-
-snapshotTableMetadataApi : Dynamo.DynamoTypedApi SnapshotTable.Key SnapshotTable.MetadataRecord Msg
-snapshotTableMetadataApi =
-    SnapshotTable.metadataOperations ProcedureMsg dynamoPorts
+snapshotTableApi : String -> SnapshotTable.Operations Msg
+snapshotTableApi tableName =
+    SnapshotTable.operations ProcedureMsg dynamoPorts tableName
 
 
 momentoApi : Momento.MomentoApi Msg
