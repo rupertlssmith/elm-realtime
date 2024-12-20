@@ -418,7 +418,7 @@ notifyCompactor component channelName drainState =
         DrainedToSeq { lastSeqNo } ->
             let
                 request =
-                    Realtime.encodeSnapshotEvent channelName lastSeqNo
+                    Realtime.encodeSnapshotRequestEvent channelName lastSeqNo
                         |> Encode.encode 2
 
                 sqsMessage =

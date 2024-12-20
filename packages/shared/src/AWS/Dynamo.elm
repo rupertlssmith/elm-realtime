@@ -1217,6 +1217,7 @@ queryEncoder table maybeIndex q =
     , Maybe.map (\exclusiveStartKey -> ( "ExclusiveStartKey", exclusiveStartKey )) q.exclusiveStartKey
     ]
         |> Maybe.Extra.values
+        |> Debug.log "queryEncoder"
         |> Encode.object
 
 

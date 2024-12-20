@@ -70,12 +70,14 @@ findLatestSnapshotQuery tableName channel =
     let
         matchLatestSnapshot =
             Dynamo.partitionKeyEquals "id" channel
+                --|> Dynamo.rangeKeyGreaterThan "seq" (Dynamo.int 0)
+                --|> Dynamo.limitResults 1
                 |> Dynamo.orderResults Reverse
-                |> Dynamo.limitResults 1
     in
     { tableName = tableName
     , match = matchLatestSnapshot
     }
+        |> Debug.log "findLatestSnapshotQuery"
 
 
 recordCodec : Codec Record

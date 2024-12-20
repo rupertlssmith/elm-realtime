@@ -10,7 +10,7 @@ import EventLog.Apis as Apis
 import EventLog.Msg exposing (Msg(..))
 import Json.Decode exposing (Decoder, Value)
 import Procedure
-import Realtime exposing (RTMessage(..), Snapshot, SnapshotEvent)
+import Realtime exposing (RTMessage(..), Snapshot, SnapshotRequestEvent)
 
 
 type alias LatestSnapshot a =
@@ -60,7 +60,7 @@ getLatestSnapshotFromTable component channelName state =
         |> Procedure.mapError Dynamo.errorToDetails
         |> Procedure.map
             (\queryResult ->
-                case queryResult of
+                case queryResult |> Debug.log "queryResult" of
                     [] ->
                         { cache = state.cache, maybeLatest = Nothing }
 

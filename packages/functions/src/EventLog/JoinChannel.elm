@@ -2,8 +2,10 @@ module EventLog.JoinChannel exposing (..)
 
 import AWS.Dynamo as Dynamo exposing (Order(..))
 import DB.EventLogTable as EventLogTable
+import Dict exposing (Dict)
 import ErrorFormat exposing (ErrorFormat)
 import EventLog.Apis as Apis
+import EventLog.LatestSnapshot as LatestSnapshot
 import EventLog.Model exposing (Model(..), ReadyState)
 import EventLog.Msg exposing (Msg(..))
 import EventLog.Route exposing (Route)
@@ -11,6 +13,7 @@ import Http.Response as Response exposing (Response)
 import HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Json.Encode as Encode exposing (Value)
 import Procedure
+import Realtime exposing (Snapshot)
 import Update2 as U2
 
 
@@ -18,6 +21,7 @@ type alias JoinChannel a =
     { a
         | momentoApiKey : String
         , eventLogTable : String
+        , snapshotTable : String
         , eventLog : Model
     }
 
@@ -41,41 +45,73 @@ switchState cons state =
     * Return the snapshot, and any saved events coming after it.
 
 -}
-joinChannel :
+procedure :
     HttpSessionKey
     -> ReadyState
     -> ApiRequest Route
     -> String
     -> JoinChannel a
     -> ( JoinChannel a, Cmd Msg )
-joinChannel session state apiRequest channelName component =
+procedure session state apiRequest channelName component =
     let
-        procedure : Procedure.Procedure Response Response Msg
-        procedure =
-            Procedure.provide channelName
-                -- |>  Procedure.andThen (fetchLatestSnapshot ...)
-                |> Procedure.andThen (fetchSavedEventsSince component 1)
+        _ =
+            Debug.log "JoinChannel.procedure" "called"
+
+        encodeEvent : EventLogTable.Record -> Value
+        encodeEvent record =
+            Realtime.encodePersistedEvent record.seq record.event
+
+        response snapshot events =
+            Maybe.map (.model >> Realtime.encodeSnapshotEvent) snapshot
+                :: List.map (\event -> encodeEvent event |> Just) events
+                |> List.filterMap identity
+                |> Encode.list identity
+
+        innerProcedure : Procedure.Procedure Response Response Msg
+        innerProcedure =
+            Procedure.provide { cache = state.cache }
+                |> Procedure.andThen (LatestSnapshot.getLatestSnapshotFromTable component channelName)
+                |> Procedure.andThen (fetchSavedEventsSince component channelName)
                 |> Procedure.mapError (Debug.log "error" >> ErrorFormat.encodeErrorFormat >> Response.err500json)
-                |> Procedure.map (\events -> Response.ok200json (Encode.list encodeEvent events))
+                |> Procedure.map (\{ maybeLatest, laterEvents } -> Response.ok200json (response maybeLatest laterEvents))
     in
     ( state
-    , Procedure.try ProcedureMsg (HttpResponse session) procedure
+    , Procedure.try ProcedureMsg (HttpResponse session) innerProcedure
     )
         |> U2.andMap (ModelReady |> switchState)
         |> Tuple.mapFirst (setModel component)
 
 
-
--- fetchLatestSnapshot
-
-
 fetchSavedEventsSince :
     JoinChannel a
-    -> Int
     -> String
-    -> Procedure.Procedure ErrorFormat (List EventLogTable.Record) Msg
-fetchSavedEventsSince component startSeq channelName =
+    ->
+        { cache : Dict String (Snapshot Value)
+        , maybeLatest : Maybe (Snapshot Value)
+        }
+    ->
+        Procedure.Procedure ErrorFormat
+            { cache : Dict String (Snapshot Value)
+            , maybeLatest : Maybe (Snapshot Value)
+            , laterEvents : List EventLogTable.Record
+            }
+            Msg
+fetchSavedEventsSince component channelName state =
     let
+        _ =
+            Debug.log "JoinChannel.fetchSavedEventsSince" "called"
+
+        _ =
+            Debug.log "state" state
+
+        startSeq =
+            case state.maybeLatest of
+                Just latest ->
+                    latest.seq
+
+                Nothing ->
+                    1
+
         match =
             Dynamo.partitionKeyEquals "id" channelName
                 |> Dynamo.rangeKeyGreaterThanOrEqual "seq" (Dynamo.int startSeq)
@@ -89,12 +125,10 @@ fetchSavedEventsSince component startSeq channelName =
     Apis.eventLogTableApi.query query
         |> Procedure.fetchResult
         |> Procedure.mapError Dynamo.errorToDetails
-
-
-encodeEvent : EventLogTable.Record -> Value
-encodeEvent record =
-    [ ( "rt", Encode.string "P" )
-    , ( "seq", Encode.int record.seq )
-    , ( "payload", record.event )
-    ]
-        |> Encode.object
+        |> Procedure.map
+            (\events ->
+                { cache = state.cache
+                , maybeLatest = state.maybeLatest
+                , laterEvents = events
+                }
+            )

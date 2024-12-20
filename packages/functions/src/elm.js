@@ -6953,56 +6953,59 @@ var $author$project$AWS$Dynamo$queryEncoder = F3(
 		var attrVals = _v0.b;
 		var encodedAttrVals = $elm$json$Json$Encode$object(attrVals);
 		return $elm$json$Json$Encode$object(
-			$elm_community$maybe_extra$Maybe$Extra$values(
-				_List_fromArray(
-					[
-						$elm$core$Maybe$Just(
-						_Utils_Tuple2(
-							'TableName',
-							$elm$json$Json$Encode$string(table))),
-						A2(
-						$elm$core$Maybe$map,
-						function (index) {
-							return _Utils_Tuple2(
-								'IndexName',
-								$elm$json$Json$Encode$string(index));
-						},
-						maybeIndex),
-						$elm$core$Maybe$Just(
-						_Utils_Tuple2(
-							'KeyConditionExpression',
-							$elm$json$Json$Encode$string(keyExpressionsString))),
-						$elm$core$Maybe$Just(
-						_Utils_Tuple2('ExpressionAttributeValues', encodedAttrVals)),
-						function () {
-						var _v1 = q.order;
-						if (_v1.$ === 'Forward') {
-							return $elm$core$Maybe$Just(
-								_Utils_Tuple2(
-									'ScanIndexForward',
-									$elm$json$Json$Encode$bool(true)));
-						} else {
-							return $elm$core$Maybe$Just(
-								_Utils_Tuple2(
-									'ScanIndexForward',
-									$elm$json$Json$Encode$bool(false)));
-						}
-					}(),
-						A2(
-						$elm$core$Maybe$map,
-						function (limit) {
-							return _Utils_Tuple2(
-								'Limit',
-								$elm$json$Json$Encode$int(limit));
-						},
-						q.limit),
-						A2(
-						$elm$core$Maybe$map,
-						function (exclusiveStartKey) {
-							return _Utils_Tuple2('ExclusiveStartKey', exclusiveStartKey);
-						},
-						q.exclusiveStartKey)
-					])));
+			A2(
+				$elm$core$Debug$log,
+				'queryEncoder',
+				$elm_community$maybe_extra$Maybe$Extra$values(
+					_List_fromArray(
+						[
+							$elm$core$Maybe$Just(
+							_Utils_Tuple2(
+								'TableName',
+								$elm$json$Json$Encode$string(table))),
+							A2(
+							$elm$core$Maybe$map,
+							function (index) {
+								return _Utils_Tuple2(
+									'IndexName',
+									$elm$json$Json$Encode$string(index));
+							},
+							maybeIndex),
+							$elm$core$Maybe$Just(
+							_Utils_Tuple2(
+								'KeyConditionExpression',
+								$elm$json$Json$Encode$string(keyExpressionsString))),
+							$elm$core$Maybe$Just(
+							_Utils_Tuple2('ExpressionAttributeValues', encodedAttrVals)),
+							function () {
+							var _v1 = q.order;
+							if (_v1.$ === 'Forward') {
+								return $elm$core$Maybe$Just(
+									_Utils_Tuple2(
+										'ScanIndexForward',
+										$elm$json$Json$Encode$bool(true)));
+							} else {
+								return $elm$core$Maybe$Just(
+									_Utils_Tuple2(
+										'ScanIndexForward',
+										$elm$json$Json$Encode$bool(false)));
+							}
+						}(),
+							A2(
+							$elm$core$Maybe$map,
+							function (limit) {
+								return _Utils_Tuple2(
+									'Limit',
+									$elm$json$Json$Encode$int(limit));
+							},
+							q.limit),
+							A2(
+							$elm$core$Maybe$map,
+							function (exclusiveStartKey) {
+								return _Utils_Tuple2('ExclusiveStartKey', exclusiveStartKey);
+							},
+							q.exclusiveStartKey)
+						]))));
 	});
 var $elm$core$Tuple$pair = F2(
 	function (a, b) {
@@ -7567,14 +7570,6 @@ var $miniBill$elm_codec$Codec$encoder = function (_v0) {
 	return m.encoder;
 };
 var $author$project$AWS$Dynamo$Reverse = {$: 'Reverse'};
-var $author$project$AWS$Dynamo$limitResults = F2(
-	function (limit, q) {
-		return _Utils_update(
-			q,
-			{
-				limit: $elm$core$Maybe$Just(limit)
-			});
-	});
 var $author$project$AWS$Dynamo$orderResults = F2(
 	function (ord, q) {
 		return _Utils_update(
@@ -7599,13 +7594,13 @@ var $author$project$AWS$Dynamo$partitionKeyEquals = F2(
 var $author$project$DB$SnapshotTable$findLatestSnapshotQuery = F2(
 	function (tableName, channel) {
 		var matchLatestSnapshot = A2(
-			$author$project$AWS$Dynamo$limitResults,
-			1,
-			A2(
-				$author$project$AWS$Dynamo$orderResults,
-				$author$project$AWS$Dynamo$Reverse,
-				A2($author$project$AWS$Dynamo$partitionKeyEquals, 'id', channel)));
-		return {match: matchLatestSnapshot, tableName: tableName};
+			$author$project$AWS$Dynamo$orderResults,
+			$author$project$AWS$Dynamo$Reverse,
+			A2($author$project$AWS$Dynamo$partitionKeyEquals, 'id', channel));
+		return A2(
+			$elm$core$Debug$log,
+			'findLatestSnapshotQuery',
+			{match: matchLatestSnapshot, tableName: tableName});
 	});
 var $author$project$DB$SnapshotTable$Record = F4(
 	function (id, seq, updatedAt, snapshot) {
@@ -7738,10 +7733,11 @@ var $author$project$EventLog$LatestSnapshot$getLatestSnapshotFromTable = F3(
 		return A2(
 			$brian_watkins$elm_procedure$Procedure$map,
 			function (queryResult) {
-				if (!queryResult.b) {
+				var _v1 = A2($elm$core$Debug$log, 'queryResult', queryResult);
+				if (!_v1.b) {
 					return {cache: state.cache, maybeLatest: $elm$core$Maybe$Nothing};
 				} else {
-					var r = queryResult.a;
+					var r = _v1.a;
 					return {
 						cache: state.cache,
 						maybeLatest: $elm$core$Maybe$Just(
@@ -8038,14 +8034,14 @@ var $author$project$EventLog$SnapshotChannel$drainSnapshotRequests = F3(
 		if (!snapshotSeqByChannel.b) {
 			return $brian_watkins$elm_procedure$Procedure$provide(state);
 		} else {
-			var snapshotEvent = snapshotSeqByChannel.a;
+			var snapshotRequestEvent = snapshotSeqByChannel.a;
 			var events = snapshotSeqByChannel.b;
 			return A2(
 				$brian_watkins$elm_procedure$Procedure$andThen,
 				A2($author$project$EventLog$SnapshotChannel$drainSnapshotRequests, component, events),
 				A2(
 					$brian_watkins$elm_procedure$Procedure$andThen,
-					A2($author$project$EventLog$SnapshotChannel$snapshotChannel, component, snapshotEvent),
+					A2($author$project$EventLog$SnapshotChannel$snapshotChannel, component, snapshotRequestEvent),
 					$brian_watkins$elm_procedure$Procedure$provide(state)));
 		}
 	});
@@ -8061,11 +8057,11 @@ var $author$project$EventLog$SnapshotChannel$setModel = F2(
 			m,
 			{eventLog: x});
 	});
-var $author$project$Realtime$SnapshotEvent = F3(
+var $author$project$Realtime$SnapshotRequestEvent = F3(
 	function (rt, channel, seq) {
 		return {channel: channel, rt: rt, seq: seq};
 	});
-var $author$project$Realtime$snapshotEventDecoder = A2(
+var $author$project$Realtime$snapshotRequestEventDecoder = A2(
 	$elm$json$Json$Decode$andThen,
 	function (ctor) {
 		if (ctor === 'S') {
@@ -8078,7 +8074,7 @@ var $author$project$Realtime$snapshotEventDecoder = A2(
 					A2(
 						$elm_community$json_extra$Json$Decode$Extra$andMap,
 						$elm$json$Json$Decode$succeed('S'),
-						$elm$json$Json$Decode$succeed($author$project$Realtime$SnapshotEvent))));
+						$elm$json$Json$Decode$succeed($author$project$Realtime$SnapshotRequestEvent))));
 		} else {
 			return $elm$json$Json$Decode$fail('Unrecognized constructor');
 		}
@@ -8123,14 +8119,14 @@ var $author$project$EventLog$SnapshotChannel$procedure = F4(
 								acc,
 								A2(
 									$elm$core$Result$map,
-									function (snapshotEvent) {
+									function (snapshotRequestEvent) {
 										return A3(
 											$elm$core$Dict$update,
-											snapshotEvent.channel,
-											updateHighest(snapshotEvent),
+											snapshotRequestEvent.channel,
+											updateHighest(snapshotRequestEvent),
 											acc);
 									},
-									A2($elm$json$Json$Decode$decodeString, $author$project$Realtime$snapshotEventDecoder, sqsMessage.body)));
+									A2($elm$json$Json$Decode$decodeString, $author$project$Realtime$snapshotRequestEventDecoder, sqsMessage.body)));
 						}),
 					$elm$core$Dict$empty,
 					sqsEvent)));
@@ -8646,17 +8642,32 @@ var $author$project$EventLog$GetAvailableChannel$getAvailableChannel = F3(
 						$author$project$EventLog$Msg$HttpResponse(session),
 						procedure))));
 	});
-var $author$project$EventLog$JoinChannel$encodeEvent = function (record) {
+var $author$project$Http$Request$method = function (_v0) {
+	var request = _v0.a;
+	return request.method;
+};
+var $author$project$Realtime$encodePersistedEvent = F2(
+	function (seq, payload) {
+		return $elm$json$Json$Encode$object(
+			_List_fromArray(
+				[
+					_Utils_Tuple2(
+					'rt',
+					$elm$json$Json$Encode$string('P')),
+					_Utils_Tuple2(
+					'seq',
+					$elm$json$Json$Encode$int(seq)),
+					_Utils_Tuple2('payload', payload)
+				]));
+	});
+var $author$project$Realtime$encodeSnapshotEvent = function (payload) {
 	return $elm$json$Json$Encode$object(
 		_List_fromArray(
 			[
 				_Utils_Tuple2(
 				'rt',
-				$elm$json$Json$Encode$string('P')),
-				_Utils_Tuple2(
-				'seq',
-				$elm$json$Json$Encode$int(record.seq)),
-				_Utils_Tuple2('payload', record.event)
+				$elm$json$Json$Encode$string('R')),
+				_Utils_Tuple2('payload', payload)
 			]));
 };
 var $author$project$AWS$Dynamo$GreaterThanOrEqual = F2(
@@ -8673,7 +8684,16 @@ var $author$project$AWS$Dynamo$rangeKeyGreaterThanOrEqual = F3(
 			});
 	});
 var $author$project$EventLog$JoinChannel$fetchSavedEventsSince = F3(
-	function (component, startSeq, channelName) {
+	function (component, channelName, state) {
+		var startSeq = function () {
+			var _v2 = state.maybeLatest;
+			if (_v2.$ === 'Just') {
+				var latest = _v2.a;
+				return latest.seq;
+			} else {
+				return 1;
+			}
+		}();
 		var match = A2(
 			$author$project$AWS$Dynamo$orderResults,
 			$author$project$AWS$Dynamo$Forward,
@@ -8683,11 +8703,18 @@ var $author$project$EventLog$JoinChannel$fetchSavedEventsSince = F3(
 				$author$project$AWS$Dynamo$int(startSeq),
 				A2($author$project$AWS$Dynamo$partitionKeyEquals, 'id', channelName)));
 		var query = {match: match, tableName: component.eventLogTable};
+		var _v0 = A2($elm$core$Debug$log, 'JoinChannel.fetchSavedEventsSince', 'called');
+		var _v1 = A2($elm$core$Debug$log, 'state', state);
 		return A2(
-			$brian_watkins$elm_procedure$Procedure$mapError,
-			$author$project$AWS$Dynamo$errorToDetails,
-			$brian_watkins$elm_procedure$Procedure$fetchResult(
-				$author$project$EventLog$Apis$eventLogTableApi.query(query)));
+			$brian_watkins$elm_procedure$Procedure$map,
+			function (events) {
+				return {cache: state.cache, laterEvents: events, maybeLatest: state.maybeLatest};
+			},
+			A2(
+				$brian_watkins$elm_procedure$Procedure$mapError,
+				$author$project$AWS$Dynamo$errorToDetails,
+				$brian_watkins$elm_procedure$Procedure$fetchResult(
+					$author$project$EventLog$Apis$eventLogTableApi.query(query))));
 	});
 var $author$project$EventLog$JoinChannel$setModel = F2(
 	function (m, x) {
@@ -8701,13 +8728,45 @@ var $author$project$EventLog$JoinChannel$switchState = F2(
 			cons(state),
 			$elm$core$Platform$Cmd$none);
 	});
-var $author$project$EventLog$JoinChannel$joinChannel = F5(
+var $author$project$EventLog$JoinChannel$procedure = F5(
 	function (session, state, apiRequest, channelName, component) {
-		var procedure = A2(
+		var encodeEvent = function (record) {
+			return A2($author$project$Realtime$encodePersistedEvent, record.seq, record.event);
+		};
+		var response = F2(
+			function (snapshot, events) {
+				return A2(
+					$elm$json$Json$Encode$list,
+					$elm$core$Basics$identity,
+					A2(
+						$elm$core$List$filterMap,
+						$elm$core$Basics$identity,
+						A2(
+							$elm$core$List$cons,
+							A2(
+								$elm$core$Maybe$map,
+								A2(
+									$elm$core$Basics$composeR,
+									function ($) {
+										return $.model;
+									},
+									$author$project$Realtime$encodeSnapshotEvent),
+								snapshot),
+							A2(
+								$elm$core$List$map,
+								function (event) {
+									return $elm$core$Maybe$Just(
+										encodeEvent(event));
+								},
+								events))));
+			});
+		var innerProcedure = A2(
 			$brian_watkins$elm_procedure$Procedure$map,
-			function (events) {
+			function (_v1) {
+				var maybeLatest = _v1.maybeLatest;
+				var laterEvents = _v1.laterEvents;
 				return $author$project$Http$Response$ok200json(
-					A2($elm$json$Json$Encode$list, $author$project$EventLog$JoinChannel$encodeEvent, events));
+					A2(response, maybeLatest, laterEvents));
 			},
 			A2(
 				$brian_watkins$elm_procedure$Procedure$mapError,
@@ -8717,8 +8776,13 @@ var $author$project$EventLog$JoinChannel$joinChannel = F5(
 					A2($elm$core$Basics$composeR, $author$project$ErrorFormat$encodeErrorFormat, $author$project$Http$Response$err500json)),
 				A2(
 					$brian_watkins$elm_procedure$Procedure$andThen,
-					A2($author$project$EventLog$JoinChannel$fetchSavedEventsSince, component, 1),
-					$brian_watkins$elm_procedure$Procedure$provide(channelName))));
+					A2($author$project$EventLog$JoinChannel$fetchSavedEventsSince, component, channelName),
+					A2(
+						$brian_watkins$elm_procedure$Procedure$andThen,
+						A2($author$project$EventLog$LatestSnapshot$getLatestSnapshotFromTable, component, channelName),
+						$brian_watkins$elm_procedure$Procedure$provide(
+							{cache: state.cache})))));
+		var _v0 = A2($elm$core$Debug$log, 'JoinChannel.procedure', 'called');
 		return A2(
 			$elm$core$Tuple$mapFirst,
 			$author$project$EventLog$JoinChannel$setModel(component),
@@ -8731,32 +8795,14 @@ var $author$project$EventLog$JoinChannel$joinChannel = F5(
 						$brian_watkins$elm_procedure$Procedure$try,
 						$author$project$EventLog$Msg$ProcedureMsg,
 						$author$project$EventLog$Msg$HttpResponse(session),
-						procedure))));
+						innerProcedure))));
 	});
-var $author$project$Http$Request$method = function (_v0) {
-	var request = _v0.a;
-	return request.method;
-};
 var $author$project$EventLog$SaveChannel$DrainedNothing = function (a) {
 	return {$: 'DrainedNothing', a: a};
 };
 var $author$project$EventLog$SaveChannel$DrainedToSeq = function (a) {
 	return {$: 'DrainedToSeq', a: a};
 };
-var $author$project$Realtime$encodePersistedEvent = F2(
-	function (seq, payload) {
-		return $elm$json$Json$Encode$object(
-			_List_fromArray(
-				[
-					_Utils_Tuple2(
-					'rt',
-					$elm$json$Json$Encode$string('P')),
-					_Utils_Tuple2(
-					'seq',
-					$elm$json$Json$Encode$int(seq)),
-					_Utils_Tuple2('payload', payload)
-				]));
-	});
 var $author$project$EventLog$SaveChannel$publishEvent = F3(
 	function (component, channelName, state) {
 		var payload = A2($author$project$Realtime$encodePersistedEvent, state.lastSeqNo, state.unsavedEvent.payload);
@@ -9042,7 +9088,7 @@ var $author$project$EventLog$SaveChannel$awsErrorToDetails = function (err) {
 		};
 	}
 };
-var $author$project$Realtime$encodeSnapshotEvent = F2(
+var $author$project$Realtime$encodeSnapshotRequestEvent = F2(
 	function (channel, seq) {
 		return $elm$json$Json$Encode$object(
 			_List_fromArray(
@@ -12454,7 +12500,7 @@ var $author$project$EventLog$SaveChannel$notifyCompactor = F3(
 			var request = A2(
 				$elm$json$Json$Encode$encode,
 				2,
-				A2($author$project$Realtime$encodeSnapshotEvent, channelName, lastSeqNo));
+				A2($author$project$Realtime$encodeSnapshotRequestEvent, channelName, lastSeqNo));
 			var sqsMessage = $the_sett$elm_aws_messaging$AWS$Sqs$sendMessage(
 				{
 					delaySeconds: $elm$core$Maybe$Nothing,
@@ -12592,7 +12638,7 @@ var $author$project$EventLog$Component$processRoute = F4(
 										$elm$core$Platform$Cmd$map(protocol.toMsg),
 										A2(
 											$the_sett$elm_update_helper$Update2$andMap,
-											A4($author$project$EventLog$JoinChannel$joinChannel, session, state, apiRequest, channelName),
+											A4($author$project$EventLog$JoinChannel$procedure, session, state, apiRequest, channelName),
 											$the_sett$elm_update_helper$Update2$pure(component))));
 							default:
 								break _v0$4;

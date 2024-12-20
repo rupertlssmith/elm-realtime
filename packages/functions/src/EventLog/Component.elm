@@ -219,7 +219,7 @@ processRoute protocol session apiRequest component =
 
         ( GET, ChannelJoin channelName, ModelReady state ) ->
             U2.pure component
-                |> U2.andMap (JoinChannel.joinChannel session state apiRequest channelName)
+                |> U2.andMap (JoinChannel.procedure session state apiRequest channelName)
                 |> Tuple.mapSecond (Cmd.map protocol.toMsg)
                 |> protocol.onUpdate
 

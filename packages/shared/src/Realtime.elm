@@ -4,7 +4,7 @@ module Realtime exposing
     , RealtimeApi, realtimeApi
     , AsyncEvent(..), RTMessage(..), Snapshot, next
     , Error, errorToDetails, errorToString
-    , SnapshotEvent, UnsavedEvent, encodePersistedEvent, encodeSnapshotEvent, persistedEventDecoder, snapshotEventDecoder, transientEventDecoder, unsavedEventDecoder
+    , SnapshotEvent, SnapshotRequestEvent, UnsavedEvent, encodePersistedEvent, encodeSnapshotEvent, encodeSnapshotRequestEvent, persistedEventDecoder, snapshotEventDecoder, snapshotRequestEventDecoder, transientEventDecoder, unsavedEventDecoder
     )
 
 {-| Realtime channels.
@@ -666,6 +666,14 @@ cacheName _ =
 
 
 -- Message formats
+--
+-- === Message Key:
+-- T: Transient message
+-- U: Unsaved message
+-- P: Persisted message
+-- R: Recovered snapshot
+-- N: Notification of unsaved message
+-- S: Snapshot request
 
 
 type RTMessage
@@ -691,14 +699,6 @@ rtMessageDecoder =
                     _ ->
                         Decode.fail "Unrecognized constructor"
             )
-
-
-encodeNotice : Value
-encodeNotice =
-    [ ( "rt", Encode.string "N" )
-    , ( "client", Encode.string "abcdef" )
-    ]
-        |> Encode.object
 
 
 type alias PersistedEvent =
@@ -796,16 +796,14 @@ unsavedEventDecoder =
 
 type alias SnapshotEvent =
     { rt : String
-    , channel : String
-    , seq : Int
+    , payload : Value
     }
 
 
-encodeSnapshotEvent : String -> Int -> Value
-encodeSnapshotEvent channel seq =
-    [ ( "rt", Encode.string "S" )
-    , ( "channel", Encode.string channel )
-    , ( "seq", Encode.int seq )
+encodeSnapshotEvent : Value -> Value
+encodeSnapshotEvent payload =
+    [ ( "rt", Encode.string "R" )
+    , ( "payload", payload )
     ]
         |> Encode.object
 
@@ -816,8 +814,52 @@ snapshotEventDecoder =
         |> Decode.andThen
             (\ctor ->
                 case ctor of
-                    "S" ->
+                    "R" ->
                         Decode.succeed SnapshotEvent
+                            |> DE.andMap (Decode.succeed "R")
+                            |> DE.andMap (Decode.field "payload" Decode.value)
+
+                    _ ->
+                        Decode.fail "Unrecognized constructor"
+            )
+
+
+
+-- Notifications
+
+
+encodeNotice : Value
+encodeNotice =
+    [ ( "rt", Encode.string "N" )
+    , ( "client", Encode.string "abcdef" )
+    ]
+        |> Encode.object
+
+
+type alias SnapshotRequestEvent =
+    { rt : String
+    , channel : String
+    , seq : Int
+    }
+
+
+encodeSnapshotRequestEvent : String -> Int -> Value
+encodeSnapshotRequestEvent channel seq =
+    [ ( "rt", Encode.string "S" )
+    , ( "channel", Encode.string channel )
+    , ( "seq", Encode.int seq )
+    ]
+        |> Encode.object
+
+
+snapshotRequestEventDecoder : Decoder SnapshotRequestEvent
+snapshotRequestEventDecoder =
+    Decode.field "rt" Decode.string
+        |> Decode.andThen
+            (\ctor ->
+                case ctor of
+                    "S" ->
+                        Decode.succeed SnapshotRequestEvent
                             |> DE.andMap (Decode.succeed "S")
                             |> DE.andMap (Decode.field "channel" Decode.string)
                             |> DE.andMap (Decode.field "seq" Decode.int)

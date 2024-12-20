@@ -17,7 +17,7 @@ import HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode
 import Procedure
-import Realtime exposing (RTMessage(..), Snapshot, SnapshotEvent)
+import Realtime exposing (RTMessage(..), Snapshot, SnapshotRequestEvent)
 import SqsLambda exposing (SqsEvent)
 import Time
 import Update2 as U2
@@ -73,12 +73,12 @@ procedure session state sqsEvent component =
         snapshotSeqByChannel =
             List.foldl
                 (\sqsMessage acc ->
-                    Decode.decodeString Realtime.snapshotEventDecoder sqsMessage.body
+                    Decode.decodeString Realtime.snapshotRequestEventDecoder sqsMessage.body
                         |> Result.map
-                            (\snapshotEvent ->
+                            (\snapshotRequestEvent ->
                                 Dict.update
-                                    snapshotEvent.channel
-                                    (updateHighest snapshotEvent)
+                                    snapshotRequestEvent.channel
+                                    (updateHighest snapshotRequestEvent)
                                     acc
                             )
                         |> Result.withDefault acc
@@ -104,7 +104,7 @@ procedure session state sqsEvent component =
 
 drainSnapshotRequests :
     SnapshotChannel a
-    -> List SnapshotEvent
+    -> List SnapshotRequestEvent
     -> { cache : Dict String (Snapshot Value) }
     -> Procedure.Procedure ErrorFormat { cache : Dict String (Snapshot Value) } Msg
 drainSnapshotRequests component snapshotSeqByChannel state =
@@ -116,9 +116,9 @@ drainSnapshotRequests component snapshotSeqByChannel state =
         [] ->
             Procedure.provide state
 
-        snapshotEvent :: events ->
+        snapshotRequestEvent :: events ->
             Procedure.provide state
-                |> Procedure.andThen (snapshotChannel component snapshotEvent)
+                |> Procedure.andThen (snapshotChannel component snapshotRequestEvent)
                 |> Procedure.andThen (drainSnapshotRequests component events)
 
 
@@ -135,7 +135,7 @@ drainSnapshotRequests component snapshotSeqByChannel state =
 -}
 snapshotChannel :
     SnapshotChannel a
-    -> SnapshotEvent
+    -> SnapshotRequestEvent
     -> { cache : Dict String (Snapshot Value) }
     -> Procedure.Procedure ErrorFormat { cache : Dict String (Snapshot Value) } Msg
 snapshotChannel component event state =
@@ -175,7 +175,7 @@ outcomes of this are:
 -}
 checkAgainstCurrentSnapshot :
     SnapshotChannel a
-    -> SnapshotEvent
+    -> SnapshotRequestEvent
     -> { cache : Dict String (Snapshot Value) }
     -> Procedure.Procedure ErrorFormat SnapshotCondition Msg
 checkAgainstCurrentSnapshot component event state =
@@ -233,7 +233,7 @@ type SnapshotCondition
 
 readLaterEvents :
     SnapshotChannel a
-    -> SnapshotEvent
+    -> SnapshotRequestEvent
     ->
         { cache : Dict String (Snapshot Value)
         , baseSnapshot : Maybe (Snapshot Value)
@@ -278,7 +278,7 @@ readLaterEvents component event state =
 
 saveNextSnapshot :
     SnapshotChannel a
-    -> SnapshotEvent
+    -> SnapshotRequestEvent
     ->
         { cache : Dict String (Snapshot Value)
         , baseSnapshot : Maybe (Snapshot Value)
