@@ -114,7 +114,7 @@ fetchSavedEventsSince component channelName state =
 
         match =
             Dynamo.partitionKeyEquals "id" channelName
-                |> Dynamo.rangeKeyGreaterThanOrEqual "seq" (Dynamo.int startSeq)
+                |> Dynamo.rangeKeyGreaterThan "seq" (Dynamo.int startSeq)
                 |> Dynamo.orderResults Forward
 
         query =

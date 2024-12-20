@@ -8685,19 +8685,6 @@ var $author$project$Realtime$encodeSnapshotEvent = F2(
 					_Utils_Tuple2('payload', payload)
 				]));
 	});
-var $author$project$AWS$Dynamo$GreaterThanOrEqual = F2(
-	function (a, b) {
-		return {$: 'GreaterThanOrEqual', a: a, b: b};
-	});
-var $author$project$AWS$Dynamo$rangeKeyGreaterThanOrEqual = F3(
-	function (keyName, attr, q) {
-		return _Utils_update(
-			q,
-			{
-				rangeKeyCondition: $elm$core$Maybe$Just(
-					A2($author$project$AWS$Dynamo$GreaterThanOrEqual, keyName, attr))
-			});
-	});
 var $author$project$EventLog$JoinChannel$fetchSavedEventsSince = F3(
 	function (component, channelName, state) {
 		var startSeq = function () {
@@ -8713,7 +8700,7 @@ var $author$project$EventLog$JoinChannel$fetchSavedEventsSince = F3(
 			$author$project$AWS$Dynamo$orderResults,
 			$author$project$AWS$Dynamo$Forward,
 			A3(
-				$author$project$AWS$Dynamo$rangeKeyGreaterThanOrEqual,
+				$author$project$AWS$Dynamo$rangeKeyGreaterThan,
 				'seq',
 				$author$project$AWS$Dynamo$int(startSeq),
 				A2($author$project$AWS$Dynamo$partitionKeyEquals, 'id', channelName)));
