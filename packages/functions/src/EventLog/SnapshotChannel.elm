@@ -276,6 +276,10 @@ readLaterEvents component event state =
             )
 
 
+{-| TODO: Change this to record the latest snapshot sequence number in a metadata row, the same way it is done
+in SaveChannel. This will allow the latest value to be retrieved efficiently, since reverse and limit to 1 with
+partition key equality check does not seem to work in Dynamo.
+-}
 saveNextSnapshot :
     SnapshotChannel a
     -> SnapshotRequestEvent
