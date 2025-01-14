@@ -50,3 +50,11 @@ type alias RTTrustedAPI a msg =
         }
         -> Cmd msg
     }
+
+
+
+--===========
+-- Snapshots
+--
+--initialSnapshot : RTMessage -> Maybe (Snapshot Value)
+--stepSnapshot : RTMessage -> Snapshot Value -> Snapshot Value
