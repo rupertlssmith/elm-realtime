@@ -4,6 +4,7 @@ module DB.SnapshotTable exposing
     , Operations
     , Record
     , encodeKey
+    , metadataOperations
     , operations
     )
 
@@ -66,6 +67,14 @@ operations proc ports tableName =
     }
 
 
+metadataOperations : (Procedure.Program.Msg msg -> msg) -> Ports msg -> DynamoTypedApi Key MetadataRecord msg
+metadataOperations =
+    Dynamo.dynamoTypedApi
+        encodeKey
+        (Codec.encoder metadataRecordCodec)
+        (Codec.decoder metadataRecordCodec)
+
+
 findLatestSnapshotQuery tableName channel =
     let
         matchLatestSnapshot =
@@ -87,6 +96,16 @@ recordCodec =
         |> Codec.field "seq" .seq Codec.int
         |> Codec.field "updatedAt" .updatedAt posixCodec
         |> Codec.field "snapshot" .snapshot Codec.value
+        |> Codec.buildObject
+
+
+metadataRecordCodec : Codec MetadataRecord
+metadataRecordCodec =
+    Codec.object MetadataRecord
+        |> Codec.field "id" .id Codec.string
+        |> Codec.field "seq" .seq Codec.int
+        |> Codec.field "updatedAt" .updatedAt posixCodec
+        |> Codec.field "lastId" .lastId Codec.int
         |> Codec.buildObject
 
 
