@@ -102,33 +102,12 @@ procedure session state sqsEvent component =
         |> Tuple.mapFirst (setModel component)
 
 
-
---======
-
-
-type DrainState
-    = DrainedNothing (Dict String (Snapshot Value))
-    | DrainedToSeq
-        { cache : Dict String (Snapshot Value)
-        , lastSeqNo : Int
-        }
-
-
 drainSnapshotRequests :
     SnapshotChannel a
     -> List SnapshotRequestEvent
     -> { cache : Dict String (Snapshot Value) }
-    -> Procedure.Procedure ErrorFormat DrainState Msg
+    -> Procedure.Procedure ErrorFormat { cache : Dict String (Snapshot Value) } Msg
 drainSnapshotRequests component snapshotSeqByChannel state =
-    drainSnapshotRequestsInner component snapshotSeqByChannel (DrainedNothing state.cache)
-
-
-drainSnapshotRequestsInner :
-    SnapshotChannel a
-    -> List SnapshotRequestEvent
-    -> DrainState
-    -> Procedure.Procedure ErrorFormat DrainState Msg
-drainSnapshotRequestsInner component snapshotSeqByChannel state =
     let
         _ =
             Debug.log "SnapshotChannel.drainSnapshotRequests" "called"
@@ -140,7 +119,7 @@ drainSnapshotRequestsInner component snapshotSeqByChannel state =
         snapshotRequestEvent :: events ->
             Procedure.provide state
                 |> Procedure.andThen (snapshotChannel component snapshotRequestEvent)
-                |> Procedure.andThen (drainSnapshotRequestsInner component events)
+                |> Procedure.andThen (drainSnapshotRequests component events)
 
 
 {-| Snapshot Channel:
@@ -298,7 +277,7 @@ readLaterEvents component event state =
 
 
 {-| TODO: Change this to record the latest snapshot sequence number in a metadata row, the same way it is done
-in SnapshotChannel. This will allow the latest value to be retrieved efficiently, since reverse and limit to 1 with
+in SaveChannel. This will allow the latest value to be retrieved efficiently, since reverse and limit to 1 with
 partition key equality check does not seem to work in Dynamo.
 -}
 saveNextSnapshot :
@@ -356,195 +335,6 @@ saveNextSnapshot component event state =
 
         Nothing ->
             Procedure.provide { cache = state.cache }
-
-
-{-| Runs a loop of attempts to store the event against a unique and contiguous sequence number at the end
-of the event log, until this completes successfuly.
-
-    1. The assigned sequence number is created optimistically by adding one to the last value stored. More
-       than one process can end up with the same number because of this.
-
-    2. The event and the plus oned sequence number are written as a transaction with conditions to check
-       that the sequence number has not been updated by another process.
-
-    3. If the transaction fails due to the condition check not passing, the process goes back to step 1
-       and tries again, until it does pass.
-
--}
-recordEventWithUniqueSeqNo :
-    SnapshotChannel a
-    -> String
-    ->
-        { cache : Dict String (Snapshot Value)
-        , unsavedEvent : UnsavedEvent
-        }
-    ->
-        Procedure.Procedure ErrorFormat
-            { cache : Dict String (Snapshot Value)
-            , lastSeqNo : Int
-            , txSuccess : Bool
-            , unsavedEvent : UnsavedEvent
-            }
-            Msg
-recordEventWithUniqueSeqNo component channelName state =
-    Procedure.provide state
-        |> Procedure.andThen (getEventsLogMetaData component channelName)
-        |> Procedure.andThen (recordEventsAndMetadata component channelName)
-        |> Procedure.andThen
-            (\stateAfterTxAttempt ->
-                if stateAfterTxAttempt.txSuccess then
-                    Procedure.provide stateAfterTxAttempt
-
-                else
-                    recordEventWithUniqueSeqNo component
-                        channelName
-                        { cache = stateAfterTxAttempt.cache
-                        , unsavedEvent = stateAfterTxAttempt.unsavedEvent
-                        }
-            )
-
-
-{-| Fetches the event log metadata for the channel. This provides the last event sequence number stored
-for that channel. This can be bumped by one to get the next sequence number, but this will be optimistic -
-another process could get the same number.
--}
-getEventsLogMetaData :
-    SnapshotChannel a
-    -> String
-    ->
-        { cache : Dict String (Snapshot Value)
-        , unsavedEvent : UnsavedEvent
-        }
-    ->
-        Procedure.Procedure ErrorFormat
-            { cache : Dict String (Snapshot Value)
-            , unsavedEvent : UnsavedEvent
-            , lastSeqNo : Int
-            }
-            Msg
-getEventsLogMetaData component channelName state =
-    let
-        key =
-            { id = Names.metadataKeyName channelName
-            , seq = 0
-            }
-    in
-    Apis.eventLogTableMetadataApi.get
-        { tableName = component.eventLogTable
-        , key = key
-        }
-        |> Procedure.fetchResult
-        |> Procedure.mapError Dynamo.errorToDetails
-        |> Procedure.andThen
-            (\maybeMetaData ->
-                case maybeMetaData of
-                    Just metadata ->
-                        { cache = state.cache
-                        , unsavedEvent = state.unsavedEvent
-                        , lastSeqNo = metadata.lastId
-                        }
-                            |> Procedure.provide
-
-                    Nothing ->
-                        { message = "No EventLog metadata record found for channel: " ++ channelName
-                        , details = Encode.null
-                        }
-                            |> Procedure.break
-            )
-
-
-{-| Records the event in the event log table AND updates the metadata in a write transaction so that the
-sequence number is bumped by one.
-
-If more than one process attempts to do this at the same time, it can fail because the sequence number is
-already taken. If the transaction fails to write the `txSuccess` flag returned will be `False`.
-
--}
-recordEventsAndMetadata :
-    SnapshotChannel a
-    -> String
-    ->
-        { cache : Dict String (Snapshot Value)
-        , lastSeqNo : Int
-        , unsavedEvent : UnsavedEvent
-        }
-    ->
-        Procedure.Procedure ErrorFormat
-            { cache : Dict String (Snapshot Value)
-            , lastSeqNo : Int
-            , txSuccess : Bool
-            , unsavedEvent : UnsavedEvent
-            }
-            Msg
-recordEventsAndMetadata component channelName state =
-    Procedure.fromTask Time.now
-        |> Procedure.andThen
-            (\timestamp ->
-                let
-                    assignedSeqNo =
-                        state.lastSeqNo + 1
-
-                    eventRecord =
-                        { id = channelName
-                        , seq = assignedSeqNo
-                        , updatedAt = timestamp
-                        , event = state.unsavedEvent.payload
-                        }
-
-                    seqUpdate =
-                        Dynamo.updateCommand
-                            EventLogTable.encodeKey
-                            { tableName = component.eventLogTable
-                            , key = { id = Names.metadataKeyName channelName, seq = 0 }
-                            , updateExpression = "SET lastId = lastId + :incr"
-                            , conditionExpression = Just "lastId = :current_id"
-                            , expressionAttributeNames = Dict.empty
-                            , expressionAttributeValues =
-                                [ ( ":incr", Dynamo.int 1 )
-                                , ( ":current_id", Dynamo.int state.lastSeqNo )
-                                ]
-                                    |> Dict.fromList
-                            , returnConsumedCapacity = Nothing
-                            , returnItemCollectionMetrics = Nothing
-                            , returnValues = Nothing
-                            , returnValuesOnConditionCheckFailure = Nothing
-                            }
-
-                    eventPut =
-                        Dynamo.putCommand
-                            EventLogTable.encodeRecord
-                            { tableName = component.eventLogTable
-                            , item = eventRecord
-                            }
-                in
-                Apis.eventLogTableMetadataApi.writeTx
-                    { tableName = component.eventLogTable
-                    , commands = [ seqUpdate, eventPut ]
-                    }
-                    |> Procedure.fetchResult
-                    |> Procedure.map
-                        (always
-                            { cache = state.cache
-                            , lastSeqNo = assignedSeqNo
-                            , txSuccess = True
-                            , unsavedEvent = state.unsavedEvent
-                            }
-                        )
-                    |> Procedure.catch
-                        (\error ->
-                            case error of
-                                ConditionCheckFailed _ ->
-                                    { cache = state.cache
-                                    , lastSeqNo = assignedSeqNo
-                                    , txSuccess = False
-                                    , unsavedEvent = state.unsavedEvent
-                                    }
-                                        |> Procedure.provide
-
-                                _ ->
-                                    Dynamo.errorToDetails error |> Procedure.break
-                        )
-            )
 
 
 
