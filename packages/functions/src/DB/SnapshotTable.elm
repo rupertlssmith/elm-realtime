@@ -1,9 +1,9 @@
 module DB.SnapshotTable exposing
     ( Key
     , MetadataRecord
-    , Operations
     , Record
     , encodeKey
+    , metadataOperations
     , operations
     )
 
@@ -37,47 +37,26 @@ type alias MetadataRecord =
     }
 
 
-type alias Operations msg =
-    { put : Put Record -> (Result Error () -> msg) -> Cmd msg
-    , findLatestSnapshot : String -> (Result Error (List Record) -> msg) -> Cmd msg
-    }
-
-
 operations :
     (Procedure.Program.Msg msg -> msg)
     -> Ports msg
-    -> String
-    ->
-        { put : Put Record -> (Result Error () -> msg) -> Cmd msg
-        , findLatestSnapshot : String -> (Result Error (List Record) -> msg) -> Cmd msg
-        }
-operations proc ports tableName =
-    let
-        typedApi =
-            Dynamo.dynamoTypedApi
-                encodeKey
-                (Codec.encoder recordCodec)
-                (Codec.decoder recordCodec)
-                proc
-                ports
-    in
-    { put = typedApi.put
-    , findLatestSnapshot = \channel -> findLatestSnapshotQuery tableName channel |> typedApi.query
-    }
+    -> DynamoTypedApi Key Record msg
+operations =
+    Dynamo.dynamoTypedApi
+        encodeKey
+        (Codec.encoder recordCodec)
+        (Codec.decoder recordCodec)
 
 
-findLatestSnapshotQuery tableName channel =
-    let
-        matchLatestSnapshot =
-            Dynamo.partitionKeyEquals "id" channel
-                --|> Dynamo.rangeKeyGreaterThan "seq" (Dynamo.int 0)
-                --|> Dynamo.limitResults 1
-                |> Dynamo.orderResults Reverse
-    in
-    { tableName = tableName
-    , match = matchLatestSnapshot
-    }
-        |> Debug.log "findLatestSnapshotQuery"
+metadataOperations :
+    (Procedure.Program.Msg msg -> msg)
+    -> Ports msg
+    -> DynamoTypedApi Key MetadataRecord msg
+metadataOperations =
+    Dynamo.dynamoTypedApi
+        encodeKey
+        (Codec.encoder metadataRecordCodec)
+        (Codec.decoder metadataRecordCodec)
 
 
 recordCodec : Codec Record
@@ -87,6 +66,16 @@ recordCodec =
         |> Codec.field "seq" .seq Codec.int
         |> Codec.field "updatedAt" .updatedAt posixCodec
         |> Codec.field "snapshot" .snapshot Codec.value
+        |> Codec.buildObject
+
+
+metadataRecordCodec : Codec MetadataRecord
+metadataRecordCodec =
+    Codec.object MetadataRecord
+        |> Codec.field "id" .id Codec.string
+        |> Codec.field "seq" .seq Codec.int
+        |> Codec.field "updatedAt" .updatedAt posixCodec
+        |> Codec.field "lastId" .lastId Codec.int
         |> Codec.buildObject
 
 

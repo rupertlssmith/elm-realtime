@@ -16,6 +16,7 @@ import Http.Response as Response exposing (Response)
 import HttpServer exposing (ApiRequest, Error, HttpSessionKey)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode
+import Names
 import Procedure
 import Realtime exposing (RTMessage(..), Snapshot, SnapshotRequestEvent)
 import SqsLambda exposing (SqsEvent)
@@ -220,6 +221,53 @@ checkAgainstCurrentSnapshot component event state =
 
                     Nothing ->
                         Procedure.provide New
+            )
+
+
+{-| Fetches the event log metadata for the channel. This provides the last event sequence number stored
+for that channel. This can be bumped by one to get the next sequence number, but this will be optimistic -
+another process could get the same number.
+-}
+getEventsLogMetaData :
+    SnapshotChannel a
+    -> String
+    ->
+        { unsavedEvent : UnsavedEvent
+        }
+    ->
+        Procedure.Procedure ErrorFormat
+            { unsavedEvent : UnsavedEvent
+            , lastSeqNo : Int
+            }
+            Msg
+getEventsLogMetaData component channelName state =
+    let
+        key =
+            { id = Names.metadataKeyName channelName
+            , seq = 0
+            }
+    in
+    Apis.snapshotTableMetadataApi.get
+        { tableName = component.eventLogTable
+        , key = key
+        }
+        |> Procedure.fetchResult
+        |> Procedure.mapError Dynamo.errorToDetails
+        |> Procedure.andThen
+            (\maybeMetaData ->
+                case maybeMetaData of
+                    Just metadata ->
+                        { sessionKey = state.sessionKey
+                        , unsavedEvent = state.unsavedEvent
+                        , lastSeqNo = metadata.lastId
+                        }
+                            |> Procedure.provide
+
+                    Nothing ->
+                        { message = "No EventLog metadata record found for channel: " ++ channelName
+                        , details = Encode.null
+                        }
+                            |> Procedure.break
             )
 
 
