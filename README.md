@@ -4,34 +4,12 @@ I have set up an AWS root account for thesett. Underneath that I have created a 
 and two other accounts, dev and prod. The set up takes a bit of effort to complete, but instructions
 on how to do it can be found here: https://docs.sst.dev/setting-up-aws
 
-My AWS config file (~/.aws/config) contains the following:
-
-```
-[sso-session thesett]
-sso_start_url = https://thesett.awsapps.com/start
-sso_region = us-east-1
-
-[profile thesett-dev]
-sso_session = thesett
-sso_account_id = 030696475731
-sso_role_name = AdministratorAccess
-region = eu-west-2
-
-[profile thesett-prod]
-sso_session = thesett
-sso_account_id = 933232018743
-sso_role_name = AdministratorAccess
-region = eu-west-2
-
-[default]
-region = eu-west-2
-```
 
 Once the above is in place, you need to install the AWS cli tools: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
 
 Then sign in to AWS SSO:
 
-    aws sso login --sso-session=thesett
+    aws sso login --sso-session=your_org
 
 This will prompt you to log in using the management account.
 
@@ -92,7 +70,6 @@ below. The build command that is run to build the web application is part of thi
             MOMENTO_API_KEY: momentoApiKey.value
         },
     });
-
 
 # Deploying to Production
 
