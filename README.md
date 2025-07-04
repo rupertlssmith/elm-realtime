@@ -39,17 +39,17 @@ If you want to create an AWS account for example for IJI, run through the above 
 
 # Setting up for Development
 
-# Setting up third party services
+### Setting up third party services
 
-Momento is being used for low-latency pubsub topics. Using the Momento console, create an API key. For now,
-create an API key has full access, because it needs to be able to create a topic. Download this key into a
-JSON file. The key must be set as an sst secret.
+Momento is being used for low-latency pubsub topics. Using the [Momento console](https://console.gomomento.com/), 
+create an API key. For now, create an API key has full access, because it needs to be able to create a topic. 
+Download this key into a JSON file. The key must be set as an sst secret.
 
     npx sst secret set MomentoApiKey < ./momento_secret.json
 
 Note, this must be done separately when deploying the other stages.
 
-    npx sst secret set --statge production MomentoApiKey < ./momento_secret.json
+    npx sst secret set --stage production MomentoApiKey < ./momento_secret.json
 
 ### To install all Node packages needed to build:
 
@@ -74,6 +74,25 @@ This can also be run with a file watcher that will rebuild it immediately when E
 Replace the URL with whatever URL the ApiEndpoint comes out as on the console once dev mode has been started:
 
     curl -X POST https://de6pgy115l.execute-api.eu-west-2.amazonaws.com  -H 'Content-Type: application/json' -d '{"prompt":"What is so great about AI in less then 100 words."}'
+
+### To recompile the Elm code the frontend during dev:
+
+This happens automatically as part of running `npx sst dev`. It is configured through SST in sst.config.ts as 
+below. The build command that is run to build the web application is part of this configuration:
+
+    // Elm UI for realtime channel management.
+    const site = new sst.aws.StaticSite("ChatSite", {
+        path: "packages/web",
+        build: {
+            command: "npm run prod",
+            output: "dist",
+        },
+        environment: {
+            ELM_RT_CHANNEL_API_URL: api.url,
+            MOMENTO_API_KEY: momentoApiKey.value
+        },
+    });
+
 
 # Deploying to Production
 
